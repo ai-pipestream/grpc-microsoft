@@ -13,6 +13,9 @@ include("grpc-connect")
 include("grpc-sync-api")
 include("grpc-sync-service")
 include("grpc-okf")
+include("grpc-output-spi")
+include("grpc-output-filesystem")
+include("grpc-output-s3")
 include("grpc-mcp")
 
 dependencyResolutionManagement {

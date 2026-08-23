@@ -31,7 +31,8 @@ class SyncTableMicrosoftChangeSinkTest {
                                 .setWebUrl("https://contoso.sharepoint.com/Docs")))
                 .build();
         Asset folderAsset = SyncTableMicrosoftChangeSink.toAsset(folder);
-        assertThat(folderAsset.getAssetId()).isEqualTo("microsoft:drive_item:folder-1");
+        assertThat(folderAsset.getAssetId()).isEqualTo("microsoft:default:drive_item:folder-1");
+        assertThat(folderAsset.getConnectionId()).isEqualTo("default");
         assertThat(folderAsset.getAttachment()).isFalse();
         assertThat(folderAsset.getPhase())
                 .isEqualTo(ai.pipestream.sync.v1.AssetPhase.ASSET_PHASE_INITIAL_CRAWL);
@@ -56,7 +57,7 @@ class SyncTableMicrosoftChangeSinkTest {
                 .build();
         Asset fileAsset = SyncTableMicrosoftChangeSink.toAsset(file);
         assertThat(fileAsset.getAttachment()).isTrue();
-        assertThat(fileAsset.getParentAssetId()).isEqualTo("microsoft:drive_item:folder-1");
+        assertThat(fileAsset.getParentAssetId()).isEqualTo("microsoft:default:drive_item:folder-1");
         assertThat(fileAsset.getPhase())
                 .isEqualTo(ai.pipestream.sync.v1.AssetPhase.ASSET_PHASE_UPDATE);
         assertThat(fileAsset.getContentBytes()).isEqualTo(12);
@@ -76,7 +77,7 @@ class SyncTableMicrosoftChangeSinkTest {
                                 .setDisplayName("Docs")
                                 .setWebUrl("https://contoso.sharepoint.com/sites/Docs")))
                 .build());
-        assertThat(site.getAssetId()).isEqualTo("microsoft:site:site-1");
+        assertThat(site.getAssetId()).isEqualTo("microsoft:default:site:site-1");
         assertThat(site.getAttachment()).isFalse();
 
         Asset drive = SyncTableMicrosoftChangeSink.toAsset(MicrosoftChange.newBuilder()

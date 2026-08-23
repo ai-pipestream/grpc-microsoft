@@ -68,8 +68,9 @@ class MicrosoftSyncTableWireTest {
                 SyncTableServiceGrpc.newBlockingStub(syncChannel);
         ledger.upsertAsset(UpsertAssetRequest.newBuilder()
                 .setAsset(Asset.newBuilder()
-                        .setAssetId("microsoft:drive_item:gone")
+                        .setAssetId("microsoft:default:drive_item:gone")
                         .setSource("microsoft")
+                        .setConnectionId("default")
                         .setKind("drive_item")
                         .setNativeId("gone")
                         .setRunId("stale-run")
@@ -98,7 +99,7 @@ class MicrosoftSyncTableWireTest {
                 });
 
         Asset file = ledger.getAsset(GetAssetRequest.newBuilder()
-                .setAssetId("microsoft:drive_item:file-1").build()).getAsset();
+                .setAssetId("microsoft:default:drive_item:file-1").build()).getAsset();
         assertThat(file.getAttachment()).isTrue();
         assertThat(file.getTitle()).isEqualTo("notes.txt");
 
@@ -107,10 +108,10 @@ class MicrosoftSyncTableWireTest {
                 .setSource("microsoft")
                 .setAttachmentsOnly(true)
                 .build()).forEachRemaining(r -> attachments.add(r.getAsset().getAssetId()));
-        assertThat(attachments).contains("microsoft:drive_item:file-1");
+        assertThat(attachments).contains("microsoft:default:drive_item:file-1");
 
         assertThat(ledger.getAsset(GetAssetRequest.newBuilder()
-                .setAssetId("microsoft:drive_item:gone").build()).getAsset().getStatus())
+                .setAssetId("microsoft:default:drive_item:gone").build()).getAsset().getStatus())
                 .isEqualTo(AssetSyncStatus.ASSET_SYNC_STATUS_DELETED);
     }
 }
