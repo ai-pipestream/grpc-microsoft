@@ -64,7 +64,17 @@ public final class MicrosoftServer {
             LOG.log(System.Logger.Level.INFO, "microsoft-proxy sync-table sink active on {0}",
                     System.getenv(SyncTableMicrosoftChangeSink.ENV_TARGET));
         }
-        if (OkfMicrosoftChangeSink.enabled()) {
+        if (OutputMicrosoftChangeSink.enabled()) {
+            OutputMicrosoftChangeSink output = OutputMicrosoftChangeSink.fromEnvironment();
+            sinks.add(output);
+            closables.add(output);
+        }
+        if (OkfMicrosoftChangeSink.enabled() && SharePointOkfPublisher.enabled()) {
+            sinks.add(OkfMicrosoftChangeSink.fromEnvironment(files));
+            LOG.log(System.Logger.Level.INFO,
+                    "microsoft-proxy SharePoint OKF upload active spoDrive={0}",
+                    System.getenv(SharePointOkfPublisher.ENV_DRIVE_ID));
+        } else if (!OutputMicrosoftChangeSink.enabled() && OkfMicrosoftChangeSink.enabled()) {
             sinks.add(OkfMicrosoftChangeSink.fromEnvironment(files));
             LOG.log(System.Logger.Level.INFO,
                     "microsoft-proxy OKF sink active dir={0} spoDrive={1}",

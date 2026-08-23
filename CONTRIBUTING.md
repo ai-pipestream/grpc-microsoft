@@ -21,7 +21,9 @@ GCA `Contracts/` tree is a frozen copy and is not in the Buf workspace.
 - **Do not invent shared modules.** A sink that talks to `SyncTableService`
   lives in the caller and depends on `grpc-sync-api` only. `grpc-okf` is the
   dedicated OKF/WARC library both crawlers share; do not fold that producer
-  into either service.
+  into either service. The output SPI (`grpc-output-spi` plus filesystem /
+  S3 ServiceLoader jars) is the dedicated destination seam; do not fold
+  S3 into either service.
 - **Secrets stay out of git, logs, and PR text.** Live smokes read env /
   GitHub Actions secrets; they never print tokens.
 - **Buf COMMENTS is strict.** Every service, rpc, message, field, oneof,

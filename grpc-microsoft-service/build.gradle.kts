@@ -6,6 +6,9 @@ dependencies {
     implementation(project(":grpc-microsoft-api"))
     implementation(project(":grpc-sync-api"))
     implementation(project(":grpc-okf"))
+    implementation(project(":grpc-output-spi"))
+    runtimeOnly(project(":grpc-output-filesystem"))
+    runtimeOnly(project(":grpc-output-s3"))
     implementation(libs.grpc.netty.shaded)
     implementation(libs.grpc.services)
     implementation(libs.jackson.databind)
@@ -13,6 +16,8 @@ dependencies {
     runtimeOnly(libs.log4j.core)
 
     testImplementation(project(":grpc-sync-service"))
+    testImplementation(project(":grpc-output-filesystem"))
+    testImplementation(project(":grpc-output-s3"))
     testImplementation(libs.grpc.inprocess)
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.assertj)
