@@ -59,5 +59,19 @@ class MicrosoftCrawlerTest {
         assertThat(notes.getListColumnsList()).extracting(c -> c.getName())
                 .containsExactly("Title", "Count");
         assertThat(notes.getListColumns(1).getIntValue()).isEqualTo(2);
+
+        DriveItem nested = sink.changes().stream()
+                .filter(c -> "file-2".equals(c.getEntity().getEntityId()))
+                .findFirst().orElseThrow()
+                .getEntity().getDriveItem();
+        // Nested file has no listItem stub: crawler uses listItemFieldsOrEmpty (404 → empty).
+        assertThat(nested.getListColumnsList()).isEmpty();
+
+        DriveItem folder = sink.changes().stream()
+                .filter(c -> "folder-1".equals(c.getEntity().getEntityId()))
+                .findFirst().orElseThrow()
+                .getEntity().getDriveItem();
+        assertThat(folder.getFolder()).isTrue();
+        assertThat(folder.getChildCount()).isEqualTo(1);
     }
 }
