@@ -44,9 +44,19 @@ public final class MicrosoftServer {
             }
             return current.accessToken();
         });
+        MicrosoftChangeSink downstream = null;
+        java.util.List<AutoCloseable> closables = new java.util.ArrayList<>();
+        if (SyncTableMicrosoftChangeSink.enabled()) {
+            SyncTableMicrosoftChangeSink syncTable = SyncTableMicrosoftChangeSink.fromEnvironment();
+            downstream = syncTable;
+            closables.add(syncTable);
+            LOG.log(System.Logger.Level.INFO, "microsoft-proxy sync-table sink active on {0}",
+                    System.getenv(SyncTableMicrosoftChangeSink.ENV_TARGET));
+        }
         MicrosoftGrpcService service = new MicrosoftGrpcService(config, new GraphFiles(client),
                 parseLong(System.getenv(ENV_ATTACHMENT_MAX_BYTES),
-                        MicrosoftGrpcService.DEFAULT_ATTACHMENT_MAX_BYTES));
+                        MicrosoftGrpcService.DEFAULT_ATTACHMENT_MAX_BYTES),
+                downstream);
         Server server = startNetty(service, parseInt(System.getenv(ENV_GRPC_PORT),
                 DEFAULT_GRPC_PORT));
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
@@ -55,9 +65,14 @@ public final class MicrosoftServer {
                 if (!server.awaitTermination(10, TimeUnit.SECONDS)) {
                     server.shutdownNow();
                 }
+                for (AutoCloseable closable : closables) {
+                    closable.close();
+                }
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 server.shutdownNow();
+            } catch (Exception e) {
+                LOG.log(System.Logger.Level.WARNING, "sink close failed: {0}", e.toString());
             }
         }, "microsoft-proxy-shutdown"));
         LOG.log(System.Logger.Level.INFO,

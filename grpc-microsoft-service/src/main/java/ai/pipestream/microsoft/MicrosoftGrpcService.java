@@ -46,9 +46,15 @@ public final class MicrosoftGrpcService extends MicrosoftServiceGrpc.MicrosoftSe
     private final GraphFiles files;
     private final MicrosoftMapper mapper;
     private final long attachmentMaxBytes;
+    private final MicrosoftChangeSink downstream;
 
     public MicrosoftGrpcService(MicrosoftConnectorConfig config, GraphFiles files,
             long attachmentMaxBytes) {
+        this(config, files, attachmentMaxBytes, null);
+    }
+
+    public MicrosoftGrpcService(MicrosoftConnectorConfig config, GraphFiles files,
+            long attachmentMaxBytes, MicrosoftChangeSink downstream) {
         this.config = Objects.requireNonNull(config, "config");
         this.files = Objects.requireNonNull(files, "files");
         this.mapper = new MicrosoftMapper();
@@ -56,6 +62,7 @@ public final class MicrosoftGrpcService extends MicrosoftServiceGrpc.MicrosoftSe
             throw new IllegalArgumentException("attachmentMaxBytes must be positive");
         }
         this.attachmentMaxBytes = attachmentMaxBytes;
+        this.downstream = downstream;
     }
 
     @Override
@@ -161,9 +168,12 @@ public final class MicrosoftGrpcService extends MicrosoftServiceGrpc.MicrosoftSe
                                     : request.getFolderPath(),
                             config.graphBaseUrl(), config.authority());
             Object lock = new Object();
+            java.util.concurrent.atomic.AtomicReference<String> runId =
+                    new java.util.concurrent.atomic.AtomicReference<>("");
             MicrosoftChangeSink observerSink = new MicrosoftChangeSink() {
                 @Override
                 public void emit(MicrosoftChange change) {
+                    runId.compareAndSet("", change.getCursor());
                     VALIDATOR.requireValid(change);
                     synchronized (lock) {
                         observer.onNext(SyncResponse.newBuilder().setChange(change).build());
@@ -178,9 +188,12 @@ public final class MicrosoftGrpcService extends MicrosoftServiceGrpc.MicrosoftSe
                     }
                 }
             };
-            MicrosoftCrawler crawler = new MicrosoftCrawler(effective, files, observerSink,
+            MicrosoftChangeSink sink = downstream == null ? observerSink
+                    : new CompositeMicrosoftChangeSink(java.util.List.of(observerSink, downstream));
+            MicrosoftCrawler crawler = new MicrosoftCrawler(effective, files, sink,
                     attachmentMaxBytes, request.getIncludeContent());
             crawler.crawl();
+            sink.completeRun(runId.get());
             synchronized (lock) {
                 observer.onNext(SyncResponse.newBuilder()
                         .setResumeCursor(java.time.Instant.now().toString()).build());

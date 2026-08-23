@@ -4,6 +4,7 @@ plugins {
 
 dependencies {
     implementation(project(":grpc-microsoft-api"))
+    implementation(project(":grpc-sync-api"))
     implementation(libs.grpc.netty.shaded)
     implementation(libs.grpc.services)
     implementation(libs.jackson.databind)

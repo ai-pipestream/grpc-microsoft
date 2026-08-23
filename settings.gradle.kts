@@ -10,6 +10,9 @@ include("grpc-microsoft-api")
 include("grpc-microsoft-service")
 include("grpc-microsoft-connector")
 include("grpc-connect")
+include("grpc-sync-api")
+include("grpc-sync-service")
+include("grpc-mcp")
 
 dependencyResolutionManagement {
     repositories {

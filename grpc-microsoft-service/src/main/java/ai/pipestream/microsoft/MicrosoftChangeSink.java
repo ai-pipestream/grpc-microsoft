@@ -12,4 +12,7 @@ public interface MicrosoftChangeSink {
     void emit(MicrosoftChange change);
 
     void snapshot(MicrosoftSnapshot snapshot);
+
+    default void completeRun(String runId) {
+    }
 }
