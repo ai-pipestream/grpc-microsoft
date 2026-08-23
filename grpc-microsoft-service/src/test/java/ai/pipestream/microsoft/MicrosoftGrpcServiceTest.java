@@ -1,8 +1,11 @@
 package ai.pipestream.microsoft;
 
+import ai.pipestream.microsoft.v1.GetItemRequest;
 import ai.pipestream.microsoft.v1.GetMeRequest;
 import ai.pipestream.microsoft.v1.ListChildrenRequest;
 import ai.pipestream.microsoft.v1.ListChildrenResponse;
+import ai.pipestream.microsoft.v1.ListDrivesRequest;
+import ai.pipestream.microsoft.v1.ListSitesRequest;
 import ai.pipestream.microsoft.v1.MicrosoftServiceGrpc;
 import ai.pipestream.microsoft.v1.SyncRequest;
 import ai.pipestream.microsoft.v1.SyncResponse;
@@ -81,5 +84,27 @@ class MicrosoftGrpcServiceTest {
         assertThat(events).anyMatch(SyncResponse::hasSnapshot);
         assertThat(events.get(events.size() - 1).getResumeCursor()).isNotBlank();
         assertThat(fake.requests()).allMatch(r -> r.authorization().equals("Bearer token"));
+    }
+
+    @Test
+    void listSitesDrivesAndGetItem() {
+        fake.stub("/sites", MicrosoftFixtures.sitesJson(
+                MicrosoftFixtures.siteJson("site-1", "Docs")));
+        fake.stub("/me/drive", MicrosoftFixtures.driveJson("drive-1", "Docs"));
+        fake.stub("/sites/site-1/drives", MicrosoftFixtures.drivesJson(
+                MicrosoftFixtures.driveJson("drive-2", "Library")));
+        fake.stub("/drives/drive-1/items/file-1",
+                MicrosoftFixtures.fileJson("file-1", "notes.txt", "drive-1"));
+
+        assertThat(stub.listSites(ListSitesRequest.newBuilder().setLimit(1).build())
+                .getSitesList()).extracting(s -> s.getId()).containsExactly("site-1");
+        assertThat(stub.listDrives(ListDrivesRequest.getDefaultInstance())
+                .getDrivesList()).extracting(d -> d.getId()).containsExactly("drive-1");
+        assertThat(stub.listDrives(ListDrivesRequest.newBuilder().setSiteId("site-1").build())
+                .getDrivesList()).extracting(d -> d.getId()).containsExactly("drive-2");
+        assertThat(stub.getItem(GetItemRequest.newBuilder()
+                .setDriveId("drive-1")
+                .setItemId("file-1")
+                .build()).getItem().getName()).isEqualTo("notes.txt");
     }
 }

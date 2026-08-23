@@ -61,4 +61,49 @@ class SyncTableMicrosoftChangeSinkTest {
                 .isEqualTo(ai.pipestream.sync.v1.AssetPhase.ASSET_PHASE_UPDATE);
         assertThat(fileAsset.getContentBytes()).isEqualTo(12);
     }
+
+    @Test
+    void mapsSiteDriveAndDelete() {
+        Asset site = SyncTableMicrosoftChangeSink.toAsset(MicrosoftChange.newBuilder()
+                .setChangeId("c3")
+                .setOperation(ChangeOperation.CHANGE_OPERATION_UPSERT)
+                .setSource(ChangeSource.CHANGE_SOURCE_CRAWL)
+                .setCursor("run-1")
+                .setEntity(MicrosoftEntity.newBuilder()
+                        .setEntityId("site-1")
+                        .setSite(ai.pipestream.microsoft.v1.Site.newBuilder()
+                                .setId("site-1")
+                                .setDisplayName("Docs")
+                                .setWebUrl("https://contoso.sharepoint.com/sites/Docs")))
+                .build());
+        assertThat(site.getAssetId()).isEqualTo("microsoft:site:site-1");
+        assertThat(site.getAttachment()).isFalse();
+
+        Asset drive = SyncTableMicrosoftChangeSink.toAsset(MicrosoftChange.newBuilder()
+                .setChangeId("c4")
+                .setOperation(ChangeOperation.CHANGE_OPERATION_UPSERT)
+                .setSource(ChangeSource.CHANGE_SOURCE_CRAWL)
+                .setCursor("run-1")
+                .setEntity(MicrosoftEntity.newBuilder()
+                        .setEntityId("drive-1")
+                        .setDrive(ai.pipestream.microsoft.v1.Drive.newBuilder()
+                                .setId("drive-1")
+                                .setName("Documents")
+                                .setWebUrl("https://contoso.sharepoint.com/Documents")))
+                .build());
+        assertThat(drive.getKind()).isEqualTo("drive");
+        assertThat(drive.getTitle()).isEqualTo("Documents");
+
+        Asset deleted = SyncTableMicrosoftChangeSink.toAsset(MicrosoftChange.newBuilder()
+                .setChangeId("c5")
+                .setOperation(ChangeOperation.CHANGE_OPERATION_DELETE)
+                .setSource(ChangeSource.CHANGE_SOURCE_DELTA)
+                .setCursor("run-1")
+                .setEntity(MicrosoftEntity.newBuilder()
+                        .setEntityId("file-1")
+                        .setDriveItem(DriveItem.newBuilder().setId("file-1").setName("gone.txt")))
+                .build());
+        assertThat(deleted.getPhase())
+                .isEqualTo(ai.pipestream.sync.v1.AssetPhase.ASSET_PHASE_DELETE);
+    }
 }

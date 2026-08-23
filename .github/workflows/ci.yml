@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
 
 jobs:
   build:
@@ -15,3 +16,53 @@ jobs:
           distribution: temurin
           java-version: "25"
       - run: ./gradlew --no-daemon build
+
+  # Read-only live probes. Fork PRs never see secrets (job is skipped).
+  # Same-repo PRs / pushes / dispatch run the job; if the secret is empty
+  # the step exits 0 so a repo without credentials stays green.
+  live-confluence:
+    needs: build
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+      - name: Live Confluence smoke
+        env:
+          CONFLUENCE_BASE_URL: ${{ secrets.CONFLUENCE_BASE_URL }}
+          CONFLUENCE_EMAIL: ${{ secrets.CONFLUENCE_EMAIL }}
+          CONFLUENCE_API_TOKEN: ${{ secrets.CONFLUENCE_API_TOKEN }}
+          CONFLUENCE_SPACES: ${{ secrets.CONFLUENCE_SPACES }}
+        run: |
+          if [ -z "${CONFLUENCE_EMAIL}" ] || [ -z "${CONFLUENCE_API_TOKEN}" ]; then
+            echo "Confluence secrets not configured; skipping live smoke"
+            exit 0
+          fi
+          ./gradlew --no-daemon :grpc-confluence-service:liveSmokeTest
+
+  live-microsoft:
+    needs: build
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+      - name: Live Microsoft Graph smoke
+        env:
+          MICROSOFT_TENANT_ID: ${{ secrets.MICROSOFT_TENANT_ID }}
+          MICROSOFT_CLIENT_ID: ${{ secrets.MICROSOFT_CLIENT_ID }}
+          MICROSOFT_CLIENT_SECRET: ${{ secrets.MICROSOFT_CLIENT_SECRET }}
+          MICROSOFT_SITE_ID: ${{ secrets.MICROSOFT_SITE_ID }}
+          MICROSOFT_DRIVE_IDS: ${{ secrets.MICROSOFT_DRIVE_IDS }}
+        run: |
+          if [ -z "${MICROSOFT_TENANT_ID}" ] || [ -z "${MICROSOFT_CLIENT_ID}" ] || [ -z "${MICROSOFT_CLIENT_SECRET}" ]; then
+            echo "Microsoft secrets not configured; skipping live smoke"
+            exit 0
+          fi
+          ./gradlew --no-daemon :grpc-microsoft-service:liveSmokeTest

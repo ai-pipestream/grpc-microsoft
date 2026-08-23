@@ -11,6 +11,7 @@ public final class InMemoryMicrosoftChangeSink implements MicrosoftChangeSink {
 
     private final List<MicrosoftChange> changes = new CopyOnWriteArrayList<>();
     private final List<MicrosoftSnapshot> snapshots = new CopyOnWriteArrayList<>();
+    private final List<String> completedRuns = new CopyOnWriteArrayList<>();
 
     @Override
     public void emit(MicrosoftChange change) {
@@ -28,5 +29,14 @@ public final class InMemoryMicrosoftChangeSink implements MicrosoftChangeSink {
 
     public List<MicrosoftSnapshot> snapshots() {
         return List.copyOf(snapshots);
+    }
+
+    @Override
+    public void completeRun(String runId) {
+        completedRuns.add(runId);
+    }
+
+    public List<String> completedRuns() {
+        return List.copyOf(completedRuns);
     }
 }

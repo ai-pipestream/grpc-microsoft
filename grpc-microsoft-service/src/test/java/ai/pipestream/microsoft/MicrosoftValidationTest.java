@@ -64,4 +64,14 @@ class MicrosoftValidationTest {
     void snapshotNeedsId() {
         assertViolation(MicrosoftSnapshot.getDefaultInstance(), "snapshot_id", "required");
     }
+
+    @Test
+    void siteAndDriveIdentity() {
+        assertViolation(ai.pipestream.microsoft.v1.Site.getDefaultInstance(), "id", "required");
+        assertViolation(ai.pipestream.microsoft.v1.Drive.getDefaultInstance(), "id", "required");
+        assertThat(VALIDATOR.validate(ai.pipestream.microsoft.v1.Site.newBuilder()
+                .setId("site-1").build()).violations()).isEmpty();
+        assertThat(VALIDATOR.validate(ai.pipestream.microsoft.v1.Drive.newBuilder()
+                .setId("drive-1").build()).violations()).isEmpty();
+    }
 }
