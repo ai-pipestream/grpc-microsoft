@@ -31,6 +31,10 @@ public final class MicrosoftSourceTask extends SourceTask {
 
     static final Map<String, String> PARTITION = Map.of("source", "microsoft");
 
+    /** Kafka Connect task that pulls MicrosoftChange protobuf bytes. */
+    public MicrosoftSourceTask() {
+    }
+
     private String topic;
     private String grpcTarget;
     private boolean plaintext;
