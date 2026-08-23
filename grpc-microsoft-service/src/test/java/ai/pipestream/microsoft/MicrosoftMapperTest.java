@@ -74,4 +74,48 @@ class MicrosoftMapperTest {
         assertThat(item.getListColumns(4).getStringValue()).isEqualTo("a, b");
         assertThat(item.getListColumns(5).getIntValue()).isEqualTo(9);
     }
+
+    @Test
+    void mapsHashesEtagDescriptionAndDownloadUrl() throws Exception {
+        DriveItem file = mapper.toDriveItem(
+                JSON.readTree(MicrosoftFixtures.fileJsonWithHashes("file-1", "notes.txt", "drive-1")),
+                "drive-1");
+        assertThat(file.getDescription()).isEqualTo("a note");
+        assertThat(file.getEtag()).isEqualTo("etag-1");
+        assertThat(file.getDownloadUrl()).isEqualTo("https://contoso.sharepoint.com/download/notes.txt");
+        assertThat(file.getHashes().getSha1()).isEqualTo("aaa");
+        assertThat(file.getHashes().getSha256()).isEqualTo("bbb");
+        assertThat(file.getHashes().getQuickXor()).isEqualTo("ccc");
+        assertThat(file.getHashes().getCrc32()).isEqualTo("ddd");
+    }
+
+    @Test
+    void listColumnsSkipNullEmptyArrayAndSecondNesting() throws Exception {
+        assertThat(mapper.toListColumns(null)).isEmpty();
+        assertThat(mapper.toListColumns(JSON.readTree("[]"))).isEmpty();
+        assertThat(mapper.toListColumns(JSON.readTree("""
+                {
+                  "Title": null,
+                  "Empty": [],
+                  "Ratio": 1.5,
+                  "Day": "2024-03-02",
+                  "Lookup": {"Id": 9, "Nested": {"x": 1}},
+                  "@skip": "annotation"
+                }
+                """))).satisfies(columns -> {
+            assertThat(columns).extracting(c -> c.getName())
+                    .containsExactly("Ratio", "Day", "Lookup.Id");
+            assertThat(columns.get(0).getDoubleValue()).isEqualTo(1.5d);
+            assertThat(columns.get(1).getStringValue()).isEqualTo("2024-03-02");
+            assertThat(columns.get(2).getIntValue()).isEqualTo(9);
+        });
+    }
+
+    @Test
+    void parsesRfc3339Offsets() {
+        assertThat(MicrosoftMapper.timestamp("2024-03-01T12:00:00Z").getSeconds())
+                .isEqualTo(MicrosoftMapper.timestamp("2024-03-01T14:00:00+02:00").getSeconds());
+        assertThat(MicrosoftMapper.timestamp("")).isNull();
+        assertThat(MicrosoftMapper.timestamp("not-a-date")).isNull();
+    }
 }

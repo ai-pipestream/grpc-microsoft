@@ -1,5 +1,7 @@
 package ai.pipestream.microsoft;
 
+import ai.pipestream.microsoft.v1.DownloadItemRequest;
+import ai.pipestream.microsoft.v1.DriveItem;
 import ai.pipestream.microsoft.v1.GetItemRequest;
 import ai.pipestream.microsoft.v1.GetMeRequest;
 import ai.pipestream.microsoft.v1.ListChildrenRequest;
@@ -77,6 +79,7 @@ class MicrosoftGrpcServiceTest {
         stub.listChildren(ListChildrenRequest.newBuilder().setDriveId("drive-1").build())
                 .forEachRemaining(children::add);
         assertThat(children).extracting(r -> r.getItem().getId()).containsExactly("file-1");
+        assertThat(children.get(0).getItem().getListColumnsList()).isEmpty();
 
         List<SyncResponse> events = new ArrayList<>();
         stub.sync(SyncRequest.getDefaultInstance()).forEachRemaining(events::add);
@@ -106,5 +109,49 @@ class MicrosoftGrpcServiceTest {
                 .setDriveId("drive-1")
                 .setItemId("file-1")
                 .build()).getItem().getName()).isEqualTo("notes.txt");
+    }
+
+    @Test
+    void getItemAndDownloadItemAttachListColumns() {
+        fake.stub("/drives/drive-1/items/file-1",
+                MicrosoftFixtures.fileJsonWithHashes("file-1", "notes.txt", "drive-1"));
+        fake.stub("/drives/drive-1/items/file-1/listItem?$expand=fields",
+                MicrosoftFixtures.listItemFieldsJson());
+        fake.stub("/drives/drive-1/items/file-1/content",
+                FakeGraphServer.Stub.bytes("hello".getBytes(), "text/plain"));
+
+        DriveItem item = stub.getItem(GetItemRequest.newBuilder()
+                .setDriveId("drive-1")
+                .setItemId("file-1")
+                .build()).getItem();
+        assertThat(item.getName()).isEqualTo("notes.txt");
+        assertThat(item.getEtag()).isEqualTo("etag-1");
+        assertThat(item.getHashes().getSha256()).isEqualTo("bbb");
+        assertThat(item.getListColumnsList()).extracting(c -> c.getName())
+                .containsExactly("Title", "Count", "Flag", "When");
+        assertThat(item.getListColumns(0).getStringValue()).isEqualTo("Notes");
+        assertThat(item.getListColumns(1).getIntValue()).isEqualTo(3);
+        assertThat(item.hasContent()).isFalse();
+
+        DriveItem downloaded = stub.downloadItem(DownloadItemRequest.newBuilder()
+                .setDriveId("drive-1")
+                .setItemId("file-1")
+                .setIncludeContent(true)
+                .build()).getItem();
+        assertThat(downloaded.getContent().toStringUtf8()).isEqualTo("hello");
+        assertThat(downloaded.getListColumnsList()).extracting(c -> c.getName())
+                .contains("Title", "Count");
+    }
+
+    @Test
+    void getItemWithMissingListItemHasEmptyColumns() {
+        fake.stub("/drives/drive-1/items/file-1",
+                MicrosoftFixtures.fileJson("file-1", "notes.txt", "drive-1"));
+        DriveItem item = stub.getItem(GetItemRequest.newBuilder()
+                .setDriveId("drive-1")
+                .setItemId("file-1")
+                .build()).getItem();
+        assertThat(item.getName()).isEqualTo("notes.txt");
+        assertThat(item.getListColumnsList()).isEmpty();
     }
 }

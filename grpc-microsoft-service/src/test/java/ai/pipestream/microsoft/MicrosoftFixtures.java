@@ -55,6 +55,48 @@ final class MicrosoftFixtures {
                 """.formatted(id, name, name, driveId);
     }
 
+    static String fileJsonWithHashes(String id, String name, String driveId) {
+        return """
+                {
+                  "id": "%s",
+                  "name": "%s",
+                  "size": 12,
+                  "description": "a note",
+                  "eTag": "etag-1",
+                  "webUrl": "https://contoso.sharepoint.com/%s",
+                  "@microsoft.graph.downloadUrl": "https://contoso.sharepoint.com/download/%s",
+                  "createdDateTime": "2024-03-01T00:00:00Z",
+                  "lastModifiedDateTime": "2024-03-02T00:00:00Z",
+                  "file": {
+                    "mimeType": "text/plain",
+                    "hashes": {
+                      "sha1Hash": "aaa",
+                      "sha256Hash": "bbb",
+                      "quickXorHash": "ccc",
+                      "crc32Hash": "ddd"
+                    }
+                  },
+                  "parentReference": {"id": "root", "driveId": "%s"},
+                  "createdBy": {"user": {"id": "user-1", "displayName": "Bot"}},
+                  "lastModifiedBy": {"user": {"id": "user-1", "displayName": "Bot"}}
+                }
+                """.formatted(id, name, name, name, driveId);
+    }
+
+    static String listItemFieldsJson() {
+        return """
+                {
+                  "fields": {
+                    "Title": "Notes",
+                    "Count": 3,
+                    "Flag": true,
+                    "When": "2024-03-02T00:00:00Z",
+                    "@odata.etag": "skip-me"
+                  }
+                }
+                """;
+    }
+
     static String folderJson(String id, String name, String driveId) {
         return """
                 {
