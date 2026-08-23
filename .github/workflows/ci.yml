@@ -17,6 +17,16 @@ jobs:
           java-version: "25"
       - run: ./gradlew --no-daemon build
 
+  buf:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: bufbuild/buf-setup-action@v1
+        with:
+          version: "1.54.0"
+      - name: buf lint STANDARD+COMMENTS
+        run: buf lint
+
   # Read-only live probes. Fork PRs never see secrets (job is skipped).
   # Same-repo PRs / pushes / dispatch run the job; if the secret is empty
   # the step exits 0 so a repo without credentials stays green.

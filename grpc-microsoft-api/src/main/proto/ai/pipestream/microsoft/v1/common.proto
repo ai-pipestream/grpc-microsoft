@@ -105,44 +105,67 @@ message MicrosoftEntity {
   google.protobuf.Timestamp ingested_at = 2;
   // The wrapped entity. Exactly one arm is set.
   oneof entity {
+    // Set when the wrapped entity is a SharePoint site.
     Site site = 10;
+    // Set when the wrapped entity is a drive.
     Drive drive = 11;
+    // Set when the wrapped entity is a file or folder.
     DriveItem drive_item = 12;
+    // Set when the wrapped entity is a Graph user.
     GraphUser user = 13;
   }
+  // Extensible key-value metadata (extension-metadata map - see convention).
   map<string, string> metadata = 99;
 }
 
 // Where a change record came from.
 enum ChangeSource {
+  // Zero value; the change source is unknown or was not recorded.
   CHANGE_SOURCE_UNSPECIFIED = 0;
+  // Full crawl of the drive.
   CHANGE_SOURCE_CRAWL = 1;
+  // Incremental sync driven by a Graph delta token.
   CHANGE_SOURCE_DELTA = 2;
 }
 
 // The kind of change applied to the wrapped entity.
 enum ChangeOperation {
+  // Zero value; the operation is unknown or was not recorded.
   CHANGE_OPERATION_UNSPECIFIED = 0;
+  // The entity was created or updated; the entity payload is present.
   CHANGE_OPERATION_UPSERT = 1;
+  // The entity was deleted; only the identity fields are meaningful.
   CHANGE_OPERATION_DELETE = 2;
 }
 
 // A full-sync marker for one completed drive sweep.
 message MicrosoftSnapshot {
+  // Unique id of this snapshot run (run id plus drive id).
   string snapshot_id = 1;
+  // Drive the sweep covered.
   string drive_id = 2;
+  // Number of entities emitted per kind (e.g. "file": 12, "folder": 3).
   map<string, int64> entity_counts = 3;
+  // Opaque cursor the sweep ended on.
   string cursor = 4;
+  // When the sweep started.
   google.protobuf.Timestamp started_at = 5;
+  // When the sweep completed (unset while the sweep is running).
   optional google.protobuf.Timestamp completed_at = 6;
 }
 
 // One upsert or delete against the Microsoft Graph mirror.
 message MicrosoftChange {
+  // Unique id of this change record.
   string change_id = 1;
+  // The kind of change (UPSERT carries the entity; DELETE is identity-only).
   ChangeOperation operation = 2;
+  // The entity payload (full for UPSERT; identity-only for DELETE).
   MicrosoftEntity entity = 3;
+  // The crawl run id (full crawl) or delta token (incremental).
   string cursor = 4;
+  // Where this change record came from.
   ChangeSource source = 5;
+  // When the change was observed.
   google.protobuf.Timestamp occurred_at = 6;
 }

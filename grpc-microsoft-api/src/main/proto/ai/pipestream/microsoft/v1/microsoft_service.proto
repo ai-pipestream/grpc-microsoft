@@ -11,6 +11,8 @@ option java_package = "ai.pipestream.microsoft.v1";
 // service are always registered alongside it.
 service MicrosoftService {
   // The signed-in user (delegated) or the configured application identity.
+  // App-only (client-credentials) tokens have no /me; the server reports
+  // FAILED_PRECONDITION in that case — ListSites is the cheap app-only probe.
   rpc GetMe(GetMeRequest) returns (GetMeResponse);
 
   // SharePoint sites the credentials can see (search query optional).
@@ -34,75 +36,112 @@ service MicrosoftService {
   rpc Sync(SyncRequest) returns (stream SyncResponse);
 }
 
+// Request for the signed-in Graph user.
 message GetMeRequest {
+  // Extensible key-value metadata (extension-metadata map - see convention).
   map<string, string> metadata = 99;
 }
 
+// The signed-in Graph user.
 message GetMeResponse {
+  // The user Graph returned for /me.
   GraphUser user = 1;
+  // Extensible key-value metadata (extension-metadata map - see convention).
   map<string, string> metadata = 99;
 }
 
+// Request to list SharePoint sites.
 message ListSitesRequest {
   // Search query; empty = list what Graph returns for an empty search.
   string query = 1;
+  // Maximum sites to return; 0 = no cap (the first Graph page only, as
+  // this unary rpc does not walk @odata.nextLink).
   int32 limit = 2;
+  // Extensible key-value metadata (extension-metadata map - see convention).
   map<string, string> metadata = 99;
 }
 
+// Sites the request matched.
 message ListSitesResponse {
+  // The matched sites.
   repeated Site sites = 1;
+  // Extensible key-value metadata (extension-metadata map - see convention).
   map<string, string> metadata = 99;
 }
 
+// Request to list drives of a site, or the signed-in user's drive.
 message ListDrivesRequest {
   // Site id; empty = the signed-in user's drive only.
   string site_id = 1;
+  // Extensible key-value metadata (extension-metadata map - see convention).
   map<string, string> metadata = 99;
 }
 
+// Drives the request matched.
 message ListDrivesResponse {
+  // The matched drives.
   repeated Drive drives = 1;
+  // Extensible key-value metadata (extension-metadata map - see convention).
   map<string, string> metadata = 99;
 }
 
+// Request to stream children of a folder.
 message ListChildrenRequest {
+  // Drive id whose folder is listed.
   string drive_id = 1;
   // Folder path; empty or "/" lists the drive root.
   string folder_path = 2;
+  // Extensible key-value metadata (extension-metadata map - see convention).
   map<string, string> metadata = 99;
 }
 
+// One streamed drive item.
 message ListChildrenResponse {
+  // The streamed child (file or folder).
   DriveItem item = 1;
 }
 
+// Request to read one drive item by id.
 message GetItemRequest {
+  // Drive id that owns the item.
   string drive_id = 1;
+  // Item id to fetch.
   string item_id = 2;
+  // Extensible key-value metadata (extension-metadata map - see convention).
   map<string, string> metadata = 99;
 }
 
+// The requested drive item (metadata).
 message GetItemResponse {
+  // The item Graph returned.
   DriveItem item = 1;
+  // Extensible key-value metadata (extension-metadata map - see convention).
   map<string, string> metadata = 99;
 }
 
+// Request to read one drive item, optionally inlining bytes.
 message DownloadItemRequest {
+  // Drive id that owns the item.
   string drive_id = 1;
+  // Item id to fetch.
   string item_id = 2;
   // When true, the binary is downloaded and inlined as DriveItem.content.
   // Refused with FAILED_PRECONDITION above MICROSOFT_ATTACHMENT_MAX_BYTES
   // (default 25 MiB).
   bool include_content = 3;
+  // Extensible key-value metadata (extension-metadata map - see convention).
   map<string, string> metadata = 99;
 }
 
+// The requested drive item (metadata always; bytes when include_content).
 message DownloadItemResponse {
+  // The item: metadata always, bytes when include_content was set.
   DriveItem item = 1;
+  // Extensible key-value metadata (extension-metadata map - see convention).
   map<string, string> metadata = 99;
 }
 
+// Request to run one bounded Graph sync pass.
 message SyncRequest {
   // Drive ids to sync; empty = the signed-in user's drive, or every drive
   // of the configured site when MICROSOFT_SITE_ID is set.
@@ -111,13 +150,23 @@ message SyncRequest {
   string folder_path = 2;
   // When true, file bytes are inlined on file items (size-capped).
   bool include_content = 3;
+  // Extensible key-value metadata (extension-metadata map - see convention).
   map<string, string> metadata = 99;
 }
 
+// One streamed sync event. The stream is exactly one bounded pass: zero or
+// more change events, one snapshot per completed drive sweep, then one
+// terminal resume_cursor.
 message SyncResponse {
+  // The streamed event: exactly one of a change, a snapshot, or the terminal
+  // resume cursor.
   oneof event {
+    // One entity upsert from the pass.
     MicrosoftChange change = 1;
+    // Full-crawl marker for one completed drive sweep.
     MicrosoftSnapshot snapshot = 2;
+    // Terminal message of every Sync stream: the cursor to persist for the
+    // next pass.
     string resume_cursor = 3;
   }
 }
