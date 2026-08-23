@@ -91,7 +91,7 @@ class SourceConnectorsTest {
         assertThat(records.get(0).topic()).isEqualTo("ms.changes");
         MicrosoftChange parsed = MicrosoftChange.parseFrom((byte[]) records.get(0).value());
         assertThat(parsed.getEntity().getEntityId()).isEqualTo("file-1");
-        assertThat(records.get(0).sourceOffset()).containsEntry("cursor", "cursor-9");
+        assertThat(records.get(0).sourceOffset().get("cursor")).isEqualTo("cursor-9");
     }
 
     @Test
