@@ -15,10 +15,21 @@ public final class OperationStatuses {
     private OperationStatuses() {
     }
 
+    /**
+     * A successful {@link OperationStatus} with an empty message.
+     *
+     * @return success with no message
+     */
     public static OperationStatus success() {
         return success("");
     }
 
+    /**
+     * A successful {@link OperationStatus} with {@code message}.
+     *
+     * @param message status message; {@code null} becomes empty
+     * @return success
+     */
     public static OperationStatus success(String message) {
         return OperationStatus.newBuilder()
                 .setResult(OperationResult.Success)
@@ -26,6 +37,13 @@ public final class OperationStatuses {
                 .build();
     }
 
+    /**
+     * An {@link OperationStatus} with {@code result} and {@code message}.
+     *
+     * @param result GCA result code
+     * @param message status message; {@code null} becomes empty
+     * @return the status
+     */
     public static OperationStatus of(OperationResult result, String message) {
         return OperationStatus.newBuilder()
                 .setResult(result)
@@ -33,6 +51,12 @@ public final class OperationStatuses {
                 .build();
     }
 
+    /**
+     * Maps a thrown failure onto a GCA {@link OperationStatus}.
+     *
+     * @param t the failure
+     * @return validation, auth, cancelled, or datasource error as appropriate
+     */
     public static OperationStatus fromThrowable(Throwable t) {
         if (t instanceof IllegalArgumentException e) {
             return of(OperationResult.ValidationFailure, e.getMessage());
@@ -47,6 +71,12 @@ public final class OperationStatuses {
         return of(OperationResult.DatasourceError, String.valueOf(t.getMessage()));
     }
 
+    /**
+     * Maps a gRPC {@link Status} onto a GCA {@link OperationStatus}.
+     *
+     * @param status the gRPC status
+     * @return the mapped GCA status, with retry hints for network errors
+     */
     public static OperationStatus fromStatus(Status status) {
         OperationResult result = switch (status.getCode()) {
             case UNAUTHENTICATED, PERMISSION_DENIED -> OperationResult.AuthenticationIssue;

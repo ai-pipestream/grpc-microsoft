@@ -29,10 +29,23 @@ import java.util.function.Consumer;
  */
 public final class GraphAuth {
 
-    /** Where tokens come from; override {@code authority} only in tests. */
+    /**
+     * Where tokens come from; override {@code authority} only in tests.
+     *
+     * @param authority Entra authority host; blank becomes
+     *        {@code https://login.microsoftonline.com}
+     * @param tenantId Microsoft Entra tenant id
+     * @param clientId application (client) id
+     * @param clientSecret client secret; {@code null} for delegated (device-code)
+     *        flows
+     */
     public record Config(String authority, String tenantId, String clientId,
                          String clientSecret) {
 
+        /**
+         * Defaults a blank {@code authority} to the public-cloud login host and
+         * requires {@code tenantId} and {@code clientId}.
+         */
         public Config {
             authority = authority == null || authority.isBlank()
                     ? "https://login.microsoftonline.com" : authority.replaceAll("/+$", "");
@@ -40,25 +53,59 @@ public final class GraphAuth {
             Objects.requireNonNull(clientId, "clientId");
         }
 
+        /**
+         * A public-client config for the device-code (delegated) flow.
+         *
+         * @param tenantId Microsoft Entra tenant id
+         * @param clientId application (client) id
+         * @return a config with no client secret
+         */
         public static Config delegated(String tenantId, String clientId) {
             return new Config(null, tenantId, clientId, null);
         }
 
+        /**
+         * A confidential-client config for the client-credentials flow.
+         *
+         * @param tenantId Microsoft Entra tenant id
+         * @param clientId application (client) id
+         * @param clientSecret client secret
+         * @return a config with a required client secret
+         */
         public static Config application(String tenantId, String clientId, String clientSecret) {
             return new Config(null, tenantId, clientId,
                     Objects.requireNonNull(clientSecret, "clientSecret"));
         }
     }
 
-    /** An issued token; {@code refreshToken} is null in the client-credentials flow. */
+    /**
+     * An issued token; {@code refreshToken} is null in the client-credentials
+     * flow.
+     *
+     * @param accessToken bearer token for Graph
+     * @param expiresAt when the access token expires
+     * @param refreshToken delegated refresh token; {@code null} for client
+     *        credentials
+     */
     public record Token(String accessToken, Instant expiresAt, String refreshToken) {
 
+        /**
+         * Whether the access token is expired or within 60 seconds of expiry.
+         *
+         * @return {@code true} when a refresh is due
+         */
         public boolean expired() {
             return Instant.now().isAfter(expiresAt.minusSeconds(60));
         }
     }
 
-    /** What the operator must do to finish a device-code sign-in. */
+    /**
+     * What the operator must do to finish a device-code sign-in.
+     *
+     * @param verificationUri URL the operator opens
+     * @param userCode code the operator enters there
+     * @param message human-readable instruction from Entra
+     */
     public record DeviceCodePrompt(String verificationUri, String userCode, String message) {
     }
 
@@ -67,6 +114,11 @@ public final class GraphAuth {
     private final Config config;
     private final HttpClient http;
 
+    /**
+     * Builds an auth helper with a default HTTP client.
+     *
+     * @param config tenant, client, and optional secret
+     */
     public GraphAuth(Config config) {
         this(config, HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(20)).build());
     }
@@ -76,7 +128,13 @@ public final class GraphAuth {
         this.http = http;
     }
 
-    /** Application permissions against {@code https://graph.microsoft.com/.default}. */
+    /**
+     * Application permissions against {@code https://graph.microsoft.com/.default}.
+     *
+     * @return an access token with no refresh token
+     * @throws IOException if the token endpoint fails
+     * @throws InterruptedException if the HTTP call is interrupted
+     */
     public Token clientCredentials() throws IOException, InterruptedException {
         if (config.clientSecret() == null) {
             throw new IllegalStateException("The client-credentials flow needs a clientSecret");
@@ -93,6 +151,12 @@ public final class GraphAuth {
      * Delegated sign-in: surfaces the verification URL and code through {@code prompt},
      * then blocks (polling at the server-directed interval) until the operator approves,
      * the code expires, or the flow is denied.
+     *
+     * @param scope OAuth2 scope string (space-separated)
+     * @param prompt called once with the URL and user code to display
+     * @return an access token plus refresh token
+     * @throws IOException if the flow fails or expires unapproved
+     * @throws InterruptedException if polling sleep or HTTP is interrupted
      */
     public Token deviceCode(String scope, Consumer<DeviceCodePrompt> prompt)
             throws IOException, InterruptedException {
@@ -132,7 +196,15 @@ public final class GraphAuth {
         throw new IOException("Device-code sign-in expired before it was approved");
     }
 
-    /** Exchanges a delegated refresh token for a fresh access token. */
+    /**
+     * Exchanges a delegated refresh token for a fresh access token.
+     *
+     * @param refreshToken refresh token from a prior device-code sign-in
+     * @param scope OAuth2 scope string (space-separated)
+     * @return a fresh access token, possibly with a rotated refresh token
+     * @throws IOException if the token endpoint fails
+     * @throws InterruptedException if the HTTP call is interrupted
+     */
     public Token refresh(String refreshToken, String scope)
             throws IOException, InterruptedException {
         JsonNode response = postForm(tokenEndpoint(), Map.of(

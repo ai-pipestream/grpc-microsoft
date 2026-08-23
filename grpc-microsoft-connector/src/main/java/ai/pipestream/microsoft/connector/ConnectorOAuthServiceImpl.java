@@ -15,6 +15,10 @@ import microsoft.graph.connectors.contracts.grpc.RefreshAccessTokenResponse;
 public final class ConnectorOAuthServiceImpl
         extends ConnectorOAuthServiceGrpc.ConnectorOAuthServiceImplBase {
 
+    /** Creates the GCA service implementation. */
+    public ConnectorOAuthServiceImpl() {
+    }
+
     @Override
     public void refreshAccessToken(RefreshAccessTokenRequest request,
             StreamObserver<RefreshAccessTokenResponse> observer) {

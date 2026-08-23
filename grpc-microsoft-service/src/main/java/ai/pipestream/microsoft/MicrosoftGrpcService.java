@@ -38,6 +38,7 @@ import java.util.Objects;
  */
 public final class MicrosoftGrpcService extends MicrosoftServiceGrpc.MicrosoftServiceImplBase {
 
+    /** Default cap for inlined file bytes: 25 MiB. */
     public static final long DEFAULT_ATTACHMENT_MAX_BYTES = 25L * 1024 * 1024;
 
     private static final MicrosoftValidator VALIDATOR = MicrosoftValidator.create();
@@ -48,11 +49,28 @@ public final class MicrosoftGrpcService extends MicrosoftServiceGrpc.MicrosoftSe
     private final long attachmentMaxBytes;
     private final MicrosoftChangeSink downstream;
 
+    /**
+     * Creates a service with no downstream {@link MicrosoftChangeSink}.
+     *
+     * @param config connector config
+     * @param files the authorized files API
+     * @param attachmentMaxBytes inline file byte cap; must be positive
+     */
     public MicrosoftGrpcService(MicrosoftConnectorConfig config, GraphFiles files,
             long attachmentMaxBytes) {
         this(config, files, attachmentMaxBytes, null);
     }
 
+    /**
+     * Creates a service. When {@code downstream} is non-null, {@code Sync} also
+     * fans out to that sink.
+     *
+     * @param config connector config
+     * @param files the authorized files API
+     * @param attachmentMaxBytes inline file byte cap; must be positive
+     * @param downstream optional extra sink for {@code Sync} emissions;
+     *        {@code null} for none
+     */
     public MicrosoftGrpcService(MicrosoftConnectorConfig config, GraphFiles files,
             long attachmentMaxBytes, MicrosoftChangeSink downstream) {
         this.config = Objects.requireNonNull(config, "config");

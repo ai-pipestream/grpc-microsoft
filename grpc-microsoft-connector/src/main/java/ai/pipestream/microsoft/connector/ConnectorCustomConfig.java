@@ -24,6 +24,12 @@ import java.util.Objects;
  *   "includeContent": false
  * }
  * </pre>
+ *
+ * @param target MicrosoftService gRPC {@code host:port}
+ * @param plaintext {@code true} when the MicrosoftService channel is plaintext
+ * @param driveIds drive ids forwarded on {@code Sync}; empty = service default
+ * @param folderPath folder path forwarded on {@code Sync}; default {@code "/"}
+ * @param includeContent whether Sync should inline file bytes
  */
 public record ConnectorCustomConfig(
         String target,
@@ -32,12 +38,19 @@ public record ConnectorCustomConfig(
         String folderPath,
         boolean includeContent) {
 
+    /** Environment variable for the MicrosoftService gRPC target ({@code host:port}). */
     public static final String ENV_TARGET = "MICROSOFT_GRPC_TARGET";
+    /** Environment variable for plaintext gRPC ({@code true}/{@code false}). */
     public static final String ENV_PLAINTEXT = "MICROSOFT_GRPC_PLAINTEXT";
+    /** Default MicrosoftService target when neither JSON nor env supplies one. */
     public static final String DEFAULT_TARGET = "localhost:9096";
 
     private static final ObjectMapper JSON = new ObjectMapper();
 
+    /**
+     * Trims {@code target}, copies {@code driveIds}, and defaults a blank
+     * {@code folderPath} to {@code "/"}.
+     */
     public ConnectorCustomConfig {
         if (target == null || target.isBlank()) {
             throw new IllegalArgumentException("target is required (gRPC host:port of MicrosoftService)");
@@ -53,6 +66,12 @@ public record ConnectorCustomConfig(
         }
     }
 
+    /**
+     * Config from process environment and {@link #DEFAULT_TARGET}, with no JSON
+     * overlay.
+     *
+     * @return the default config
+     */
     public static ConnectorCustomConfig defaults() {
         return parse("", null);
     }
@@ -66,6 +85,7 @@ public record ConnectorCustomConfig(
      *        is the SharePoint / Graph location); accepted so callers can
      *        pass the AuthenticationData field through without a second
      *        parse
+     * @return the resolved config
      */
     public static ConnectorCustomConfig parse(String configuration, String datasourceUrl) {
         String target = firstNonBlank(System.getenv(ENV_TARGET), DEFAULT_TARGET);

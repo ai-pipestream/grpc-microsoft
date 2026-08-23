@@ -28,6 +28,7 @@ import java.util.UUID;
  */
 public final class MicrosoftCrawler {
 
+    /** Default cap for inlined file bytes: 25 MiB. */
     public static final long DEFAULT_ATTACHMENT_MAX_BYTES = 25L * 1024 * 1024;
 
     private final MicrosoftConnectorConfig config;
@@ -37,11 +38,29 @@ public final class MicrosoftCrawler {
     private final long attachmentMaxBytes;
     private final boolean includeContent;
 
+    /**
+     * Creates a crawler that maps Graph entities and emits them to {@code sink},
+     * without inlining file bytes.
+     *
+     * @param config crawl scope and credentials
+     * @param files the authorized files API
+     * @param sink where changes and snapshots go
+     */
     public MicrosoftCrawler(MicrosoftConnectorConfig config, GraphFiles files,
             MicrosoftChangeSink sink) {
         this(config, files, sink, DEFAULT_ATTACHMENT_MAX_BYTES, false);
     }
 
+    /**
+     * Creates a crawler. When {@code includeContent} is {@code true}, file
+     * bytes up to {@code attachmentMaxBytes} are inlined on each drive item.
+     *
+     * @param config crawl scope and credentials
+     * @param files the authorized files API
+     * @param sink where changes and snapshots go
+     * @param attachmentMaxBytes inline file byte cap; must be positive
+     * @param includeContent whether to fetch file content
+     */
     public MicrosoftCrawler(MicrosoftConnectorConfig config, GraphFiles files,
             MicrosoftChangeSink sink, long attachmentMaxBytes, boolean includeContent) {
         this.config = Objects.requireNonNull(config, "config");
@@ -55,7 +74,12 @@ public final class MicrosoftCrawler {
         this.includeContent = includeContent;
     }
 
-    /** Full crawl of the configured drives (or the signed-in user's drive). */
+    /**
+     * A full crawl of the configured drives (or the signed-in user's drive).
+     *
+     * @throws IOException if a Graph call fails
+     * @throws InterruptedException if the calling thread is interrupted while waiting
+     */
     public void crawl() throws IOException, InterruptedException {
         String runId = UUID.randomUUID().toString();
         for (Drive drive : listDrives()) {

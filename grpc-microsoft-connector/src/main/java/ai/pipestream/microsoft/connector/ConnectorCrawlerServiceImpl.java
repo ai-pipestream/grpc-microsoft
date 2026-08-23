@@ -28,6 +28,10 @@ import java.util.Optional;
 public final class ConnectorCrawlerServiceImpl
         extends ConnectorCrawlerServiceGrpc.ConnectorCrawlerServiceImplBase {
 
+    /** Creates the GCA service implementation. */
+    public ConnectorCrawlerServiceImpl() {
+    }
+
     private static final System.Logger LOG =
             System.getLogger(ConnectorCrawlerServiceImpl.class.getName());
 

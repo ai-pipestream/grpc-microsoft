@@ -15,6 +15,10 @@ import microsoft.graph.connectors.contracts.grpc.HealthCheckResponse;
 public final class ConnectorInfoServiceImpl
         extends ConnectorInfoServiceGrpc.ConnectorInfoServiceImplBase {
 
+    /** Creates the GCA service implementation. */
+    public ConnectorInfoServiceImpl() {
+    }
+
     @Override
     public void getBasicConnectorInfo(GetBasicConnectorInfoRequest request,
             StreamObserver<GetBasicConnectorInfoResponse> observer) {

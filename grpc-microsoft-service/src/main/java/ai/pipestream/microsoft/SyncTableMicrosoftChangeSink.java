@@ -25,8 +25,11 @@ import java.util.concurrent.TimeUnit;
 /** Writes Microsoft Graph changes into {@code SyncTableService}. */
 public final class SyncTableMicrosoftChangeSink implements MicrosoftChangeSink, AutoCloseable {
 
+    /** Asset {@code source} written for every Microsoft Graph row. */
     public static final String SOURCE = "microsoft";
+    /** Environment variable for the {@code SyncTableService} target. */
     public static final String ENV_TARGET = "SYNC_TABLE_TARGET";
+    /** Environment variable; {@code false} disables plaintext on the channel. */
     public static final String ENV_PLAINTEXT = "SYNC_TABLE_PLAINTEXT";
 
     private static final System.Logger LOG =
@@ -35,16 +38,31 @@ public final class SyncTableMicrosoftChangeSink implements MicrosoftChangeSink, 
     private final ManagedChannel channel;
     private final SyncTableServiceGrpc.SyncTableServiceBlockingStub stub;
 
+    /**
+     * Creates a sink over an existing channel (takes ownership for {@link #close()}).
+     *
+     * @param channel the gRPC channel to {@code SyncTableService}
+     */
     public SyncTableMicrosoftChangeSink(ManagedChannel channel) {
         this.channel = Objects.requireNonNull(channel, "channel");
         this.stub = SyncTableServiceGrpc.newBlockingStub(channel);
     }
 
+    /**
+     * Whether sync-table publishing is configured in the process environment.
+     *
+     * @return {@code true} when {@link #ENV_TARGET} is set
+     */
     public static boolean enabled() {
         String target = System.getenv(ENV_TARGET);
         return target != null && !target.isBlank();
     }
 
+    /**
+     * Builds a sink from {@code SYNC_TABLE_*} environment variables.
+     *
+     * @return a sink connected to the configured target
+     */
     public static SyncTableMicrosoftChangeSink fromEnvironment() {
         String target = System.getenv(ENV_TARGET);
         if (target == null || target.isBlank()) {
@@ -155,6 +173,7 @@ public final class SyncTableMicrosoftChangeSink implements MicrosoftChangeSink, 
                 : AssetPhase.ASSET_PHASE_UPDATE;
     }
 
+    /** Shuts down the underlying channel. */
     @Override
     public void close() {
         channel.shutdown();

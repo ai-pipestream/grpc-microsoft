@@ -20,6 +20,16 @@ import java.time.format.DateTimeParseException;
  */
 public final class MicrosoftMapper {
 
+    /** Creates a mapper. */
+    public MicrosoftMapper() {
+    }
+
+    /**
+     * Maps a Graph site JSON object to the domain proto.
+     *
+     * @param node the API object
+     * @return the proto; missing fields stay unset
+     */
     public Site toSite(JsonNode node) {
         return Site.newBuilder()
                 .setId(text(node, "id"))
@@ -29,6 +39,12 @@ public final class MicrosoftMapper {
                 .build();
     }
 
+    /**
+     * Maps a Graph drive JSON object to the domain proto.
+     *
+     * @param node the API object
+     * @return the proto; missing fields stay unset
+     */
     public Drive toDrive(JsonNode node) {
         return Drive.newBuilder()
                 .setId(text(node, "id"))
@@ -38,6 +54,13 @@ public final class MicrosoftMapper {
                 .build();
     }
 
+    /**
+     * Maps a Graph drive JSON object and sets {@code siteId} when non-blank.
+     *
+     * @param node the API object
+     * @param siteId parent SharePoint site id; blank leaves the field unset
+     * @return the proto
+     */
     public Drive toDrive(JsonNode node, String siteId) {
         Drive.Builder b = toDrive(node).toBuilder();
         if (siteId != null && !siteId.isBlank()) {
@@ -46,6 +69,12 @@ public final class MicrosoftMapper {
         return b.build();
     }
 
+    /**
+     * Maps a Graph user JSON object to the domain proto.
+     *
+     * @param node the API object
+     * @return the proto; missing fields stay unset
+     */
     public GraphUser toUser(JsonNode node) {
         return GraphUser.newBuilder()
                 .setId(text(node, "id"))
@@ -55,6 +84,13 @@ public final class MicrosoftMapper {
                 .build();
     }
 
+    /**
+     * Maps a Graph driveItem JSON object to the domain proto.
+     *
+     * @param node the API object
+     * @param driveId parent drive id when the JSON omits {@code parentReference}
+     * @return the proto; missing fields stay unset
+     */
     public DriveItem toDriveItem(JsonNode node, String driveId) {
         DriveItem.Builder b = DriveItem.newBuilder()
                 .setId(text(node, "id"))
@@ -113,6 +149,14 @@ public final class MicrosoftMapper {
                 .build();
     }
 
+    /**
+     * RFC3339 / ISO-8601 to Timestamp. Tolerant of offset forms
+     * ({@code +00:00} as well as {@code Z}); blank or unparseable input
+     * yields null so the field stays unset.
+     *
+     * @param rfc3339 an RFC3339 / ISO-8601 timestamp, or blank
+     * @return the proto timestamp, or {@code null} when input is blank or unparseable
+     */
     public static Timestamp timestamp(String rfc3339) {
         if (rfc3339 == null || rfc3339.isBlank()) {
             return null;

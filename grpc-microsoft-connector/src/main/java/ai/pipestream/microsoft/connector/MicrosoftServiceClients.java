@@ -15,6 +15,12 @@ public final class MicrosoftServiceClients {
     private MicrosoftServiceClients() {
     }
 
+    /**
+     * Opens a channel to {@code config}'s MicrosoftService target.
+     *
+     * @param config target and plaintext flag
+     * @return a new channel; caller must {@link #shutdown(ManagedChannel)}
+     */
     public static ManagedChannel channel(ConnectorCustomConfig config) {
         ManagedChannelBuilder<?> builder = ManagedChannelBuilder.forTarget(config.target());
         if (config.plaintext()) {
@@ -23,10 +29,21 @@ public final class MicrosoftServiceClients {
         return builder.build();
     }
 
+    /**
+     * A blocking stub on {@code channel}.
+     *
+     * @param channel an open MicrosoftService channel
+     * @return a blocking stub
+     */
     public static MicrosoftServiceGrpc.MicrosoftServiceBlockingStub stub(ManagedChannel channel) {
         return MicrosoftServiceGrpc.newBlockingStub(channel);
     }
 
+    /**
+     * Shuts {@code channel} down, interrupting if it does not terminate promptly.
+     *
+     * @param channel the channel to close; {@code null} is ignored
+     */
     public static void shutdown(ManagedChannel channel) {
         if (channel == null) {
             return;

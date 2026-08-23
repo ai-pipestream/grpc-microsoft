@@ -19,8 +19,11 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 public final class MicrosoftServer {
 
+    /** Environment variable for the gRPC listen port. */
     public static final String ENV_GRPC_PORT = "MICROSOFT_GRPC_PORT";
+    /** Environment variable for the inline file byte cap. */
     public static final String ENV_ATTACHMENT_MAX_BYTES = "MICROSOFT_ATTACHMENT_MAX_BYTES";
+    /** Default gRPC listen port when {@link #ENV_GRPC_PORT} is unset. */
     public static final int DEFAULT_GRPC_PORT = 9096;
 
     private static final System.Logger LOG = System.getLogger(MicrosoftServer.class.getName());
@@ -28,6 +31,12 @@ public final class MicrosoftServer {
     private MicrosoftServer() {
     }
 
+    /**
+     * Starts the proxy from the process environment and blocks until shutdown.
+     *
+     * @param args unused
+     * @throws Exception if the server cannot start or is interrupted
+     */
     public static void main(String[] args) throws Exception {
         MicrosoftConnectorConfig config = MicrosoftConnectorConfig.fromEnvironment();
         GraphAuth auth = new GraphAuth(config.authConfig());
@@ -82,6 +91,14 @@ public final class MicrosoftServer {
         server.awaitTermination();
     }
 
+    /**
+     * Binds {@code service} on Netty with reflection, health, and a virtual-thread executor.
+     *
+     * @param service the gRPC service to serve
+     * @param port the listen port
+     * @return the started server
+     * @throws IOException if the port cannot be bound
+     */
     public static Server startNetty(BindableService service, int port) throws IOException {
         HealthStatusManager health = new HealthStatusManager();
         Server server = NettyServerBuilder.forPort(port)

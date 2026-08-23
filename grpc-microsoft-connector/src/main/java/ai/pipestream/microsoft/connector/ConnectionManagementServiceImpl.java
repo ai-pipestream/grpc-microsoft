@@ -23,6 +23,10 @@ import microsoft.graph.connectors.contracts.grpc.ValidateCustomConfigurationResp
 public final class ConnectionManagementServiceImpl
         extends ConnectionManagementServiceGrpc.ConnectionManagementServiceImplBase {
 
+    /** Creates the GCA service implementation. */
+    public ConnectionManagementServiceImpl() {
+    }
+
     @Override
     public void validateAuthentication(ValidateAuthenticationRequest request,
             StreamObserver<ValidateAuthenticationResponse> observer) {

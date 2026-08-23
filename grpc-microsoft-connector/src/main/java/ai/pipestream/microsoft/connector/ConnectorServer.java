@@ -26,7 +26,9 @@ import java.util.concurrent.TimeUnit;
  */
 public final class ConnectorServer {
 
+    /** Environment variable for the listen port. */
     public static final String ENV_GRPC_PORT = "CONNECTOR_GRPC_PORT";
+    /** Default GCA template listen port. */
     public static final int DEFAULT_GRPC_PORT = 30303;
 
     private static final System.Logger LOG = System.getLogger(ConnectorServer.class.getName());
@@ -34,6 +36,12 @@ public final class ConnectorServer {
     private ConnectorServer() {
     }
 
+    /**
+     * Starts the connector process and blocks until shutdown.
+     *
+     * @param args unused
+     * @throws Exception if the server fails to start or is interrupted
+     */
     public static void main(String[] args) throws Exception {
         Server server = startNetty(parseInt(System.getenv(ENV_GRPC_PORT), DEFAULT_GRPC_PORT));
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
@@ -55,6 +63,14 @@ public final class ConnectorServer {
         server.awaitTermination();
     }
 
+    /**
+     * Starts a Netty gRPC server on {@code port} with the four GCA services,
+     * health, and reflection.
+     *
+     * @param port listen port
+     * @return the started server
+     * @throws IOException if the port cannot be bound
+     */
     public static Server startNetty(int port) throws IOException {
         HealthStatusManager health = new HealthStatusManager();
         Server server = NettyServerBuilder.forPort(port)

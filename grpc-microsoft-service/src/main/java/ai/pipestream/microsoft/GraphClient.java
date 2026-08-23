@@ -29,8 +29,11 @@ public final class GraphClient {
         /** {@link #status()} for a failure Graph never expressed as an HTTP status. */
         public static final int NO_HTTP_STATUS = 0;
 
+        /** HTTP status of the failing response, or {@link #NO_HTTP_STATUS}. */
         private final int status;
+        /** Graph error {@code code} field, or empty. */
         private final String code;
+        /** Raw error response body. */
         private final String body;
 
         GraphApiException(int status, String code, String message) {
@@ -50,16 +53,27 @@ public final class GraphClient {
          * failure was not an HTTP one — an async operation that reported failure, or one this
          * client stopped waiting on. Both arrive over a 200 poll, so reporting 200 would name
          * a success.
+         *
+         * @return the HTTP status, or {@link #NO_HTTP_STATUS}
          */
         public int status() {
             return status;
         }
 
+        /**
+         * Graph's error {@code code} field, or empty when the body had none.
+         *
+         * @return the Graph error code
+         */
         public String code() {
             return code;
         }
 
-        /** Graph's full error response body; {@code innerError} often names the real cause. */
+        /**
+         * Graph's full error response body; {@code innerError} often names the real cause.
+         *
+         * @return the raw body; empty when none was captured
+         */
         public String body() {
             return body;
         }
@@ -72,21 +86,48 @@ public final class GraphClient {
     private final Supplier<String> bearer;
     private final HttpClient http;
 
+    /**
+     * Builds a client against the public Graph v1.0 endpoint.
+     *
+     * @param bearer supplies a current access token for each request
+     */
     public GraphClient(Supplier<String> bearer) {
         this("https://graph.microsoft.com/v1.0", bearer);
     }
 
-    /** {@code baseUrl} is overridable for tests and national-cloud endpoints. */
+    /**
+     * Builds a client against {@code baseUrl} (tests and national-cloud
+     * endpoints).
+     *
+     * @param baseUrl Graph root URL, no trailing slash required
+     * @param bearer supplies a current access token for each request
+     */
     public GraphClient(String baseUrl, Supplier<String> bearer) {
         this.baseUrl = Objects.requireNonNull(baseUrl, "baseUrl").replaceAll("/+$", "");
         this.bearer = Objects.requireNonNull(bearer, "bearer");
         this.http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(20)).build();
     }
 
+    /**
+     * GET {@code path} (relative to the base URL, or an absolute URL) as JSON.
+     *
+     * @param path Graph path or absolute URL
+     * @return the JSON body; an empty object when the body is blank
+     * @throws IOException if Graph returns an error or the body is not JSON
+     * @throws InterruptedException if the HTTP call is interrupted
+     */
     public JsonNode get(String path) throws IOException, InterruptedException {
         return json(send(request(path).GET().build(), HttpResponse.BodyHandlers.ofString()));
     }
 
+    /**
+     * GET {@code path} as raw bytes (file content downloads).
+     *
+     * @param path Graph path or absolute URL
+     * @return the response body bytes
+     * @throws IOException if Graph returns an error
+     * @throws InterruptedException if the HTTP call is interrupted
+     */
     public byte[] getBytes(String path) throws IOException, InterruptedException {
         HttpResponse<byte[]> response = send(request(path).GET().build(),
                 HttpResponse.BodyHandlers.ofByteArray());
@@ -97,6 +138,15 @@ public final class GraphClient {
         return response.body();
     }
 
+    /**
+     * POST JSON to {@code path}.
+     *
+     * @param path Graph path or absolute URL
+     * @param body JSON request body
+     * @return the JSON response body
+     * @throws IOException if Graph returns an error
+     * @throws InterruptedException if the HTTP call is interrupted
+     */
     public JsonNode post(String path, JsonNode body) throws IOException, InterruptedException {
         return json(send(request(path)
                         .header("content-type", "application/json")
@@ -104,7 +154,15 @@ public final class GraphClient {
                 HttpResponse.BodyHandlers.ofString()));
     }
 
-    /** POST that answers 202 with a Location header (Graph's async operations). */
+    /**
+     * POST that answers 202 with a Location header (Graph's async operations).
+     *
+     * @param path Graph path or absolute URL
+     * @param body JSON request body
+     * @return the {@code Location} header when present
+     * @throws IOException if Graph returns an error
+     * @throws InterruptedException if the HTTP call is interrupted
+     */
     public Optional<String> postAsync(String path, JsonNode body)
             throws IOException, InterruptedException {
         HttpResponse<String> response = send(request(path)
@@ -117,6 +175,15 @@ public final class GraphClient {
         return response.headers().firstValue("Location");
     }
 
+    /**
+     * PATCH JSON at {@code path}.
+     *
+     * @param path Graph path or absolute URL
+     * @param body JSON request body
+     * @return the JSON response body
+     * @throws IOException if Graph returns an error
+     * @throws InterruptedException if the HTTP call is interrupted
+     */
     public JsonNode patch(String path, JsonNode body) throws IOException, InterruptedException {
         return json(send(request(path)
                         .header("content-type", "application/json")
@@ -125,6 +192,15 @@ public final class GraphClient {
                 HttpResponse.BodyHandlers.ofString()));
     }
 
+    /**
+     * PUT JSON at {@code path}.
+     *
+     * @param path Graph path or absolute URL
+     * @param body JSON request body
+     * @return the JSON response body
+     * @throws IOException if Graph returns an error
+     * @throws InterruptedException if the HTTP call is interrupted
+     */
     public JsonNode put(String path, JsonNode body) throws IOException, InterruptedException {
         return json(send(request(path)
                         .header("content-type", "application/json")
@@ -132,6 +208,16 @@ public final class GraphClient {
                 HttpResponse.BodyHandlers.ofString()));
     }
 
+    /**
+     * PUT raw bytes at {@code path} with {@code contentType}.
+     *
+     * @param path Graph path or absolute URL
+     * @param content body bytes
+     * @param contentType {@code Content-Type} header value
+     * @return the JSON response body
+     * @throws IOException if Graph returns an error
+     * @throws InterruptedException if the HTTP call is interrupted
+     */
     public JsonNode putBytes(String path, byte[] content, String contentType)
             throws IOException, InterruptedException {
         return json(send(request(path)
@@ -140,6 +226,13 @@ public final class GraphClient {
                 HttpResponse.BodyHandlers.ofString()));
     }
 
+    /**
+     * DELETE {@code path}.
+     *
+     * @param path Graph path or absolute URL
+     * @throws IOException if Graph returns an error
+     * @throws InterruptedException if the HTTP call is interrupted
+     */
     public void delete(String path) throws IOException, InterruptedException {
         HttpResponse<String> response = send(request(path).DELETE().build(),
                 HttpResponse.BodyHandlers.ofString());
@@ -148,7 +241,15 @@ public final class GraphClient {
         }
     }
 
-    /** Follows an async-operation URL until it reports {@code completed} (or fails). */
+    /**
+     * Follows an async-operation URL until it reports {@code completed} (or fails).
+     *
+     * @param operationUrl Graph operation monitor URL
+     * @param timeout how long to poll before giving up
+     * @return the completed operation JSON
+     * @throws IOException if Graph reports failure or the wait times out
+     * @throws InterruptedException if polling sleep or HTTP is interrupted
+     */
     public JsonNode awaitOperation(String operationUrl, Duration timeout)
             throws IOException, InterruptedException {
         long deadline = System.nanoTime() + timeout.toNanos();

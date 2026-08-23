@@ -12,19 +12,33 @@ import microsoft.graph.connectors.contracts.grpc.SourcePropertyDefinition.Source
  */
 public final class DataSourceSchemas {
 
+    /** Display name of the drive item. */
     public static final String TITLE = "Title";
+    /** File or folder name. */
     public static final String FILE_NAME = "FileName";
+    /** File extension without the leading dot. */
     public static final String FILE_EXTENSION = "FileExtension";
+    /** Browser URL of the item. */
     public static final String WEB_URL = "WebUrl";
+    /** When the item was created. */
     public static final String CREATED = "Created";
+    /** When the item was last modified. */
     public static final String LAST_MODIFIED = "LastModified";
+    /** User who created the item. */
     public static final String CREATED_BY = "CreatedBy";
+    /** User who last modified the item. */
     public static final String LAST_MODIFIED_BY = "LastModifiedBy";
+    /** MIME type when the item is a file. */
     public static final String MIME_TYPE = "MimeType";
+    /** Size in bytes; 0 for folders. */
     public static final String SIZE = "Size";
+    /** Parent drive-item id. */
     public static final String PARENT_ID = "ParentId";
+    /** Parent drive id. */
     public static final String DRIVE_ID = "DriveId";
+    /** {@code true} when the item is a folder. */
     public static final String FOLDER = "Folder";
+    /** {@code file} or {@code folder}. */
     public static final String ITEM_TYPE = "ItemType";
 
     private static final int SEARCHABLE_QUERYABLE_RETRIEVABLE =
@@ -37,6 +51,11 @@ public final class DataSourceSchemas {
     private DataSourceSchemas() {
     }
 
+    /**
+     * The drive-item {@link DataSourceSchema} registered on the connection.
+     *
+     * @return the schema GCA stores
+     */
     public static DataSourceSchema driveItem() {
         return DataSourceSchema.newBuilder()
                 .addPropertyList(property(TITLE, SourcePropertyType.String,

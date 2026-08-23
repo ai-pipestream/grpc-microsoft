@@ -32,6 +32,14 @@ public final class CrawlItemMapper {
     private CrawlItemMapper() {
     }
 
+    /**
+     * Maps a non-delete {@link MicrosoftChange} to a full-crawl {@link CrawlItem}.
+     * Deletes are skipped; GCA full crawls do not carry deleted items.
+     *
+     * @param change a Sync change event
+     * @return the crawl item, or empty when the change is a delete or not a
+     *         drive item
+     */
     public static Optional<CrawlItem> toCrawlItem(MicrosoftChange change) {
         if (change.getOperation() == ChangeOperation.CHANGE_OPERATION_DELETE) {
             return Optional.empty();
@@ -39,6 +47,14 @@ public final class CrawlItemMapper {
         return driveItem(change).map(CrawlItemMapper::toCrawlItem);
     }
 
+    /**
+     * Maps a {@link MicrosoftChange} to an incremental crawl item, including
+     * deletes.
+     *
+     * @param change a Sync change event
+     * @return the incremental item, or empty when the entity is missing or not a
+     *         drive item
+     */
     public static Optional<IncrementalCrawlItem> toIncrementalCrawlItem(MicrosoftChange change) {
         if (change.getOperation() == ChangeOperation.CHANGE_OPERATION_DELETE) {
             String itemId = change.getEntity().getEntityId();
@@ -54,6 +70,12 @@ public final class CrawlItemMapper {
         return driveItem(change).map(CrawlItemMapper::toIncrementalContent);
     }
 
+    /**
+     * Maps a {@link DriveItem} to a GCA {@link CrawlItem} content item.
+     *
+     * @param item the drive item
+     * @return the crawl item
+     */
     public static CrawlItem toCrawlItem(DriveItem item) {
         return CrawlItem.newBuilder()
                 .setItemType(CrawlItem.ItemType.ContentItem)

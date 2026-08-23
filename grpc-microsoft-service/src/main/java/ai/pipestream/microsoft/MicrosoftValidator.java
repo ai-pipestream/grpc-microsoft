@@ -29,22 +29,46 @@ public final class MicrosoftValidator {
     private MicrosoftValidator() {
     }
 
+    /**
+     * Returns the shared validator.
+     *
+     * @return the singleton instance
+     */
     public static MicrosoftValidator create() {
         return INSTANCE;
     }
 
+    /**
+     * One rule failure: proto field path, rule id, and human message.
+     *
+     * @param path the proto field path, empty for the message itself
+     * @param ruleId a stable rule identifier
+     * @param message a human-readable failure
+     */
     public record Violation(String path, String ruleId, String message) {
     }
 
+    /**
+     * The collected violations for one message (empty = valid).
+     *
+     * @param violations the failures; copied
+     */
     public record ValidationResult(List<Violation> violations) {
+        /** Validates and normalizes fields. */
         public ValidationResult {
             violations = List.copyOf(violations);
         }
 
+        /**
+         * Whether the message passed every rule.
+         *
+         * @return {@code true} when {@code violations} is empty
+         */
         public boolean isValid() {
             return violations.isEmpty();
         }
 
+        /** Throws {@code FAILED_PRECONDITION} when this result is not valid. */
         public void throwIfInvalid() {
             if (violations.isEmpty()) {
                 return;
@@ -59,12 +83,23 @@ public final class MicrosoftValidator {
         }
     }
 
+    /**
+     * Checks {@code message} against the domain rules.
+     *
+     * @param message a Microsoft Graph domain proto
+     * @return the collected violations (empty when valid)
+     */
     public ValidationResult validate(Message message) {
         List<Violation> violations = new ArrayList<>();
         visit("", message, violations);
         return new ValidationResult(violations);
     }
 
+    /**
+     * Validates {@code message} and throws if any rule fails.
+     *
+     * @param message a Microsoft Graph domain proto
+     */
     public void requireValid(Message message) {
         validate(message).throwIfInvalid();
     }

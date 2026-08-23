@@ -9,10 +9,26 @@ import ai.pipestream.microsoft.v1.MicrosoftSnapshot;
  */
 public interface MicrosoftChangeSink {
 
+    /**
+     * One upsert or delete against the Microsoft Graph mirror.
+     *
+     * @param change the change to emit
+     */
     void emit(MicrosoftChange change);
 
+    /**
+     * The full-sync marker for one completed drive crawl.
+     *
+     * @param snapshot the snapshot to emit
+     */
     void snapshot(MicrosoftSnapshot snapshot);
 
+    /**
+     * A full crawl run finished. Sync-table sinks reconcile rows not seen
+     * in {@code runId}; others ignore.
+     *
+     * @param runId identifier of the completed run
+     */
     default void completeRun(String runId) {
     }
 }

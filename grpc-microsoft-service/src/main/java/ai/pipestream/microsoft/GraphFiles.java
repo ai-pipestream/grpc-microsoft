@@ -24,48 +24,114 @@ public final class GraphFiles {
 
     private final GraphClient graph;
 
+    /**
+     * Binds this files API to an authorized Graph client.
+     *
+     * @param graph the authorized REST client
+     */
     public GraphFiles(GraphClient graph) {
         this.graph = Objects.requireNonNull(graph, "graph");
     }
 
-    /** The signed-in user (delegated flows) — the cheapest connectivity probe. */
+    /**
+     * The signed-in user (delegated flows) — the cheapest connectivity probe.
+     *
+     * @return the {@code /me} JSON object
+     * @throws IOException if Graph returns an error
+     * @throws InterruptedException if the HTTP call is interrupted
+     */
     public JsonNode me() throws IOException, InterruptedException {
         return graph.get("/me");
     }
 
-    /** The signed-in user's OneDrive (its {@code driveType} says personal vs business). */
+    /**
+     * The signed-in user's OneDrive (its {@code driveType} says personal vs
+     * business).
+     *
+     * @return the {@code /me/drive} JSON object
+     * @throws IOException if Graph returns an error
+     * @throws InterruptedException if the HTTP call is interrupted
+     */
     public JsonNode meDrive() throws IOException, InterruptedException {
         return graph.get("/me/drive");
     }
 
-    /** SharePoint site search; an empty result on a OneDrive-only tenant, not an error. */
+    /**
+     * SharePoint site search; an empty result on a OneDrive-only tenant, not an
+     * error.
+     *
+     * @param query search string
+     * @return the sites search JSON page
+     * @throws IOException if Graph returns an error
+     * @throws InterruptedException if the HTTP call is interrupted
+     */
     public JsonNode searchSites(String query) throws IOException, InterruptedException {
         return graph.get("/sites?search=" + URLEncoder.encode(query, StandardCharsets.UTF_8));
     }
 
-    /** Document libraries (drives) of a SharePoint site. */
+    /**
+     * Document libraries (drives) of a SharePoint site.
+     *
+     * @param siteId SharePoint site id
+     * @return the drives JSON page
+     * @throws IOException if Graph returns an error
+     * @throws InterruptedException if the HTTP call is interrupted
+     */
     public JsonNode drives(String siteId) throws IOException, InterruptedException {
         return graph.get("/sites/" + siteId + "/drives");
     }
 
-    /** One drive by id. */
+    /**
+     * One drive by id.
+     *
+     * @param driveId drive id
+     * @return the drive JSON object
+     * @throws IOException if Graph returns an error
+     * @throws InterruptedException if the HTTP call is interrupted
+     */
     public JsonNode drive(String driveId) throws IOException, InterruptedException {
         return graph.get("/drives/" + driveId);
     }
 
-    /** One drive item by id. */
+    /**
+     * One drive item by id.
+     *
+     * @param driveId parent drive id
+     * @param itemId drive-item id
+     * @return the driveItem JSON object
+     * @throws IOException if Graph returns an error
+     * @throws InterruptedException if the HTTP call is interrupted
+     */
     public JsonNode item(String driveId, String itemId)
             throws IOException, InterruptedException {
         return graph.get("/drives/" + driveId + "/items/" + itemId);
     }
 
-    /** Children of a folder; {@code folderPath} null or "/" lists the drive root. */
+    /**
+     * Children of a folder; {@code folderPath} null or "/" lists the drive root.
+     *
+     * @param driveId parent drive id
+     * @param folderPath folder path within the drive; {@code null} or {@code "/"}
+     *        is the root
+     * @return one page of child driveItems
+     * @throws IOException if Graph returns an error
+     * @throws InterruptedException if the HTTP call is interrupted
+     */
     public JsonNode children(String driveId, String folderPath)
             throws IOException, InterruptedException {
         return graph.get(childrenPath(driveId, folderPath));
     }
 
-    /** Follows {@code @odata.nextLink} until the folder listing is exhausted. */
+    /**
+     * Follows {@code @odata.nextLink} until the folder listing is exhausted.
+     *
+     * @param driveId parent drive id
+     * @param folderPath folder path within the drive; {@code null} or {@code "/"}
+     *        is the root
+     * @return every child driveItem across pages
+     * @throws IOException if Graph returns an error
+     * @throws InterruptedException if the HTTP call is interrupted
+     */
     public java.util.List<JsonNode> childrenAll(String driveId, String folderPath)
             throws IOException, InterruptedException {
         java.util.List<JsonNode> items = new java.util.ArrayList<>();
@@ -87,6 +153,15 @@ public final class GraphFiles {
                 : base + ":" + encodePath(folderPath) + ":/children";
     }
 
+    /**
+     * Downloads file content for one drive item.
+     *
+     * @param driveId parent drive id
+     * @param itemId drive-item id
+     * @return the file bytes
+     * @throws IOException if Graph returns an error
+     * @throws InterruptedException if the HTTP call is interrupted
+     */
     public byte[] download(String driveId, String itemId)
             throws IOException, InterruptedException {
         return graph.getBytes("/drives/" + driveId + "/items/" + itemId + "/content");
@@ -95,6 +170,16 @@ public final class GraphFiles {
     /**
      * Uploads (or overwrites) a file by path. Content up to {@link #SIMPLE_UPLOAD_LIMIT};
      * the destination is always the caller's explicit drive and path.
+     *
+     * @param driveId destination drive id
+     * @param folderPath destination folder; {@code null} or {@code "/"} is the root
+     * @param fileName file name within the folder
+     * @param content file bytes
+     * @param contentType MIME type; {@code null} becomes
+     *        {@code application/octet-stream}
+     * @return the created or updated driveItem JSON
+     * @throws IOException if Graph returns an error
+     * @throws InterruptedException if the HTTP call is interrupted
      */
     public JsonNode upload(String driveId, String folderPath, String fileName, byte[] content,
                            String contentType) throws IOException, InterruptedException {
@@ -112,6 +197,12 @@ public final class GraphFiles {
     /**
      * The SharePoint list-item column values behind a document — titles, choice columns,
      * managed metadata, whatever the library declares. This is the metadata read lane.
+     *
+     * @param driveId parent drive id
+     * @param itemId drive-item id
+     * @return the listItem JSON including expanded {@code fields}
+     * @throws IOException if Graph returns an error
+     * @throws InterruptedException if the HTTP call is interrupted
      */
     public JsonNode listItemFields(String driveId, String itemId)
             throws IOException, InterruptedException {
@@ -121,9 +212,15 @@ public final class GraphFiles {
 
     /**
      * Just the list-item columns behind a document — the {@code fields} object out of
-     * {@link #listItemFields}, Returns an empty object when the item has no list item (a personal-OneDrive file that
+     * {@link #listItemFields}. Returns an empty object when the item has no list item (a personal-OneDrive file that
      * belongs to no document library), so a caller can sample a folder without null checks.
      * A {@code driveId} or {@code itemId} that does not resolve still fails.
+     *
+     * @param driveId parent drive id
+     * @param itemId drive-item id
+     * @return the {@code fields} object, or empty when the item has no list item
+     * @throws IOException if Graph returns an error
+     * @throws InterruptedException if the HTTP call is interrupted
      */
     public ObjectNode listItemFieldsOnly(String driveId, String itemId)
             throws IOException, InterruptedException {
@@ -153,7 +250,16 @@ public final class GraphFiles {
         }
     }
 
-    /** Patches list-item columns; {@code fields} holds exactly the columns to change. */
+    /**
+     * Patches list-item columns; {@code fields} holds exactly the columns to change.
+     *
+     * @param driveId parent drive id
+     * @param itemId drive-item id
+     * @param fields columns to patch
+     * @return the patched fields JSON
+     * @throws IOException if Graph returns an error
+     * @throws InterruptedException if the HTTP call is interrupted
+     */
     public JsonNode updateListItemFields(String driveId, String itemId, ObjectNode fields)
             throws IOException, InterruptedException {
         return graph.patch("/drives/" + driveId + "/items/" + itemId + "/listItem/fields",
