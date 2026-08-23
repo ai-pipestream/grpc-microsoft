@@ -5,6 +5,7 @@ import io.grpc.Server;
 import io.grpc.Status;
 import io.grpc.inprocess.InProcessChannelBuilder;
 import io.grpc.inprocess.InProcessServerBuilder;
+import microsoft.graph.connectors.contracts.grpc.AuthenticationData;
 import microsoft.graph.connectors.contracts.grpc.ConnectionManagementServiceGrpc;
 import microsoft.graph.connectors.contracts.grpc.ConnectorCrawlerServiceGrpc;
 import microsoft.graph.connectors.contracts.grpc.ConnectorInfoServiceGrpc;
@@ -103,9 +104,8 @@ class ConnectorServicesTest {
     void validateAuthenticationCallsGetMe() {
         String hostPort = targetJson.replaceAll(".*\"target\":\"([^\"]+)\".*", "$1");
         var auth = management.validateAuthentication(ValidateAuthenticationRequest.newBuilder()
-                .setAuthenticationData(
-                        microsoft.graph.connectors.contracts.grpc.AuthenticationData.newBuilder()
-                                .setDatasourceUrl(hostPort))
+                .setAuthenticationData(AuthenticationData.newBuilder()
+                        .setDatasourceUrl(hostPort))
                 .build());
         assertThat(auth.getStatus().getResult()).isEqualTo(OperationResult.Success);
         assertThat(auth.getStatus().getStatusMessage()).contains("bot@contoso.com");
@@ -128,7 +128,7 @@ class ConnectorServicesTest {
                 .contains(DataSourceSchemas.TITLE, DataSourceSchemas.WEB_URL);
 
         var auth = ConnectionManagementServiceImpl.parse(config(),
-                microsoft.graph.connectors.contracts.grpc.AuthenticationData.getDefaultInstance());
+                AuthenticationData.getDefaultInstance());
         assertThat(auth.target()).startsWith("127.0.0.1:");
 
         // Call GetMe through the real adapter method by stuffing target in JSON
