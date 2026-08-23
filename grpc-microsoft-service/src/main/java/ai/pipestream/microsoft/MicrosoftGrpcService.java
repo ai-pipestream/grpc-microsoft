@@ -152,6 +152,8 @@ public final class MicrosoftGrpcService extends MicrosoftServiceGrpc.MicrosoftSe
         try {
             DriveItem item = requireValid(mapper.toDriveItem(
                     files.item(request.getDriveId(), request.getItemId()), request.getDriveId()));
+            item = requireValid(mapper.withListColumns(item,
+                    files.listItemFieldsOrEmpty(request.getDriveId(), request.getItemId())));
             observer.onNext(GetItemResponse.newBuilder().setItem(item).build());
             observer.onCompleted();
         } catch (Throwable t) {
@@ -165,6 +167,8 @@ public final class MicrosoftGrpcService extends MicrosoftServiceGrpc.MicrosoftSe
         try {
             DriveItem item = requireValid(mapper.toDriveItem(
                     files.item(request.getDriveId(), request.getItemId()), request.getDriveId()));
+            item = requireValid(mapper.withListColumns(item,
+                    files.listItemFieldsOrEmpty(request.getDriveId(), request.getItemId())));
             if (request.getIncludeContent()) {
                 item = requireValid(withContent(item));
             }

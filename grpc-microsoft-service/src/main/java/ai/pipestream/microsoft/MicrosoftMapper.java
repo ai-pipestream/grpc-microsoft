@@ -2,9 +2,11 @@ package ai.pipestream.microsoft;
 
 import ai.pipestream.microsoft.v1.Drive;
 import ai.pipestream.microsoft.v1.DriveItem;
+import ai.pipestream.microsoft.v1.FileHashes;
 import ai.pipestream.microsoft.v1.GraphUser;
 import ai.pipestream.microsoft.v1.Identity;
 import ai.pipestream.microsoft.v1.IdentitySet;
+import ai.pipestream.microsoft.v1.ListColumn;
 import ai.pipestream.microsoft.v1.Site;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.protobuf.Timestamp;
@@ -12,6 +14,10 @@ import com.google.protobuf.Timestamp;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Jackson {@link JsonNode} to domain proto translation for Microsoft Graph
@@ -99,10 +105,25 @@ public final class MicrosoftMapper {
                 .setWebUrl(text(node, "webUrl"))
                 .setDownloadUrl(firstText(node, "@microsoft.graph.downloadUrl", "@content.downloadUrl"))
                 .setSize(node.path("size").isIntegralNumber() ? node.path("size").longValue() : 0L)
-                .setFolder(node.path("folder").isObject());
+                .setFolder(node.path("folder").isObject())
+                .setDescription(text(node, "description"))
+                .setEtag(firstText(node, "eTag", "etag"));
+        JsonNode folder = node.path("folder");
+        if (folder.isObject() && folder.path("childCount").isIntegralNumber()) {
+            b.setChildCount(folder.path("childCount").intValue());
+        }
         JsonNode file = node.path("file");
         if (file.isObject()) {
             b.setMimeType(text(file, "mimeType"));
+            JsonNode hashes = file.path("hashes");
+            if (hashes.isObject()) {
+                b.setHashes(FileHashes.newBuilder()
+                        .setSha1(firstText(hashes, "sha1Hash", "sha1"))
+                        .setSha256(firstText(hashes, "sha256Hash", "sha256"))
+                        .setQuickXor(firstText(hashes, "quickXorHash", "quickXor"))
+                        .setCrc32(firstText(hashes, "crc32Hash", "crc32"))
+                        .build());
+            }
         }
         JsonNode parent = node.path("parentReference");
         if (parent.isObject()) {
@@ -126,6 +147,103 @@ public final class MicrosoftMapper {
             b.setLastModifiedBy(toIdentitySet(node.path("lastModifiedBy")));
         }
         return b.build();
+    }
+
+    /**
+     * Copies {@code item} and replaces {@code list_columns} with the flattened
+     * SharePoint fields object. {@code @odata.*} keys are skipped; nested
+     * objects flatten one level as {@code Parent.Child}.
+     *
+     * @param item the drive item
+     * @param fields Graph {@code listItem.fields} object; {@code null} or
+     *        non-object leaves columns empty
+     * @return a copy with typed columns
+     */
+    public DriveItem withListColumns(DriveItem item, JsonNode fields) {
+        return item.toBuilder().clearListColumns().addAllListColumns(toListColumns(fields)).build();
+    }
+
+    /**
+     * Flattens a SharePoint {@code fields} object into typed {@link ListColumn}s.
+     *
+     * @param fields Graph fields object; {@code null} or non-object yields empty
+     * @return columns in field-name order
+     */
+    public List<ListColumn> toListColumns(JsonNode fields) {
+        List<ListColumn> columns = new ArrayList<>();
+        if (fields == null || !fields.isObject()) {
+            return columns;
+        }
+        Iterator<Map.Entry<String, JsonNode>> fieldsIt = fields.fields();
+        while (fieldsIt.hasNext()) {
+            Map.Entry<String, JsonNode> entry = fieldsIt.next();
+            addColumns(columns, entry.getKey(), entry.getValue(), true);
+        }
+        return columns;
+    }
+
+    private static void addColumns(List<ListColumn> out, String name, JsonNode value,
+            boolean flattenObjects) {
+        if (name == null || name.startsWith("@odata.") || name.startsWith("@")) {
+            return;
+        }
+        if (value == null || value.isNull() || value.isMissingNode()) {
+            return;
+        }
+        if (value.isObject() && flattenObjects) {
+            Iterator<Map.Entry<String, JsonNode>> nested = value.fields();
+            while (nested.hasNext()) {
+                Map.Entry<String, JsonNode> entry = nested.next();
+                addColumns(out, name + "." + entry.getKey(), entry.getValue(), false);
+            }
+            return;
+        }
+        ListColumn column = toColumn(name, value);
+        if (column != null) {
+            out.add(column);
+        }
+    }
+
+    private static ListColumn toColumn(String name, JsonNode value) {
+        ListColumn.Builder b = ListColumn.newBuilder().setName(name);
+        if (value.isBoolean()) {
+            return b.setBoolValue(value.booleanValue()).build();
+        }
+        if (value.isIntegralNumber()) {
+            return b.setIntValue(value.longValue()).build();
+        }
+        if (value.isFloatingPointNumber()) {
+            return b.setDoubleValue(value.doubleValue()).build();
+        }
+        if (value.isArray()) {
+            List<String> parts = new ArrayList<>();
+            for (JsonNode element : value) {
+                if (element.isValueNode() && !element.isNull()) {
+                    parts.add(element.asText());
+                }
+            }
+            if (parts.isEmpty()) {
+                return null;
+            }
+            return b.setStringValue(String.join(", ", parts)).build();
+        }
+        if (value.isTextual()) {
+            String text = value.asText();
+            Timestamp ts = timestamp(text);
+            if (ts != null && looksLikeTimestamp(text)) {
+                return b.setTimestampValue(ts).build();
+            }
+            return b.setStringValue(text).build();
+        }
+        if (value.isObject()) {
+            return null;
+        }
+        return b.setStringValue(value.asText()).build();
+    }
+
+    private static boolean looksLikeTimestamp(String text) {
+        return text.length() >= 10 && (text.charAt(4) == '-' || text.endsWith("Z")
+                || text.contains("T"));
     }
 
     private static IdentitySet toIdentitySet(JsonNode node) {

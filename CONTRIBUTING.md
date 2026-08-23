@@ -19,7 +19,9 @@ GCA `Contracts/` tree is a frozen copy and is not in the Buf workspace.
 
 - **No JSON bridge** on the typed gRPC path. Domain messages stay protobuf.
 - **Do not invent shared modules.** A sink that talks to `SyncTableService`
-  lives in the caller and depends on `grpc-sync-api` only.
+  lives in the caller and depends on `grpc-sync-api` only. `grpc-okf` is the
+  dedicated OKF/WARC library both crawlers share; do not fold that producer
+  into either service.
 - **Secrets stay out of git, logs, and PR text.** Live smokes read env /
   GitHub Actions secrets; they never print tokens.
 - **Buf COMMENTS is strict.** Every service, rpc, message, field, oneof,

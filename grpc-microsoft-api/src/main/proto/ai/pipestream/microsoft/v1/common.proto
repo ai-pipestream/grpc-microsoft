@@ -63,6 +63,39 @@ message Drive {
   string site_id = 5;
 }
 
+// Content hashes Graph reports on a file (the `file.hashes` object).
+message FileHashes {
+  // SHA-1 hex digest, empty when Graph omitted it.
+  string sha1 = 1;
+  // SHA-256 hex digest, empty when Graph omitted it.
+  string sha256 = 2;
+  // QuickXOR hash (Graph's SharePoint hash), empty when omitted.
+  string quick_xor = 3;
+  // CRC32 hash, empty when omitted.
+  string crc32 = 4;
+}
+
+// One SharePoint list-item column. Nested objects are flattened one level
+// (`Parent.Child`); `@odata.*` annotations are skipped. No JSON/Struct arm:
+// Graph column values are scalars or one-level objects of scalars.
+message ListColumn {
+  // SharePoint internal column name (for example `FileLeafRef`).
+  string name = 1;
+  // The column value. Exactly one arm is set when the column has a value.
+  oneof value {
+    // Text, choice, lookup display name, or a joined multi-value list.
+    string string_value = 2;
+    // Integral number (Graph integer / whole JSON number).
+    int64 int_value = 3;
+    // Floating-point number.
+    double double_value = 4;
+    // Boolean column.
+    bool bool_value = 5;
+    // Date-only or date-time column parsed as RFC3339.
+    google.protobuf.Timestamp timestamp_value = 6;
+  }
+}
+
 // A file or folder in a drive.
 message DriveItem {
   // Item id.
@@ -91,9 +124,19 @@ message DriveItem {
   IdentitySet created_by = 12;
   // Who last modified the item.
   IdentitySet last_modified_by = 13;
+  // Item description, empty when Graph omitted it.
+  string description = 14;
+  // Graph eTag of the item, empty when omitted.
+  string etag = 15;
+  // Folder child count; 0 when the item is not a folder or Graph omitted it.
+  int32 child_count = 16;
+  // File content hashes; unset when Graph omitted `file.hashes`.
+  FileHashes hashes = 17;
+  // SharePoint list-item columns behind this document, flattened and typed.
+  repeated ListColumn list_columns = 18;
   // File bytes when a download was requested and the size cap allows it.
   optional bytes content = 21;
-  // Extensible key-value metadata (SharePoint list-item columns, etc.).
+  // Extensible key-value metadata (extension-metadata map - see convention).
   map<string, string> metadata = 99;
 }
 

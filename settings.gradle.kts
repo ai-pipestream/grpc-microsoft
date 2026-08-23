@@ -12,6 +12,7 @@ include("grpc-microsoft-connector")
 include("grpc-connect")
 include("grpc-sync-api")
 include("grpc-sync-service")
+include("grpc-okf")
 include("grpc-mcp")
 
 dependencyResolutionManagement {

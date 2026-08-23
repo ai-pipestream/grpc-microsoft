@@ -30,7 +30,8 @@ final class FakeGraphServer implements AutoCloseable {
         }
     }
 
-    record RecordedRequest(String method, String path, String query, String authorization) {
+    record RecordedRequest(String method, String path, String query, String authorization,
+            String contentRange, int bodyLength) {
     }
 
     private final HttpServer server;
@@ -79,9 +80,12 @@ final class FakeGraphServer implements AutoCloseable {
     private void handle(com.sun.net.httpserver.HttpExchange exchange) throws IOException {
         String path = exchange.getRequestURI().getPath();
         String query = exchange.getRequestURI().getRawQuery();
+        byte[] body = exchange.getRequestBody().readAllBytes();
         requests.add(new RecordedRequest(exchange.getRequestMethod(), path,
                 query == null ? "" : query,
-                exchange.getRequestHeaders().getFirst("authorization")));
+                exchange.getRequestHeaders().getFirst("authorization"),
+                exchange.getRequestHeaders().getFirst("content-range"),
+                body.length));
 
         Stub stub = null;
         Queue<Stub> once = onceStubs.get(path);
@@ -93,6 +97,9 @@ final class FakeGraphServer implements AutoCloseable {
         }
         if (stub == null) {
             stub = stubs.get(path);
+        }
+        if (stub == null && "PUT".equals(exchange.getRequestMethod())) {
+            stub = Stub.json("{\"id\":\"uploaded\",\"name\":\"file\"}");
         }
         if (stub == null) {
             stub = Stub.json("{\"error\":{\"code\":\"notFound\",\"message\":\"not stubbed: "

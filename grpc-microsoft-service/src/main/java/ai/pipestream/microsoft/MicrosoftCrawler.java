@@ -127,6 +127,8 @@ public final class MicrosoftCrawler {
             String cursor, Map<String, Long> counts) throws IOException, InterruptedException {
         for (JsonNode node : files.childrenAll(driveId, folderPath)) {
             DriveItem item = mapper.toDriveItem(node, driveId);
+            item = mapper.withListColumns(item,
+                    files.listItemFieldsOrEmpty(driveId, item.getId()));
             if (includeContent && !item.getFolder() && item.getSize() > 0
                     && item.getSize() <= attachmentMaxBytes) {
                 byte[] bytes = files.download(driveId, item.getId());

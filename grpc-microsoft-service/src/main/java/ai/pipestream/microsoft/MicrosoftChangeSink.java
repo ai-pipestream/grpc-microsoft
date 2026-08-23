@@ -5,7 +5,9 @@ import ai.pipestream.microsoft.v1.MicrosoftSnapshot;
 
 /**
  * Where the Microsoft crawler's output goes. Implementations must be
- * thread-safe: the crawler may emit from virtual threads.
+ * thread-safe: the crawler may emit from virtual threads. Optional
+ * {@link OkfMicrosoftChangeSink} writes OKF + WARC when {@code OKF_DIR}
+ * or {@code OKF_SPO_DRIVE_ID} is set.
  */
 public interface MicrosoftChangeSink {
 

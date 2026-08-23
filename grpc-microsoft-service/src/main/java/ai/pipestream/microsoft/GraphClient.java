@@ -227,6 +227,43 @@ public final class GraphClient {
     }
 
     /**
+     * PUT bytes at an absolute URL with no {@code Authorization} header.
+     * Graph upload-session URLs are pre-authenticated; sending a bearer token
+     * makes them fail.
+     *
+     * @param url absolute upload URL from {@code createUploadSession}
+     * @param content chunk bytes
+     * @param contentType {@code Content-Type}; {@code null} becomes
+     *        {@code application/octet-stream}
+     * @param contentRange {@code Content-Range} value, for example
+     *        {@code bytes 0-3276799/5000000}
+     * @return the JSON body, or an empty object when Graph returns no body
+     *        (intermediate 202 chunks)
+     * @throws IOException if Graph returns an error
+     * @throws InterruptedException if the HTTP call is interrupted
+     */
+    public JsonNode putRangeUnauthenticated(String url, byte[] content, String contentType,
+            String contentRange) throws IOException, InterruptedException {
+        HttpRequest.Builder builder = HttpRequest.newBuilder(URI.create(url))
+                .timeout(Duration.ofMinutes(10))
+                .header("content-type",
+                        contentType == null ? "application/octet-stream" : contentType)
+                .PUT(HttpRequest.BodyPublishers.ofByteArray(content));
+        if (contentRange != null && !contentRange.isBlank()) {
+            builder.header("content-range", contentRange);
+        }
+        HttpResponse<String> response = send(builder.build(), HttpResponse.BodyHandlers.ofString());
+        if (response.statusCode() >= 400) {
+            throw error(response.statusCode(), response.body());
+        }
+        String body = response.body();
+        if (body == null || body.isBlank()) {
+            return JSON.createObjectNode();
+        }
+        return JSON.readTree(body);
+    }
+
+    /**
      * DELETE {@code path}.
      *
      * @param path Graph path or absolute URL

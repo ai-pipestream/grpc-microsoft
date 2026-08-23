@@ -13,13 +13,13 @@ import java.util.Objects;
  * Files and their metadata over Microsoft Graph — OneDrive and SharePoint Online through
  * the same {@code driveItem} model (a OneDrive for Business drive <em>is</em> a SharePoint
  * document library under the hood, so everything here works on whichever the tenant has).
- * The read side returns {@link #listItemFields} returns the SharePoint column
- * values of a document — a data-rich JSON object that {@code infer-schema} turns into a
- * typed message. The write side is output: upload content, patch metadata columns.
+ * {@link #listItemFields} returns the SharePoint column values of a document; the mapper
+ * flattens them into typed {@code ListColumn}s. The write side uploads content (simple
+ * PUT or an upload session above {@link #SIMPLE_UPLOAD_LIMIT}) and can patch list columns.
  */
 public final class GraphFiles {
 
-    /** Simple-upload ceiling; larger files need an upload session (a later phase). */
+    /** Simple-upload ceiling; larger files use {@link #uploadSession}. */
     public static final int SIMPLE_UPLOAD_LIMIT = 4 * 1024 * 1024;
 
     private final GraphClient graph;
@@ -195,6 +195,70 @@ public final class GraphFiles {
     }
 
     /**
+     * Uploads by path, using a simple PUT under {@link #SIMPLE_UPLOAD_LIMIT}
+     * and an upload session for larger files. Destination folders in the path
+     * are created as needed by Graph.
+     *
+     * @param driveId destination drive id
+     * @param destPath file path from drive root, for example {@code /okf/pages/200.md}
+     * @param content file bytes
+     * @param contentType MIME type; {@code null} becomes {@code application/octet-stream}
+     * @return the created or updated driveItem JSON (last upload-session response)
+     * @throws IOException if Graph returns an error
+     * @throws InterruptedException if the HTTP call is interrupted
+     */
+    public JsonNode uploadOrSession(String driveId, String destPath, byte[] content,
+            String contentType) throws IOException, InterruptedException {
+        String mime = contentType == null ? "application/octet-stream" : contentType;
+        if (content.length <= SIMPLE_UPLOAD_LIMIT) {
+            String path = normalize(destPath);
+            return graph.putBytes("/drives/" + driveId + "/root:" + encodePath(path) + ":/content",
+                    content, mime);
+        }
+        return uploadSession(driveId, destPath, content, mime);
+    }
+
+    /**
+     * Upload-session PUT for files larger than {@link #SIMPLE_UPLOAD_LIMIT}.
+     * Fragments are a multiple of 320 KiB except the last. The upload URL is
+     * called without {@code Authorization}.
+     *
+     * @param driveId destination drive id
+     * @param destPath file path from drive root
+     * @param content file bytes
+     * @param contentType MIME type
+     * @return the completed driveItem JSON
+     * @throws IOException if Graph returns an error or omits {@code uploadUrl}
+     * @throws InterruptedException if the HTTP call is interrupted
+     */
+    public JsonNode uploadSession(String driveId, String destPath, byte[] content,
+            String contentType) throws IOException, InterruptedException {
+        String path = normalize(destPath);
+        ObjectNode body = GraphClient.object();
+        body.putObject("item")
+                .put("@microsoft.graph.conflictBehavior", "replace")
+                .put("name", fileName(path));
+        JsonNode session = graph.post(
+                "/drives/" + driveId + "/root:" + encodePath(path) + ":/createUploadSession",
+                body);
+        String uploadUrl = session.path("uploadUrl").asText("");
+        if (uploadUrl.isBlank()) {
+            throw new IOException("createUploadSession returned no uploadUrl for " + destPath);
+        }
+        final int fragment = 320 * 1024 * 10;
+        int offset = 0;
+        JsonNode last = GraphClient.object();
+        while (offset < content.length) {
+            int end = Math.min(offset + fragment, content.length);
+            byte[] chunk = java.util.Arrays.copyOfRange(content, offset, end);
+            String range = "bytes " + offset + "-" + (end - 1) + "/" + content.length;
+            last = graph.putRangeUnauthenticated(uploadUrl, chunk, contentType, range);
+            offset = end;
+        }
+        return last;
+    }
+
+    /**
      * The SharePoint list-item column values behind a document — titles, choice columns,
      * managed metadata, whatever the library declares. This is the metadata read lane.
      *
@@ -239,6 +303,31 @@ public final class GraphFiles {
         return fields.isObject() ? (ObjectNode) fields : JsonNodeFactory.instance.objectNode();
     }
 
+    /**
+     * List-item columns, or empty on 404 (a personal-OneDrive file, or a
+     * library item with no list item). Use this from a crawler that already
+     * holds the drive item; it does not re-GET the item to distinguish 404
+     * causes.
+     *
+     * @param driveId parent drive id
+     * @param itemId drive-item id
+     * @return the {@code fields} object, or empty
+     * @throws IOException if Graph returns a non-404 error
+     * @throws InterruptedException if the HTTP call is interrupted
+     */
+    public ObjectNode listItemFieldsOrEmpty(String driveId, String itemId)
+            throws IOException, InterruptedException {
+        try {
+            JsonNode fields = listItemFields(driveId, itemId).path("fields");
+            return fields.isObject() ? (ObjectNode) fields : JsonNodeFactory.instance.objectNode();
+        } catch (GraphClient.GraphApiException e) {
+            if (e.status() == 404) {
+                return JsonNodeFactory.instance.objectNode();
+            }
+            throw e;
+        }
+    }
+
     /** Whether the driveItem resolves; any error resolving it leaves the caller's own to report. */
     private boolean itemExists(String driveId, String itemId)
             throws IOException, InterruptedException {
@@ -272,6 +361,12 @@ public final class GraphFiles {
             cleaned = "/" + cleaned;
         }
         return cleaned.replaceAll("/+$", "");
+    }
+
+    private static String fileName(String destPath) {
+        String normalized = normalize(destPath);
+        int slash = normalized.lastIndexOf('/');
+        return slash < 0 ? normalized : normalized.substring(slash + 1);
     }
 
     private static String encodePath(String path) {

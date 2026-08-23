@@ -55,14 +55,27 @@ public final class MicrosoftServer {
         });
         MicrosoftChangeSink downstream = null;
         java.util.List<AutoCloseable> closables = new java.util.ArrayList<>();
+        java.util.List<MicrosoftChangeSink> sinks = new java.util.ArrayList<>();
+        GraphFiles files = new GraphFiles(client);
         if (SyncTableMicrosoftChangeSink.enabled()) {
             SyncTableMicrosoftChangeSink syncTable = SyncTableMicrosoftChangeSink.fromEnvironment();
-            downstream = syncTable;
+            sinks.add(syncTable);
             closables.add(syncTable);
             LOG.log(System.Logger.Level.INFO, "microsoft-proxy sync-table sink active on {0}",
                     System.getenv(SyncTableMicrosoftChangeSink.ENV_TARGET));
         }
-        MicrosoftGrpcService service = new MicrosoftGrpcService(config, new GraphFiles(client),
+        if (OkfMicrosoftChangeSink.enabled()) {
+            sinks.add(OkfMicrosoftChangeSink.fromEnvironment(files));
+            LOG.log(System.Logger.Level.INFO,
+                    "microsoft-proxy OKF sink active dir={0} spoDrive={1}",
+                    System.getenv(ai.pipestream.okf.OkfOutput.ENV_DIR),
+                    System.getenv(SharePointOkfPublisher.ENV_DRIVE_ID));
+        }
+        if (!sinks.isEmpty()) {
+            downstream = sinks.size() == 1 ? sinks.get(0)
+                    : new CompositeMicrosoftChangeSink(sinks);
+        }
+        MicrosoftGrpcService service = new MicrosoftGrpcService(config, files,
                 parseLong(System.getenv(ENV_ATTACHMENT_MAX_BYTES),
                         MicrosoftGrpcService.DEFAULT_ATTACHMENT_MAX_BYTES),
                 downstream);

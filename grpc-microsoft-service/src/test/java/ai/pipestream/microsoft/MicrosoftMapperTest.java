@@ -45,5 +45,33 @@ class MicrosoftMapperTest {
                 "drive-1");
         assertThat(folder.getFolder()).isTrue();
         assertThat(folder.getMimeType()).isEmpty();
+        assertThat(folder.getChildCount()).isEqualTo(1);
+    }
+
+    @Test
+    void flattensSharePointColumnsSkippingOdata() throws Exception {
+        DriveItem item = mapper.withListColumns(DriveItem.newBuilder().setId("file-1").build(),
+                JSON.readTree("""
+                        {
+                          "Title": "Notes",
+                          "Count": 3,
+                          "Flag": true,
+                          "When": "2024-03-02T00:00:00Z",
+                          "Tags": ["a", "b"],
+                          "Lookup": {"Id": 9, "Label": "X"},
+                          "@odata.etag": "skip-me",
+                          "@odata.context": "also-skip"
+                        }
+                        """));
+        assertThat(item.getListColumnsList()).extracting(c -> c.getName())
+                .containsExactly("Title", "Count", "Flag", "When", "Tags", "Lookup.Id",
+                        "Lookup.Label");
+        assertThat(item.getListColumnsList()).noneMatch(c -> c.getName().startsWith("@odata"));
+        assertThat(item.getListColumns(0).getStringValue()).isEqualTo("Notes");
+        assertThat(item.getListColumns(1).getIntValue()).isEqualTo(3);
+        assertThat(item.getListColumns(2).getBoolValue()).isTrue();
+        assertThat(item.getListColumns(3).hasTimestampValue()).isTrue();
+        assertThat(item.getListColumns(4).getStringValue()).isEqualTo("a, b");
+        assertThat(item.getListColumns(5).getIntValue()).isEqualTo(9);
     }
 }
