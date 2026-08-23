@@ -34,6 +34,7 @@ jetty-ee10-servlet = { module = "org.eclipse.jetty.ee10:jetty-ee10-servlet", ver
 slf4j-jdk14 = { module = "org.slf4j:slf4j-jdk14", version = "2.0.16" }
 protobuf-java-util = { module = "com.google.protobuf:protobuf-java-util", version.ref = "protobuf" }
 awssdk-s3 = { module = "software.amazon.awssdk:s3", version.ref = "awssdk" }
+sqlite-jdbc = { module = "org.xerial:sqlite-jdbc", version = "3.49.1.0" }
 
 [plugins]
 protobuf = { id = "com.google.protobuf", version.ref = "protobufPlugin" }

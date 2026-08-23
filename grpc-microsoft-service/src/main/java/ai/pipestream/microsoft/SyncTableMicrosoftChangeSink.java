@@ -27,6 +27,8 @@ public final class SyncTableMicrosoftChangeSink implements MicrosoftChangeSink, 
 
     /** Asset {@code source} written for every Microsoft Graph row. */
     public static final String SOURCE = "microsoft";
+    /** Catalog id used when the caller does not name a connection. */
+    public static final String DEFAULT_CONNECTION_ID = "default";
     /** Environment variable for the {@code SyncTableService} target. */
     public static final String ENV_TARGET = "SYNC_TABLE_TARGET";
     /** Environment variable; {@code false} disables plaintext on the channel. */
@@ -37,15 +39,29 @@ public final class SyncTableMicrosoftChangeSink implements MicrosoftChangeSink, 
 
     private final ManagedChannel channel;
     private final SyncTableServiceGrpc.SyncTableServiceBlockingStub stub;
+    private final String connectionId;
 
     /**
      * Creates a sink over an existing channel (takes ownership for {@link #close()}).
+     * Rows are stamped {@link #DEFAULT_CONNECTION_ID}.
      *
      * @param channel the gRPC channel to {@code SyncTableService}
      */
     public SyncTableMicrosoftChangeSink(ManagedChannel channel) {
+        this(channel, DEFAULT_CONNECTION_ID);
+    }
+
+    /**
+     * Creates a sink that stamps {@code connectionId} on every row.
+     *
+     * @param channel the gRPC channel to {@code SyncTableService}
+     * @param connectionId catalog connection
+     */
+    public SyncTableMicrosoftChangeSink(ManagedChannel channel, String connectionId) {
         this.channel = Objects.requireNonNull(channel, "channel");
         this.stub = SyncTableServiceGrpc.newBlockingStub(channel);
+        this.connectionId = connectionId == null || connectionId.isBlank()
+                ? DEFAULT_CONNECTION_ID : connectionId;
     }
 
     /**
@@ -82,13 +98,14 @@ public final class SyncTableMicrosoftChangeSink implements MicrosoftChangeSink, 
         try {
             if (change.getOperation() == ChangeOperation.CHANGE_OPERATION_DELETE) {
                 stub.deleteAsset(DeleteAssetRequest.newBuilder()
-                        .setAssetId(assetId(change.getEntity()))
+                        .setAssetId(assetId(connectionId, change.getEntity()))
                         .setRunId(change.getCursor())
                         .setCursor(change.getCursor())
                         .build());
                 return;
             }
-            stub.upsertAsset(UpsertAssetRequest.newBuilder().setAsset(toAsset(change)).build());
+            stub.upsertAsset(UpsertAssetRequest.newBuilder()
+                    .setAsset(toAsset(connectionId, change)).build());
         } catch (RuntimeException e) {
             LOG.log(System.Logger.Level.WARNING, "sync-table emit failed: {0}", e.toString());
         }
@@ -100,6 +117,7 @@ public final class SyncTableMicrosoftChangeSink implements MicrosoftChangeSink, 
             stub.putCheckpoint(PutCheckpointRequest.newBuilder()
                     .setCheckpoint(Checkpoint.newBuilder()
                             .setSource(SOURCE)
+                            .setConnectionId(connectionId)
                             .setScope(snapshot.getDriveId())
                             .setCursor(snapshot.getCursor()))
                     .build());
@@ -116,6 +134,7 @@ public final class SyncTableMicrosoftChangeSink implements MicrosoftChangeSink, 
         try {
             stub.reconcile(ReconcileRequest.newBuilder()
                     .setSource(SOURCE)
+                    .setConnectionId(connectionId)
                     .setRunId(runId)
                     .build());
         } catch (RuntimeException e) {
@@ -124,11 +143,18 @@ public final class SyncTableMicrosoftChangeSink implements MicrosoftChangeSink, 
     }
 
     static Asset toAsset(MicrosoftChange change) {
+        return toAsset(DEFAULT_CONNECTION_ID, change);
+    }
+
+    static Asset toAsset(String connectionId, MicrosoftChange change) {
         MicrosoftEntity entity = change.getEntity();
         String kind = kind(entity);
+        String connection = connectionId == null || connectionId.isBlank()
+                ? DEFAULT_CONNECTION_ID : connectionId;
         Asset.Builder asset = Asset.newBuilder()
-                .setAssetId(assetId(entity))
+                .setAssetId(assetId(connection, entity))
                 .setSource(SOURCE)
+                .setConnectionId(connection)
                 .setNativeId(entity.getEntityId())
                 .setKind(kind)
                 .setPhase(phase(change))
@@ -146,7 +172,7 @@ public final class SyncTableMicrosoftChangeSink implements MicrosoftChangeSink, 
                     .setMediaType(item.getMimeType())
                     .setAttachment(!item.getFolder());
             if (!item.getParentId().isEmpty()) {
-                asset.setParentAssetId(SOURCE + ":drive_item:" + item.getParentId());
+                asset.setParentAssetId(SOURCE + ":" + connection + ":drive_item:" + item.getParentId());
             }
         } else if (entity.getEntityCase() == MicrosoftEntity.EntityCase.DRIVE) {
             asset.setTitle(entity.getDrive().getName()).setSourceUri(entity.getDrive().getWebUrl());
@@ -157,7 +183,13 @@ public final class SyncTableMicrosoftChangeSink implements MicrosoftChangeSink, 
     }
 
     static String assetId(MicrosoftEntity entity) {
-        return SOURCE + ":" + kind(entity) + ":" + entity.getEntityId();
+        return assetId(DEFAULT_CONNECTION_ID, entity);
+    }
+
+    static String assetId(String connectionId, MicrosoftEntity entity) {
+        String connection = connectionId == null || connectionId.isBlank()
+                ? DEFAULT_CONNECTION_ID : connectionId;
+        return SOURCE + ":" + connection + ":" + kind(entity) + ":" + entity.getEntityId();
     }
 
     private static String kind(MicrosoftEntity entity) {

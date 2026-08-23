@@ -150,6 +150,8 @@ message SyncRequest {
   string folder_path = 2;
   // When true, file bytes are inlined on file items (size-capped).
   bool include_content = 3;
+  // Catalog connection to crawl. Empty = the process-default (env) connection.
+  string connection_id = 4;
   // Extensible key-value metadata (extension-metadata map - see convention).
   map<string, string> metadata = 99;
 }

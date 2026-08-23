@@ -23,7 +23,9 @@ GCA `Contracts/` tree is a frozen copy and is not in the Buf workspace.
   dedicated OKF/WARC library both crawlers share; do not fold that producer
   into either service. The output SPI (`grpc-output-spi` plus filesystem /
   S3 ServiceLoader jars) is the dedicated destination seam; do not fold
-  S3 into either service.
+  S3 into either service. Connection catalog and ledger live behind
+  `ConnectionService` / `SyncTableService` gRPC; callers do not open the
+  store.
 - **Secrets stay out of git, logs, and PR text.** Live smokes read env /
   GitHub Actions secrets; they never print tokens.
 - **Buf COMMENTS is strict.** Every service, rpc, message, field, oneof,
