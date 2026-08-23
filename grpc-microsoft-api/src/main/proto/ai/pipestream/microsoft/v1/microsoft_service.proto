@@ -1,0 +1,123 @@
+syntax = "proto3";
+
+package ai.pipestream.microsoft.v1;
+
+import "ai/pipestream/microsoft/v1/common.proto";
+
+option java_multiple_files = true;
+option java_package = "ai.pipestream.microsoft.v1";
+
+// The Microsoft Graph read proxy. Server reflection and the gRPC health
+// service are always registered alongside it.
+service MicrosoftService {
+  // The signed-in user (delegated) or the configured application identity.
+  rpc GetMe(GetMeRequest) returns (GetMeResponse);
+
+  // SharePoint sites the credentials can see (search query optional).
+  rpc ListSites(ListSitesRequest) returns (ListSitesResponse);
+
+  // Document libraries of a site, or the signed-in user's drive when site_id
+  // is empty.
+  rpc ListDrives(ListDrivesRequest) returns (ListDrivesResponse);
+
+  // Children of a folder as a stream; REST pagination stays hidden.
+  rpc ListChildren(ListChildrenRequest) returns (stream ListChildrenResponse);
+
+  // One drive item by id (metadata always).
+  rpc GetItem(GetItemRequest) returns (GetItemResponse);
+
+  // One item's metadata plus bytes when requested (size-capped).
+  rpc DownloadItem(DownloadItemRequest) returns (DownloadItemResponse);
+
+  // One bounded sync pass of a drive (or of every visible drive): changes,
+  // a snapshot per drive, then a terminal resume cursor.
+  rpc Sync(SyncRequest) returns (stream SyncResponse);
+}
+
+message GetMeRequest {
+  map<string, string> metadata = 99;
+}
+
+message GetMeResponse {
+  GraphUser user = 1;
+  map<string, string> metadata = 99;
+}
+
+message ListSitesRequest {
+  // Search query; empty = list what Graph returns for an empty search.
+  string query = 1;
+  int32 limit = 2;
+  map<string, string> metadata = 99;
+}
+
+message ListSitesResponse {
+  repeated Site sites = 1;
+  map<string, string> metadata = 99;
+}
+
+message ListDrivesRequest {
+  // Site id; empty = the signed-in user's drive only.
+  string site_id = 1;
+  map<string, string> metadata = 99;
+}
+
+message ListDrivesResponse {
+  repeated Drive drives = 1;
+  map<string, string> metadata = 99;
+}
+
+message ListChildrenRequest {
+  string drive_id = 1;
+  // Folder path; empty or "/" lists the drive root.
+  string folder_path = 2;
+  map<string, string> metadata = 99;
+}
+
+message ListChildrenResponse {
+  DriveItem item = 1;
+}
+
+message GetItemRequest {
+  string drive_id = 1;
+  string item_id = 2;
+  map<string, string> metadata = 99;
+}
+
+message GetItemResponse {
+  DriveItem item = 1;
+  map<string, string> metadata = 99;
+}
+
+message DownloadItemRequest {
+  string drive_id = 1;
+  string item_id = 2;
+  // When true, the binary is downloaded and inlined as DriveItem.content.
+  // Refused with FAILED_PRECONDITION above MICROSOFT_ATTACHMENT_MAX_BYTES
+  // (default 25 MiB).
+  bool include_content = 3;
+  map<string, string> metadata = 99;
+}
+
+message DownloadItemResponse {
+  DriveItem item = 1;
+  map<string, string> metadata = 99;
+}
+
+message SyncRequest {
+  // Drive ids to sync; empty = the signed-in user's drive, or every drive
+  // of the configured site when MICROSOFT_SITE_ID is set.
+  repeated string drive_ids = 1;
+  // Folder path to start from; empty = drive root.
+  string folder_path = 2;
+  // When true, file bytes are inlined on file items (size-capped).
+  bool include_content = 3;
+  map<string, string> metadata = 99;
+}
+
+message SyncResponse {
+  oneof event {
+    MicrosoftChange change = 1;
+    MicrosoftSnapshot snapshot = 2;
+    string resume_cursor = 3;
+  }
+}
