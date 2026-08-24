@@ -44,7 +44,8 @@ final class MicrosoftMcpTools {
                 McpJson.objectSchema(Map.of(
                         "includeContent", McpJson.boolProp("Inline file bytes when size-capped"),
                         "folderPath", McpJson.stringProp("Folder to start from"),
-                        "limit", McpJson.intProp("Max change events to return")),
+                        "limit", McpJson.intProp("Max change events to return"),
+                        "connectionId", McpJson.stringProp("Catalog connection; empty = default")),
                         List.of()),
                 (exchange, request) -> {
                     int limit = McpJson.argInt(request.arguments(), "limit", 50);
@@ -52,6 +53,8 @@ final class MicrosoftMcpTools {
                             .setIncludeContent(McpJson.argBool(request.arguments(),
                                     "includeContent", false))
                             .setFolderPath(McpJson.argString(request.arguments(), "folderPath", "/"))
+                            .setConnectionId(McpJson.argString(request.arguments(),
+                                    "connectionId", ""))
                             .build());
                     List<Map<String, String>> sample = new ArrayList<>();
                     int changes = 0;
