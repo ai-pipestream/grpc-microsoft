@@ -8,7 +8,6 @@ assertj = "3.27.3"
 kafka = "3.9.0"
 protobufPlugin = "0.9.5"
 mcp = "2.0.1"
-jetty = "12.0.21"
 awssdk = "2.31.78"
 
 [libraries]
@@ -29,8 +28,6 @@ kafka-clients = { module = "org.apache.kafka:kafka-clients", version.ref = "kafk
 kafka-connect-api = { module = "org.apache.kafka:connect-api", version.ref = "kafka" }
 mcp-core = { module = "io.modelcontextprotocol.sdk:mcp-core", version.ref = "mcp" }
 mcp-json-jackson2 = { module = "io.modelcontextprotocol.sdk:mcp-json-jackson2", version.ref = "mcp" }
-jetty-server = { module = "org.eclipse.jetty:jetty-server", version.ref = "jetty" }
-jetty-ee10-servlet = { module = "org.eclipse.jetty.ee10:jetty-ee10-servlet", version.ref = "jetty" }
 slf4j-jdk14 = { module = "org.slf4j:slf4j-jdk14", version = "2.0.16" }
 protobuf-java-util = { module = "com.google.protobuf:protobuf-java-util", version.ref = "protobuf" }
 awssdk-s3 = { module = "software.amazon.awssdk:s3", version.ref = "awssdk" }
