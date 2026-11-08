@@ -8,6 +8,7 @@ import "google/protobuf/timestamp.proto";
 
 option java_multiple_files = true;
 option java_package = "ai.pipestream.microsoft.v1";
+option java_outer_classname = "DriveProto";
 
 // ============================================================================
 // DRIVE and DRIVE ITEM - OneDrive (personal / business) and SharePoint
@@ -74,8 +75,9 @@ message Drive {
 }
 
 // The `package` facet: the item is a package (e.g. a OneNote notebook) that
-// is a folder on the wire but a single document to users.
-message Package {
+// is a folder on the wire but a single document to users. Named
+// PackageFacet so the generated Java class does not shadow java.lang.Package.
+message PackageFacet {
   // Package type; `oneNote` is the only documented value, others may appear.
   string type = 1;
 }
@@ -241,7 +243,7 @@ message RemoteItem {
   // Client file system timestamps.
   FileSystemInfo file_system_info = 15;
   // Present when the remote item is a package.
-  Package package = 16;
+  PackageFacet package = 16;
   // Present when the remote item is shared.
   Shared shared = 17;
   // SharePoint identifiers of the remote item.
@@ -363,7 +365,7 @@ message DriveItem {
   // True when the item is the root folder of its drive.
   bool is_root = 27;
   // Present when the item is a package (e.g. OneNote notebook).
-  Package package = 28;
+  PackageFacet package = 28;
   // Present when the item points at an item in another drive (shortcut or
   // shared-with-me entry).
   RemoteItem remote_item = 29;
@@ -388,8 +390,8 @@ message DriveItem {
   // SharePoint REST identifiers (list, list item, site, web, tenant).
   SharepointIds sharepoint_ids = 39;
   // True when Graph reports a pending content update (the
-  // `pendingOperations.pendingContentUpdate` facet); the binary may change
-  // shortly.
+  // `pendingOperations.pendingContentUpdate` facet; its queuedDateTime is
+  // not carried); the binary may change shortly.
   bool pending_content_update = 40;
   // Retention label; populated when the request asked for it.
   ItemRetentionLabel retention_label = 41;
@@ -406,8 +408,6 @@ message DriveItem {
   // sharing changed (the `@microsoft.graph.sharedChanged` annotation,
   // requires the show-sharing-changes preference). Re-read permissions.
   bool sharing_changed = 45;
-  // View/edit analytics; populated when the request asked for analytics.
-  ItemAnalytics analytics = 46;
   // Extensible key-value metadata (extension-metadata map - see convention).
   map<string, string> metadata = 99;
 }

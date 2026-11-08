@@ -11,14 +11,16 @@ import "google/protobuf/timestamp.proto";
 
 option java_multiple_files = true;
 option java_package = "ai.pipestream.microsoft.v1";
+option java_outer_classname = "EventsProto";
 
 // ============================================================================
 // CRAWL ENVELOPES - what the crawler emits and what Sync streams.
 //
 // These messages moved here from common.proto so the entity files can be
 // split per Graph resource without an import cycle. Fully qualified names,
-// field numbers and the generated Java classes (java_multiple_files) are
-// unchanged; only the generated outer descriptor class differs.
+// field numbers and the generated Java message classes (java_multiple_files)
+// are unchanged; only the generated outer descriptor class differs (Common
+// -> EventsProto), and no code references it.
 // ============================================================================
 
 // One Microsoft Graph entity as the crawler read it.
@@ -42,16 +44,11 @@ message MicrosoftEntity {
     // Set when the wrapped entity is a SharePoint list item.
     ListItem list_item = 15;
     // Set when the wrapped entity is a permission (ACL entry); its
-    // `target` says which item it belongs to.
+    // `target` says which item it belongs to. Graph permission ids are only
+    // unique per target (an inherited grant repeats its id on every item
+    // below it), so `entity_id` for this arm is the target key plus the
+    // permission id, not the bare permission id.
     Permission permission = 16;
-    // Set when the wrapped entity is a drive item version.
-    DriveItemVersion drive_item_version = 17;
-    // Set when the wrapped entity is a list item version.
-    ListItemVersion list_item_version = 18;
-    // Set when the wrapped entity is a column definition.
-    ColumnDefinition column_definition = 19;
-    // Set when the wrapped entity is a content type.
-    ContentType content_type = 20;
   }
   // Extensible key-value metadata (extension-metadata map - see convention).
   map<string, string> metadata = 99;
@@ -61,7 +58,9 @@ message MicrosoftEntity {
 enum ChangeSource {
   // Zero value; the change source is unknown or was not recorded.
   CHANGE_SOURCE_UNSPECIFIED = 0;
-  // Full crawl of the drive (children walk or initial delta enumeration).
+  // Full enumeration of the scope: a children walk, the first delta pass,
+  // or the fresh enumeration after Graph rejected a delta link (410 Gone).
+  // Only a CRAWL snapshot lets a consumer delete what the sweep did not see.
   CHANGE_SOURCE_CRAWL = 1;
   // Incremental sync driven by a Graph delta token.
   CHANGE_SOURCE_DELTA = 2;
@@ -98,6 +97,12 @@ message MicrosoftSnapshot {
   string site_id = 7;
   // List the sweep covered; empty for drive and site sweeps.
   string list_id = 8;
+  // Whether the sweep was a full enumeration (CHANGE_SOURCE_CRAWL: entities
+  // the consumer holds for this scope but the sweep did not emit are gone
+  // upstream) or incremental (CHANGE_SOURCE_DELTA: unseen entities are
+  // unchanged and must not be reconciled away). UNSPECIFIED means a
+  // first-revision server, which only did full sweeps.
+  ChangeSource source = 9;
   // Extensible key-value metadata (extension-metadata map - see convention).
   map<string, string> metadata = 99;
 }
@@ -124,7 +129,10 @@ message MicrosoftChange {
 // The typed content of a Sync resume cursor. The terminal
 // SyncResponse.resume_cursor string is the base64 (URL-safe, unpadded)
 // binary encoding of this message so that a client can carry it opaquely
-// while the server keeps every Graph delta link it needs to resume.
+// while the server keeps every Graph delta link it needs to resume. The
+// server validates every link on the way back in (Graph host, matching
+// delta route) exactly as the delta rpcs do. Size grows with the number of
+// drives and lists in scope.
 message SyncCursor {
   // Drive id to the `@odata.deltaLink` its last sweep ended on.
   map<string, string> drive_delta_links = 1;

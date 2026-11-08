@@ -245,55 +245,6 @@ message FileSystemInfo {
   google.protobuf.Timestamp last_accessed_at = 3;
 }
 
-// Counts for one kind of action in an analytics interval (the
-// `itemActionStat` type).
-message ItemActionStat {
-  // How many times the action took place.
-  int32 action_count = 1;
-  // How many distinct actors performed it.
-  int32 actor_count = 2;
-}
-
-// Marks an analytics interval whose data is incomplete (the `incompleteData`
-// type).
-message IncompleteData {
-  // The service has no data before this time.
-  google.protobuf.Timestamp missing_data_before = 1;
-  // Some data was not recorded because of excessive activity.
-  bool was_throttled = 2;
-}
-
-// Activity statistics for one interval (the `itemActivityStat` type).
-message ItemActivityStat {
-  // Start of the interval.
-  google.protobuf.Timestamp started_at = 1;
-  // End of the interval.
-  google.protobuf.Timestamp ended_at = 2;
-  // Access (view) statistics.
-  ItemActionStat access = 3;
-  // Create statistics.
-  ItemActionStat create = 4;
-  // Delete statistics.
-  ItemActionStat delete = 5;
-  // Edit statistics.
-  ItemActionStat edit = 6;
-  // Move statistics.
-  ItemActionStat move = 7;
-  // Whether the item is trending in this interval.
-  bool is_trending = 8;
-  // Present when the interval's statistics are based on incomplete data.
-  IncompleteData incomplete_data = 9;
-}
-
-// View/edit analytics of a site, drive item, or list item (the
-// `itemAnalytics` type). Useful as a popularity ranking signal.
-message ItemAnalytics {
-  // Statistics over the item's lifetime.
-  ItemActivityStat all_time = 1;
-  // Statistics over the last seven days.
-  ItemActivityStat last_seven_days = 2;
-}
-
 // A reference to one drive item by drive and item id.
 message DriveItemRef {
   // Drive id that owns the item.

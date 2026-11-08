@@ -142,6 +142,9 @@ public final class MicrosoftValidator {
                 case DRIVE -> entity.getDrive();
                 case DRIVE_ITEM -> entity.getDriveItem();
                 case USER -> entity.getUser();
+                case LIST -> entity.getList();
+                case LIST_ITEM -> entity.getListItem();
+                case PERMISSION -> entity.getPermission();
                 case ENTITY_NOT_SET -> entity;
             };
             visit(child(prefix, entity.getEntityCase().name().toLowerCase()), nested, out);

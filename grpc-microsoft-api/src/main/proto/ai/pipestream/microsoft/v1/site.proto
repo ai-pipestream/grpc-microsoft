@@ -7,6 +7,7 @@ import "google/protobuf/timestamp.proto";
 
 option java_multiple_files = true;
 option java_package = "ai.pipestream.microsoft.v1";
+option java_outer_classname = "SiteProto";
 
 // ============================================================================
 // SITE - a SharePoint site (root site, subsite, or a user's personal
@@ -62,6 +63,9 @@ message Site {
   // Parent reference for subsites (the parent site id in `site_id`).
   ItemReference parent_reference = 15;
   // Present when a sites delta enumeration reports the site as deleted.
+  // Graph's site schema does not declare the facet; the sites/delta
+  // documentation says removed sites are "marked as deleted". Unverified
+  // against a live tenant; reconcile with ListAllSites until it is.
   Deleted deleted = 16;
   // Extensible key-value metadata (extension-metadata map - see convention).
   map<string, string> metadata = 99;

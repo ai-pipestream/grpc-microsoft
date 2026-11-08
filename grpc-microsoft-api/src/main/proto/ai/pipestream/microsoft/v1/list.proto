@@ -9,12 +9,14 @@ import "google/protobuf/timestamp.proto";
 
 option java_multiple_files = true;
 option java_package = "ai.pipestream.microsoft.v1";
+option java_outer_classname = "ListProto";
 
 // ============================================================================
-// LISTS, LIST ITEMS, COLUMNS, CONTENT TYPES - SharePoint lists beyond
-// document libraries (generic lists, task lists, calendars, ...) and the
-// schema (columns, content types) that gives list-item field values their
-// meaning.
+// LISTS, LIST ITEMS, COLUMNS - SharePoint lists beyond document libraries
+// (generic lists, task lists, calendars, ...) and the column schema that
+// gives list-item field values their meaning. Content types are carried as
+// the per-item ContentTypeInfo only; the contentType resource is not
+// modelled.
 // ============================================================================
 
 // Extra details about a list (the `listInfo` facet).
@@ -66,8 +68,6 @@ message SharePointList {
   string drive_id = 15;
   // Parent reference (site).
   ItemReference parent_reference = 16;
-  // Permissions on the list; populated when the request asked for them.
-  repeated Permission permissions = 17;
   // Extensible key-value metadata (extension-metadata map - see convention).
   map<string, string> metadata = 99;
 }
@@ -112,30 +112,6 @@ message ListItem {
   ItemReference parent_reference = 17;
   // Permissions on the item; populated when the request asked for them.
   repeated Permission permissions = 18;
-  // View/edit analytics; populated when the request asked for analytics.
-  ItemAnalytics analytics = 19;
-  // Extensible key-value metadata (extension-metadata map - see convention).
-  map<string, string> metadata = 99;
-}
-
-// One previous version of a list item (the `listItemVersion` resource).
-message ListItemVersion {
-  // Version id (e.g. `2.0`).
-  string id = 1;
-  // When this version was last modified.
-  google.protobuf.Timestamp last_modified_at = 2;
-  // Who last modified this version.
-  IdentitySet last_modified_by = 3;
-  // Publication state of this version.
-  PublicationFacet publication = 4;
-  // Column values as of this version.
-  repeated ListColumn fields = 5;
-  // Site that owns the list; set by the server.
-  string site_id = 6;
-  // List that owns the item; set by the server.
-  string list_id = 7;
-  // Item this is a version of; set by the server.
-  string item_id = 8;
   // Extensible key-value metadata (extension-metadata map - see convention).
   map<string, string> metadata = 99;
 }
@@ -411,54 +387,6 @@ message ColumnDefinition {
   // Content type the column was read from; empty for site and list scoped
   // columns. Set by the server.
   string content_type_id = 42;
-  // Extensible key-value metadata (extension-metadata map - see convention).
-  map<string, string> metadata = 99;
-}
-
-// A column required by a content type (the `columnLink` resource).
-message ColumnLink {
-  // Column id.
-  string id = 1;
-  // Column name within the content type.
-  string name = 2;
-}
-
-// A SharePoint content type on a site or list (the `contentType` resource).
-message ContentType {
-  // Content type id (e.g. `0x0101...`).
-  string id = 1;
-  // Content type name.
-  string name = 2;
-  // Description.
-  string description = 3;
-  // Group the content type belongs to.
-  string group = 4;
-  // Whether hidden from the list's New menu.
-  bool hidden = 5;
-  // Whether read-only.
-  bool read_only = 6;
-  // Whether sealed against changes.
-  bool sealed = 7;
-  // Whether a built-in content type.
-  bool is_built_in = 8;
-  // Whether changes propagate to derived content types and lists.
-  bool propagate_changes = 9;
-  // Id of the parent content type.
-  string parent_id = 10;
-  // Where the content type is defined when inherited from another scope.
-  ItemReference inherited_from = 11;
-  // Canonical URLs of hub sites the content type is associated with.
-  repeated string associated_hubs_urls = 12;
-  // Columns required by the content type.
-  repeated ColumnLink column_links = 13;
-  // Column definitions of the content type; populated when the request asked
-  // for columns.
-  repeated ColumnDefinition columns = 14;
-  // Site the content type was read from; set by the server.
-  string site_id = 15;
-  // List the content type was read from; empty for site scoped content
-  // types. Set by the server.
-  string list_id = 16;
   // Extensible key-value metadata (extension-metadata map - see convention).
   map<string, string> metadata = 99;
 }

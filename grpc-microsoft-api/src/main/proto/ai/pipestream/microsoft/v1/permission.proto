@@ -7,6 +7,7 @@ import "google/protobuf/timestamp.proto";
 
 option java_multiple_files = true;
 option java_package = "ai.pipestream.microsoft.v1";
+option java_outer_classname = "PermissionProto";
 
 // ============================================================================
 // PERMISSIONS AND SHARING - the Graph `permission` resource as it appears on

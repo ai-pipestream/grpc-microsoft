@@ -8,8 +8,6 @@ import "ai/pipestream/microsoft/v1/events.proto";
 import "ai/pipestream/microsoft/v1/list.proto";
 import "ai/pipestream/microsoft/v1/permission.proto";
 import "ai/pipestream/microsoft/v1/site.proto";
-import "ai/pipestream/microsoft/v1/subscription.proto";
-import "google/protobuf/timestamp.proto";
 
 option java_multiple_files = true;
 option java_package = "ai.pipestream.microsoft.v1";
@@ -46,14 +44,6 @@ service MicrosoftService {
   // report which auth mode the token has and whether the call worked. Does
   // not start a crawl.
   rpc ProbeConnection(ProbeConnectionRequest) returns (ProbeConnectionResponse);
-
-  // GET /users/{id}. One directory user by object id or user principal
-  // name.
-  rpc GetUser(GetUserRequest) returns (GetUserResponse);
-
-  // GET /users. Directory users as a stream (pagination hidden); the way an
-  // app-only crawler discovers OneDrives (ListDrives with user_id).
-  rpc ListUsers(ListUsersRequest) returns (stream ListUsersResponse);
 
   // --- Sites -------------------------------------------------------------
 
@@ -109,19 +99,16 @@ service MicrosoftService {
   // metadata first, then the binary as a stream of chunks.
   rpc DownloadContent(DownloadContentRequest) returns (stream DownloadContentResponse);
 
-  // GET /drives/{drive-id}/root/delta or /drives/{drive-id}/items/{item-id}/delta.
-  // Changed items (deletes carry the `deleted` facet) since a delta link, or
-  // a full enumeration when none is given, ending with the new delta link.
+  // GET /drives/{drive-id}/root/delta (or /items/{item-id}/delta on OneDrive
+  // personal). Changed items (deletes carry the `deleted` facet) since a
+  // delta link, or a full enumeration when none is given, ending with the new
+  // delta link. HTTP 410 Gone on a stale link becomes a leading DeltaResync
+  // event followed by the fresh enumeration.
   rpc DeltaDriveItems(DeltaDriveItemsRequest) returns (stream DeltaDriveItemsResponse);
 
   // GET /drives/{drive-id}/items/{item-id}/versions. Previous versions of a
   // drive item as a stream.
   rpc ListItemVersions(ListItemVersionsRequest) returns (stream ListItemVersionsResponse);
-
-  // GET /drives/{drive-id}/items/{item-id}/analytics,
-  // /sites/{site-id}/lists/{list-id}/items/{item-id}/analytics, or
-  // /sites/{site-id}/analytics. View/edit statistics of one resource.
-  rpc GetItemAnalytics(GetItemAnalyticsRequest) returns (GetItemAnalyticsResponse);
 
   // --- Lists, list items, columns, content types -------------------------
 
@@ -146,19 +133,10 @@ service MicrosoftService {
   // enumeration when none is given, ending with the new delta link.
   rpc DeltaListItems(DeltaListItemsRequest) returns (stream DeltaListItemsResponse);
 
-  // GET /sites/{site-id}/lists/{list-id}/items/{item-id}/versions. Previous
-  // versions of a list item as a stream.
-  rpc ListListItemVersions(ListListItemVersionsRequest) returns (stream ListListItemVersionsResponse);
-
   // GET /sites/{site-id}/columns, /sites/{site-id}/lists/{list-id}/columns,
   // or /sites/{site-id}/contentTypes/{content-type-id}/columns. Column
   // definitions of a site, list, or content type as a stream.
   rpc ListColumns(ListColumnsRequest) returns (stream ListColumnsResponse);
-
-  // GET /sites/{site-id}/contentTypes or
-  // /sites/{site-id}/lists/{list-id}/contentTypes. Content types of a site
-  // or list as a stream.
-  rpc ListContentTypes(ListContentTypesRequest) returns (stream ListContentTypesResponse);
 
   // --- Permissions --------------------------------------------------------
 
@@ -177,21 +155,6 @@ service MicrosoftService {
   // cursor. Deliberately bounded; a continuously tailing rpc is a possible
   // additive later.
   rpc Sync(SyncRequest) returns (stream SyncResponse);
-
-  // --- Change notification subscriptions ---------------------------------
-
-  // GET /subscriptions. Subscriptions owned by the held token's app.
-  rpc ListSubscriptions(ListSubscriptionsRequest) returns (ListSubscriptionsResponse);
-
-  // POST /subscriptions. Subscribe to `updated` notifications on a drive
-  // root or a list. Graph validates the notification URL synchronously.
-  rpc CreateSubscription(CreateSubscriptionRequest) returns (CreateSubscriptionResponse);
-
-  // PATCH /subscriptions/{id}. Extend a subscription's expiry.
-  rpc RenewSubscription(RenewSubscriptionRequest) returns (RenewSubscriptionResponse);
-
-  // DELETE /subscriptions/{id}. Remove a subscription.
-  rpc DeleteSubscription(DeleteSubscriptionRequest) returns (DeleteSubscriptionResponse);
 }
 
 // ============================================================================
@@ -199,7 +162,11 @@ service MicrosoftService {
 // ============================================================================
 
 // Which per-item expansions a drive-item rpc should fetch. Each costs a
-// Graph call (or an $expand) per item, so all default to off.
+// Graph call (or an $expand) per item. When a request leaves its `include`
+// field unset the rpc keeps its first-revision behaviour (GetItem,
+// DownloadItem, DownloadContent and Sync fetch list columns; ListChildren
+// and DeltaDriveItems fetch nothing extra); when `include` is set, exactly
+// the flags set to true are fetched.
 message DriveItemInclude {
   // Fetch the backing list item's column values into
   // DriveItem.list_columns ($expand=listItem($expand=fields)).
@@ -210,24 +177,19 @@ message DriveItemInclude {
   // Fetch the retention label into DriveItem.retention_label
   // (/retentionLabel per item).
   bool retention_label = 3;
-  // Fetch view/edit analytics into DriveItem.analytics (/analytics per
-  // item).
-  bool analytics = 4;
   // Request the publication facet ($select=publication).
   bool publication = 5;
 }
 
 // Which per-item expansions a list-item rpc should fetch. Column values
-// (`fields`) are always fetched. Each extra costs a Graph call per item, so
-// all default to off.
+// (`fields`) are always fetched. Each extra costs a Graph call (or an
+// $expand) per item, so all default to off.
 message ListItemInclude {
   // Fetch the drive item view into ListItem.drive_item
   // ($expand=driveItem; document libraries only).
   bool drive_item = 1;
   // Fetch the item's permissions into ListItem.permissions.
   bool permissions = 2;
-  // Fetch view/edit analytics into ListItem.analytics.
-  bool analytics = 3;
 }
 
 // How a delta enumeration should report sharing and visibility changes
@@ -342,41 +304,6 @@ message ProbeConnectionResponse {
   map<string, string> metadata = 99;
 }
 
-// Request to read one directory user.
-message GetUserRequest {
-  // Object id or user principal name.
-  string user_id = 1;
-  // Catalog connection to use. Empty = the process-default (env) connection.
-  string connection_id = 2;
-  // Extensible key-value metadata (extension-metadata map - see convention).
-  map<string, string> metadata = 99;
-}
-
-// The requested user.
-message GetUserResponse {
-  // The user Graph returned.
-  GraphUser user = 1;
-  // Extensible key-value metadata (extension-metadata map - see convention).
-  map<string, string> metadata = 99;
-}
-
-// Request to stream directory users.
-message ListUsersRequest {
-  // OData $filter expression (e.g. `accountEnabled eq true and userType eq
-  // 'Member'`); empty = all users.
-  string filter = 1;
-  // Catalog connection to use. Empty = the process-default (env) connection.
-  string connection_id = 2;
-  // Extensible key-value metadata (extension-metadata map - see convention).
-  map<string, string> metadata = 99;
-}
-
-// One streamed user.
-message ListUsersResponse {
-  // The streamed user.
-  GraphUser user = 1;
-}
-
 // ============================================================================
 // Sites
 // ============================================================================
@@ -457,7 +384,7 @@ message ListSubsitesResponse {
 message DeltaSitesRequest {
   // The `@odata.deltaLink` a previous DeltaSites stream ended with. Empty =
   // full enumeration of every site; `latest` = emit no sites, only the
-  // current delta link.
+  // current delta link. The server validates the link as for DeltaDriveItems.
   string delta_link = 1;
   // Catalog connection to use. Empty = the process-default (env) connection.
   string connection_id = 2;
@@ -558,7 +485,8 @@ message GetItemRequest {
   // Path from the drive root (e.g. `/Shared Documents/report.docx`) when
   // item_id is empty.
   string path = 3;
-  // Per-item expansions to fetch; unset = metadata only.
+  // Per-item expansions to fetch; unset = metadata plus list columns (the
+  // first-revision behaviour).
   DriveItemInclude include = 4;
   // Catalog connection to use. Empty = the process-default (env) connection.
   string connection_id = 5;
@@ -586,7 +514,8 @@ message DownloadItemRequest {
   bool include_content = 3;
   // Largest binary to inline, in bytes; 0 = no limit.
   int64 max_inline_bytes = 4;
-  // Per-item expansions to fetch; unset = metadata only.
+  // Per-item expansions to fetch; unset = metadata plus list columns (the
+  // first-revision behaviour).
   DriveItemInclude include = 5;
   // Catalog connection to use. Empty = the process-default (env) connection.
   string connection_id = 6;
@@ -619,7 +548,8 @@ message DownloadContentRequest {
   // Preferred chunk size per streamed message, in bytes; 0 = server
   // default.
   int32 chunk_bytes = 7;
-  // Per-item expansions to fetch on the leading metadata message.
+  // Per-item expansions to fetch on the leading metadata message; unset =
+  // metadata plus list columns.
   DriveItemInclude include = 8;
   // Catalog connection to use. Empty = the process-default (env) connection.
   string connection_id = 9;
@@ -644,9 +574,16 @@ message DeltaDriveItemsRequest {
   // Drive id to enumerate.
   string drive_id = 1;
   // Folder item id to scope the enumeration to; empty = the drive root.
+  // Graph supports folder-scoped delta on OneDrive personal only; on
+  // OneDrive for Business and SharePoint the server answers
+  // INVALID_ARGUMENT for a non-root folder.
   string item_id = 2;
   // The `@odata.deltaLink` a previous stream ended with. Empty = full
-  // enumeration; `latest` = emit no items, only the current delta link.
+  // enumeration; `latest` = emit no items, only the current delta link
+  // (`?token=latest`). The server only follows a link whose host is its
+  // configured Graph endpoint and whose path is this drive's delta route,
+  // and answers INVALID_ARGUMENT otherwise (no client-chosen URLs are
+  // fetched with the server's token).
   string delta_link = 3;
   // Graph `Prefer` preferences controlling how sharing and lost-access
   // changes are reported.
@@ -691,31 +628,6 @@ message ListItemVersionsRequest {
 message ListItemVersionsResponse {
   // The streamed version.
   DriveItemVersion version = 1;
-}
-
-// Request for the analytics of one resource.
-message GetItemAnalyticsRequest {
-  // Exactly one arm names the resource.
-  oneof target {
-    // A drive item.
-    DriveItemRef drive_item = 1;
-    // A list item.
-    ListItemRef list_item = 2;
-    // A site.
-    string site_id = 3;
-  }
-  // Catalog connection to use. Empty = the process-default (env) connection.
-  string connection_id = 4;
-  // Extensible key-value metadata (extension-metadata map - see convention).
-  map<string, string> metadata = 99;
-}
-
-// The requested analytics.
-message GetItemAnalyticsResponse {
-  // All-time and last-seven-days statistics.
-  ItemAnalytics analytics = 1;
-  // Extensible key-value metadata (extension-metadata map - see convention).
-  map<string, string> metadata = 99;
 }
 
 // ============================================================================
@@ -819,7 +731,8 @@ message DeltaListItemsRequest {
   // List id to enumerate.
   string list_id = 2;
   // The `@odata.deltaLink` a previous stream ended with. Empty = full
-  // enumeration; `latest` = emit no items, only the current delta link.
+  // enumeration; `latest` = emit no items, only the current delta link. The
+  // server validates the link as for DeltaDriveItems.
   string delta_link = 3;
   // Per-item expansions to fetch; unset = fields only.
   ListItemInclude include = 4;
@@ -843,26 +756,6 @@ message DeltaListItemsResponse {
   }
 }
 
-// Request to stream the versions of a list item.
-message ListListItemVersionsRequest {
-  // Site id that owns the list.
-  string site_id = 1;
-  // List id.
-  string list_id = 2;
-  // List item id whose versions are listed.
-  string item_id = 3;
-  // Catalog connection to use. Empty = the process-default (env) connection.
-  string connection_id = 4;
-  // Extensible key-value metadata (extension-metadata map - see convention).
-  map<string, string> metadata = 99;
-}
-
-// One streamed list item version.
-message ListListItemVersionsResponse {
-  // The streamed version.
-  ListItemVersion version = 1;
-}
-
 // Request to stream the columns of a site, list, or content type.
 message ListColumnsRequest {
   // Site id; required.
@@ -882,28 +775,6 @@ message ListColumnsRequest {
 message ListColumnsResponse {
   // The streamed column.
   ColumnDefinition column = 1;
-}
-
-// Request to stream the content types of a site or list.
-message ListContentTypesRequest {
-  // Site id; required.
-  string site_id = 1;
-  // List id; when set, the list's content types are returned, otherwise the
-  // site's.
-  string list_id = 2;
-  // When true, each content type's columns are expanded into
-  // ContentType.columns.
-  bool include_columns = 3;
-  // Catalog connection to use. Empty = the process-default (env) connection.
-  string connection_id = 4;
-  // Extensible key-value metadata (extension-metadata map - see convention).
-  map<string, string> metadata = 99;
-}
-
-// One streamed content type.
-message ListContentTypesResponse {
-  // The streamed content type.
-  ContentType content_type = 1;
 }
 
 // ============================================================================
@@ -937,8 +808,9 @@ message SyncRequest {
   // configured drives / site, or the signed-in user's drive.
   repeated string drive_ids = 1;
   // Folder path to start from on a children-walk crawl; empty = drive root.
-  // Delta enumerations always cover the whole drive (Graph scopes delta to
-  // a folder only by item id; see DeltaDriveItems.item_id).
+  // Delta-driven passes always cover the whole drive (OneDrive for Business
+  // and SharePoint support delta on the drive root only); a non-empty path
+  // filters emitted items to that subtree.
   string folder_path = 2;
   // When true, file bytes are inlined on file items up to max_inline_bytes.
   bool include_content = 3;
@@ -947,11 +819,14 @@ message SyncRequest {
   // The resume cursor a previous Sync ended with. Empty = full enumeration
   // (and the server starts tracking delta links for the next pass); set =
   // incremental pass emitting only changes, deletes included, since then.
+  // A drive or list whose stored link Graph rejects (410 Gone) is swept in
+  // full again; its snapshot then reports CHANGE_SOURCE_CRAWL.
   string since_cursor = 5;
   // Largest binary to inline when include_content is set, in bytes; 0 = no
   // limit.
   int64 max_inline_bytes = 6;
-  // Per-item expansions to fetch for drive items.
+  // Per-item expansions to fetch for drive items; unset = list columns only
+  // (the first-revision behaviour).
   DriveItemInclude include = 7;
   // Site ids whose drives (and, with include_lists, lists) are synced in
   // addition to drive_ids.
@@ -987,90 +862,4 @@ message SyncResponse {
     // SyncRequest.since_cursor next time (an encoded SyncCursor).
     string resume_cursor = 3;
   }
-}
-
-// ============================================================================
-// Change notification subscriptions
-// ============================================================================
-
-// Request to list subscriptions.
-message ListSubscriptionsRequest {
-  // Catalog connection to use. Empty = the process-default (env) connection.
-  string connection_id = 1;
-  // Extensible key-value metadata (extension-metadata map - see convention).
-  map<string, string> metadata = 99;
-}
-
-// The subscriptions Graph returned.
-message ListSubscriptionsResponse {
-  // Subscriptions owned by the token's application.
-  repeated Subscription subscriptions = 1;
-  // Extensible key-value metadata (extension-metadata map - see convention).
-  map<string, string> metadata = 99;
-}
-
-// Request to create a subscription.
-message CreateSubscriptionRequest {
-  // Resource path relative to the Graph base URL (`drives/{id}/root`,
-  // `sites/{id}/lists/{id}`).
-  string resource = 1;
-  // HTTPS endpoint that receives notifications.
-  string notification_url = 2;
-  // HTTPS endpoint for lifecycle notifications; empty = none.
-  string lifecycle_notification_url = 3;
-  // Requested expiry; unset = the server picks the Graph maximum for the
-  // resource.
-  google.protobuf.Timestamp expires_at = 4;
-  // Opaque client state echoed in notifications (max 128 chars).
-  string client_state = 5;
-  // Catalog connection to use. Empty = the process-default (env) connection.
-  string connection_id = 6;
-  // Extensible key-value metadata (extension-metadata map - see convention).
-  map<string, string> metadata = 99;
-}
-
-// The created subscription.
-message CreateSubscriptionResponse {
-  // The subscription as Graph stored it.
-  Subscription subscription = 1;
-  // Extensible key-value metadata (extension-metadata map - see convention).
-  map<string, string> metadata = 99;
-}
-
-// Request to extend a subscription.
-message RenewSubscriptionRequest {
-  // Subscription id.
-  string subscription_id = 1;
-  // New expiry; unset = the server picks the Graph maximum for the
-  // resource.
-  google.protobuf.Timestamp expires_at = 2;
-  // Catalog connection to use. Empty = the process-default (env) connection.
-  string connection_id = 3;
-  // Extensible key-value metadata (extension-metadata map - see convention).
-  map<string, string> metadata = 99;
-}
-
-// The renewed subscription.
-message RenewSubscriptionResponse {
-  // The subscription with its new expiry.
-  Subscription subscription = 1;
-  // Extensible key-value metadata (extension-metadata map - see convention).
-  map<string, string> metadata = 99;
-}
-
-// Request to delete a subscription.
-message DeleteSubscriptionRequest {
-  // Subscription id.
-  string subscription_id = 1;
-  // Catalog connection to use. Empty = the process-default (env) connection.
-  string connection_id = 2;
-  // Extensible key-value metadata (extension-metadata map - see convention).
-  map<string, string> metadata = 99;
-}
-
-// Result of deleting a subscription (empty on success; errors are gRPC
-// statuses).
-message DeleteSubscriptionResponse {
-  // Extensible key-value metadata (extension-metadata map - see convention).
-  map<string, string> metadata = 99;
 }
