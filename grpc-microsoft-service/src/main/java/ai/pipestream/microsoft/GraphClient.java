@@ -29,6 +29,8 @@ public final class GraphClient {
     /** A Graph error, with the service's own code and message (client-relevant by design). */
     public static final class GraphApiException extends IOException {
 
+        private static final long serialVersionUID = 1L;
+
         /** {@link #status()} for a failure Graph never expressed as an HTTP status. */
         public static final int NO_HTTP_STATUS = 0;
 

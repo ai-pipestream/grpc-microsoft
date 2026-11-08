@@ -6,7 +6,7 @@ log4j = "2.24.3"
 junit = "5.11.4"
 assertj = "3.27.3"
 kafka = "3.9.0"
-protobufPlugin = "0.9.5"
+protobufPlugin = "0.9.6"
 mcp = "2.0.1"
 awssdk = "2.31.78"
 

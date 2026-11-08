@@ -117,6 +117,8 @@ class MicrosoftGrpcServiceTest {
                 .build()).getItem().getName()).isEqualTo("notes.txt");
     }
 
+    // Covers the deprecated DownloadItem rpc, which the service still serves.
+    @SuppressWarnings("deprecation")
     @Test
     void getItemAndDownloadItemAttachListColumns() {
         fake.stub("/drives/drive-1/items/file-1",
