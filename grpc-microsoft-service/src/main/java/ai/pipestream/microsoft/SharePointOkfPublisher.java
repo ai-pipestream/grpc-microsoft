@@ -39,6 +39,16 @@ public final class SharePointOkfPublisher {
     }
 
     /**
+     * A publisher that uploads under {@code subfolder} of this one's folder.
+     *
+     * @param subfolder relative folder, for example {@code increments/{run-id}}
+     * @return the nested publisher
+     */
+    public SharePointOkfPublisher under(String subfolder) {
+        return new SharePointOkfPublisher(files, driveId, join(folderPath, subfolder));
+    }
+
+    /**
      * Whether SharePoint upload is configured.
      *
      * @return true when {@link #ENV_DRIVE_ID} is set

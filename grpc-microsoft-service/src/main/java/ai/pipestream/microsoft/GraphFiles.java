@@ -34,6 +34,15 @@ public final class GraphFiles {
     }
 
     /**
+     * The authorized REST client this API wraps.
+     *
+     * @return the client
+     */
+    public GraphClient client() {
+        return graph;
+    }
+
+    /**
      * The signed-in user (delegated flows) — the cheapest connectivity probe.
      *
      * @return the {@code /me} JSON object

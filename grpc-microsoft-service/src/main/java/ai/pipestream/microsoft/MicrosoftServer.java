@@ -23,6 +23,12 @@ public final class MicrosoftServer {
     public static final String ENV_GRPC_PORT = "MICROSOFT_GRPC_PORT";
     /** Environment variable for the inline file byte cap. */
     public static final String ENV_ATTACHMENT_MAX_BYTES = "MICROSOFT_ATTACHMENT_MAX_BYTES";
+    /**
+     * Environment variable for the {@code DownloadContent} chunk size used when a
+     * request leaves {@code chunk_bytes} at 0; default
+     * {@link MicrosoftGrpcService#DEFAULT_DOWNLOAD_CHUNK_BYTES}.
+     */
+    public static final String ENV_DOWNLOAD_CHUNK_BYTES = "MICROSOFT_DOWNLOAD_CHUNK_BYTES";
     /** Default gRPC listen port when {@link #ENV_GRPC_PORT} is unset. */
     public static final int DEFAULT_GRPC_PORT = 9096;
 
@@ -52,12 +58,23 @@ public final class MicrosoftServer {
                 }
             }
             return current.accessToken();
-        });
+        }, ai.pipestream.microsoft.v1.AuthMode.AUTH_MODE_APPLICATION);
         MicrosoftChangeSink downstream = null;
         java.util.List<AutoCloseable> closables = new java.util.ArrayList<>();
         java.util.List<MicrosoftChangeSink> sinks = new java.util.ArrayList<>();
         GraphFiles files = new GraphFiles(client);
+        ai.pipestream.sync.v1.ConnectionServiceGrpc.ConnectionServiceBlockingStub connections = null;
         if (SyncTableMicrosoftChangeSink.enabled()) {
+            boolean plaintext = !"false".equalsIgnoreCase(java.util.Objects.toString(
+                    System.getenv(SyncTableMicrosoftChangeSink.ENV_PLAINTEXT), "true"));
+            io.grpc.ManagedChannelBuilder<?> catalogBuilder = io.grpc.ManagedChannelBuilder
+                    .forTarget(System.getenv(SyncTableMicrosoftChangeSink.ENV_TARGET).trim());
+            if (plaintext) {
+                catalogBuilder.usePlaintext();
+            }
+            io.grpc.ManagedChannel catalog = catalogBuilder.build();
+            closables.add(catalog::shutdownNow);
+            connections = ai.pipestream.sync.v1.ConnectionServiceGrpc.newBlockingStub(catalog);
             SyncTableMicrosoftChangeSink syncTable = SyncTableMicrosoftChangeSink.fromEnvironment();
             sinks.add(syncTable);
             closables.add(syncTable);
@@ -88,7 +105,8 @@ public final class MicrosoftServer {
         MicrosoftGrpcService service = new MicrosoftGrpcService(config, files,
                 parseLong(System.getenv(ENV_ATTACHMENT_MAX_BYTES),
                         MicrosoftGrpcService.DEFAULT_ATTACHMENT_MAX_BYTES),
-                downstream);
+                downstream, connections, parseInt(System.getenv(ENV_DOWNLOAD_CHUNK_BYTES),
+                        MicrosoftGrpcService.DEFAULT_DOWNLOAD_CHUNK_BYTES));
         Server server = startNetty(service, parseInt(System.getenv(ENV_GRPC_PORT),
                 DEFAULT_GRPC_PORT));
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {

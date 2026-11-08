@@ -31,7 +31,7 @@ final class FakeGraphServer implements AutoCloseable {
     }
 
     record RecordedRequest(String method, String path, String query, String authorization,
-            String contentRange, int bodyLength) {
+            String contentRange, int bodyLength, String prefer, String range) {
     }
 
     private final HttpServer server;
@@ -77,6 +77,29 @@ final class FakeGraphServer implements AutoCloseable {
         return List.copyOf(requests);
     }
 
+    /** Requests whose path is exactly {@code path}, in order. */
+    List<RecordedRequest> requestsTo(String path) {
+        return requests.stream().filter(r -> r.path().equals(path)).toList();
+    }
+
+    /** The single request to {@code path}; fails when there were none or several. */
+    RecordedRequest only(String path) {
+        List<RecordedRequest> matching = requestsTo(path);
+        if (matching.size() != 1) {
+            throw new AssertionError("expected one request to " + path + " but saw " + matching
+                    + " among " + requests);
+        }
+        return matching.get(0);
+    }
+
+    /** A JSON error stub. */
+    static Stub error(int status, String code, Map<String, String> headers) {
+        java.util.Map<String, String> all = new java.util.HashMap<>(headers);
+        all.put("content-type", "application/json");
+        return new Stub(status, ("{\"error\":{\"code\":\"" + code + "\",\"message\":\"" + code
+                + "\"}}").getBytes(StandardCharsets.UTF_8), all);
+    }
+
     private void handle(com.sun.net.httpserver.HttpExchange exchange) throws IOException {
         String path = exchange.getRequestURI().getPath();
         String query = exchange.getRequestURI().getRawQuery();
@@ -85,7 +108,9 @@ final class FakeGraphServer implements AutoCloseable {
                 query == null ? "" : query,
                 exchange.getRequestHeaders().getFirst("authorization"),
                 exchange.getRequestHeaders().getFirst("content-range"),
-                body.length));
+                body.length,
+                exchange.getRequestHeaders().getFirst("prefer"),
+                exchange.getRequestHeaders().getFirst("range")));
 
         Stub stub = null;
         Queue<Stub> once = onceStubs.get(path);

@@ -1,6 +1,7 @@
 package ai.pipestream.microsoft;
 
 import ai.pipestream.microsoft.v1.MicrosoftServiceGrpc;
+import ai.pipestream.microsoft.v1.SyncCursor;
 import ai.pipestream.microsoft.v1.SyncRequest;
 import ai.pipestream.sync.AssetStore;
 import ai.pipestream.sync.SyncTableGrpcService;
@@ -53,8 +54,65 @@ class MicrosoftSyncTableWireTest {
     void syncWritesFilesAndReconcilesStaleRows() throws Exception {
         fake = FakeGraphServer.start();
         fake.stub("/me/drive", MicrosoftFixtures.driveJson("drive-1", "Docs"));
-        fake.stub("/drives/drive-1/root/children", MicrosoftFixtures.childrenJson(
+        fake.stub("/drives/drive-1/root/delta", MicrosoftFixtures.deltaJson(
+                fake.baseUrl() + "/drives/drive-1/root/delta?token=t1",
                 MicrosoftFixtures.fileJson("file-1", "notes.txt", "drive-1")));
+        SyncTableServiceGrpc.SyncTableServiceBlockingStub ledger = start();
+        MicrosoftServiceGrpc.newBlockingStub(microsoftChannel)
+                .sync(SyncRequest.getDefaultInstance())
+                .forEachRemaining(ignored -> {
+                });
+
+        Asset file = ledger.getAsset(GetAssetRequest.newBuilder()
+                .setAssetId("microsoft:default:drive_item:file-1").build()).getAsset();
+        assertThat(file.getAttachment()).isTrue();
+        assertThat(file.getTitle()).isEqualTo("notes.txt");
+
+        List<String> attachments = new ArrayList<>();
+        ledger.listAssets(ListAssetsRequest.newBuilder()
+                .setSource("microsoft")
+                .setAttachmentsOnly(true)
+                .build()).forEachRemaining(r -> attachments.add(r.getAsset().getAssetId()));
+        assertThat(attachments).contains("microsoft:default:drive_item:file-1");
+
+        assertThat(status(ledger, "gone")).isEqualTo(AssetSyncStatus.ASSET_SYNC_STATUS_DELETED);
+    }
+
+    @Test
+    void incrementalSyncNeverReconcilesUnchangedRowsAway() throws Exception {
+        fake = FakeGraphServer.start();
+        fake.stub("/me/drive", MicrosoftFixtures.driveJson("drive-1", "Docs"));
+        String since = fake.baseUrl() + "/drives/drive-1/root/delta?token=t1";
+        fake.stub("/drives/drive-1/root/delta?token=t1", MicrosoftFixtures.deltaJson(
+                fake.baseUrl() + "/drives/drive-1/root/delta?token=t2",
+                MicrosoftFixtures.fileJson("file-1", "notes.txt", "drive-1")));
+        SyncTableServiceGrpc.SyncTableServiceBlockingStub ledger = start();
+        String cursor = SyncCursors.encode(SyncCursor.newBuilder()
+                .putDriveDeltaLinks("drive-1", since).build());
+        List<String> resume = new ArrayList<>();
+        MicrosoftServiceGrpc.newBlockingStub(microsoftChannel)
+                .sync(SyncRequest.newBuilder().setSinceCursor(cursor).build())
+                .forEachRemaining(r -> {
+                    if (!r.getResumeCursor().isEmpty()) {
+                        resume.add(r.getResumeCursor());
+                    }
+                });
+
+        assertThat(fake.only("/drives/drive-1/root/delta").query()).isEqualTo("token=t1");
+        assertThat(status(ledger, "file-1")).isNotEqualTo(AssetSyncStatus.ASSET_SYNC_STATUS_DELETED);
+        assertThat(status(ledger, "gone")).isNotEqualTo(AssetSyncStatus.ASSET_SYNC_STATUS_DELETED);
+        assertThat(resume).hasSize(1);
+        assertThat(SyncCursors.decode(resume.get(0), fake.baseUrl()).getDriveDeltaLinksMap())
+                .containsEntry("drive-1", fake.baseUrl() + "/drives/drive-1/root/delta?token=t2");
+    }
+
+    private static AssetSyncStatus status(SyncTableServiceGrpc.SyncTableServiceBlockingStub ledger,
+            String nativeId) {
+        return ledger.getAsset(GetAssetRequest.newBuilder()
+                .setAssetId("microsoft:default:drive_item:" + nativeId).build()).getAsset().getStatus();
+    }
+
+    private SyncTableServiceGrpc.SyncTableServiceBlockingStub start() throws Exception {
 
         String syncName = InProcessServerBuilder.generateName();
         String msName = InProcessServerBuilder.generateName();
@@ -93,25 +151,6 @@ class MicrosoftSyncTableWireTest {
                 .build()
                 .start();
         microsoftChannel = InProcessChannelBuilder.forName(msName).directExecutor().build();
-        MicrosoftServiceGrpc.newBlockingStub(microsoftChannel)
-                .sync(SyncRequest.getDefaultInstance())
-                .forEachRemaining(ignored -> {
-                });
-
-        Asset file = ledger.getAsset(GetAssetRequest.newBuilder()
-                .setAssetId("microsoft:default:drive_item:file-1").build()).getAsset();
-        assertThat(file.getAttachment()).isTrue();
-        assertThat(file.getTitle()).isEqualTo("notes.txt");
-
-        List<String> attachments = new ArrayList<>();
-        ledger.listAssets(ListAssetsRequest.newBuilder()
-                .setSource("microsoft")
-                .setAttachmentsOnly(true)
-                .build()).forEachRemaining(r -> attachments.add(r.getAsset().getAssetId()));
-        assertThat(attachments).contains("microsoft:default:drive_item:file-1");
-
-        assertThat(ledger.getAsset(GetAssetRequest.newBuilder()
-                .setAssetId("microsoft:default:drive_item:gone").build()).getAsset().getStatus())
-                .isEqualTo(AssetSyncStatus.ASSET_SYNC_STATUS_DELETED);
+        return ledger;
     }
 }

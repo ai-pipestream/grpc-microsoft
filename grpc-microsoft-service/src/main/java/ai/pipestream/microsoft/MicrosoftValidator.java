@@ -1,6 +1,11 @@
 package ai.pipestream.microsoft;
 
 import ai.pipestream.microsoft.v1.ChangeOperation;
+import ai.pipestream.microsoft.v1.ColumnDefinition;
+import ai.pipestream.microsoft.v1.DriveItemVersion;
+import ai.pipestream.microsoft.v1.ListItem;
+import ai.pipestream.microsoft.v1.Permission;
+import ai.pipestream.microsoft.v1.SharePointList;
 import ai.pipestream.microsoft.v1.Drive;
 import ai.pipestream.microsoft.v1.DriveItem;
 import ai.pipestream.microsoft.v1.GraphUser;
@@ -110,6 +115,11 @@ public final class MicrosoftValidator {
             case Drive drive -> required(prefix, "id", drive.getId(), out);
             case DriveItem item -> visitDriveItem(prefix, item, out);
             case GraphUser user -> visitUser(prefix, user, out);
+            case SharePointList list -> required(prefix, "id", list.getId(), out);
+            case ListItem item -> required(prefix, "id", item.getId(), out);
+            case Permission permission -> required(prefix, "id", permission.getId(), out);
+            case ColumnDefinition column -> required(prefix, "id", column.getId(), out);
+            case DriveItemVersion version -> required(prefix, "id", version.getId(), out);
             case MicrosoftEntity entity -> visitEntity(prefix, entity, out);
             case MicrosoftSnapshot snapshot -> required(prefix, "snapshot_id", snapshot.getSnapshotId(), out);
             case MicrosoftChange change -> visitChange(prefix, change, out);

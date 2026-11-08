@@ -71,6 +71,9 @@ class MicrosoftGrpcServiceTest {
         fake.stub("/me/drive", MicrosoftFixtures.driveJson("drive-1", "Docs"));
         fake.stub("/drives/drive-1/root/children", MicrosoftFixtures.childrenJson(
                 MicrosoftFixtures.fileJson("file-1", "notes.txt", "drive-1")));
+        fake.stub("/drives/drive-1/root/delta", MicrosoftFixtures.deltaJson(
+                fake.baseUrl() + "/drives/drive-1/root/delta?token=t1",
+                MicrosoftFixtures.fileJson("file-1", "notes.txt", "drive-1")));
 
         assertThat(stub.getMe(GetMeRequest.getDefaultInstance()).getUser().getId())
                 .isEqualTo("user-1");
@@ -93,7 +96,8 @@ class MicrosoftGrpcServiceTest {
     void listSitesDrivesAndGetItem() {
         fake.stub("/sites", MicrosoftFixtures.sitesJson(
                 MicrosoftFixtures.siteJson("site-1", "Docs")));
-        fake.stub("/me/drive", MicrosoftFixtures.driveJson("drive-1", "Docs"));
+        fake.stub("/me/drives", MicrosoftFixtures.drivesJson(
+                MicrosoftFixtures.driveJson("drive-1", "Docs")));
         fake.stub("/sites/site-1/drives", MicrosoftFixtures.drivesJson(
                 MicrosoftFixtures.driveJson("drive-2", "Library")));
         fake.stub("/drives/drive-1/items/file-1",

@@ -13,14 +13,22 @@ import com.google.protobuf.Message;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * Writes Graph crawl artifacts through the output SPI (protobuf, JSON,
  * OKF, microsoft-connector) into the selected store.
+ *
+ * <p>Per-record formats write on {@link #emit}. End-of-run formats (OKF) get a
+ * mirror: the latest record per object key. A full-sweep run replaces the
+ * mirror with exactly what it emitted; an incremental run merges its records
+ * into the mirror, so unchanged entities stay in the bundle. An incremental run
+ * in a process that has not completed a full sweep yet has no mirror to merge
+ * into, so it writes its records under {@code {prefix}/increments/{run-id}}
+ * instead of overwriting the full bundle with a partial one.</p>
  */
 public final class OutputMicrosoftChangeSink implements MicrosoftChangeSink, AutoCloseable {
 
@@ -29,7 +37,9 @@ public final class OutputMicrosoftChangeSink implements MicrosoftChangeSink, Aut
     private final OutputStore store;
     private final List<OutputFormat> formats;
     private final String prefix;
-    private final List<Message> records = new CopyOnWriteArrayList<>();
+    private final Map<String, Message> run = new LinkedHashMap<>();
+    private final Map<String, Message> mirror = new LinkedHashMap<>();
+    private boolean baseline;
 
     /**
      * Creates a sink.
@@ -90,8 +100,11 @@ public final class OutputMicrosoftChangeSink implements MicrosoftChangeSink, Aut
 
     @Override
     public void emit(MicrosoftChange change) {
-        records.add(change);
-        String key = ObjectKeys.under(prefix, ObjectKeys.of(change));
+        String relative = ObjectKeys.of(change);
+        synchronized (this) {
+            run.put(relative, change);
+        }
+        String key = ObjectKeys.under(prefix, relative);
         try {
             for (OutputFormat format : formats) {
                 if (format.supports(change)) {
@@ -110,13 +123,33 @@ public final class OutputMicrosoftChangeSink implements MicrosoftChangeSink, Aut
 
     @Override
     public void completeRun(String runId) {
+        completeRun(runId, true);
+    }
+
+    @Override
+    public synchronized void completeRun(String runId, boolean fullSweep) {
+        List<Message> records;
+        String target = prefix;
+        if (fullSweep) {
+            mirror.clear();
+            mirror.putAll(run);
+            baseline = true;
+            records = new ArrayList<>(mirror.values());
+        } else if (baseline) {
+            mirror.putAll(run);
+            records = new ArrayList<>(mirror.values());
+        } else {
+            records = new ArrayList<>(run.values());
+            target = ObjectKeys.under(prefix, ObjectKeys.join("increments", ObjectKeys.segment(runId)));
+        }
+        run.clear();
         try {
             for (OutputFormat format : formats) {
-                format.complete(store, new ArrayList<>(records), prefix);
+                format.complete(store, records, target);
             }
             LOG.log(System.Logger.Level.INFO,
-                    "microsoft-proxy output wrote {0} records store={1}",
-                    records.size(), store.id());
+                    "microsoft-proxy output wrote {0} records store={1} prefix={2} fullSweep={3}",
+                    records.size(), store.id(), target, fullSweep);
         } catch (IOException e) {
             throw new UncheckedIOException("output complete failed for run " + runId, e);
         }
