@@ -38,8 +38,8 @@ import java.util.Objects;
  */
 public final class MicrosoftGrpcService extends MicrosoftServiceGrpc.MicrosoftServiceImplBase {
 
-    /** Default cap for inlined file bytes: 25 MiB. */
-    public static final long DEFAULT_ATTACHMENT_MAX_BYTES = 25L * 1024 * 1024;
+    /** Default inline byte cap: 0, meaning no cap. Set a positive value to enforce one. */
+    public static final long DEFAULT_ATTACHMENT_MAX_BYTES = 0L;
 
     private static final MicrosoftValidator VALIDATOR = MicrosoftValidator.create();
 
@@ -54,7 +54,7 @@ public final class MicrosoftGrpcService extends MicrosoftServiceGrpc.MicrosoftSe
      *
      * @param config connector config
      * @param files the authorized files API
-     * @param attachmentMaxBytes inline file byte cap; must be positive
+     * @param attachmentMaxBytes inline file byte cap; 0 or less means no cap
      */
     public MicrosoftGrpcService(MicrosoftConnectorConfig config, GraphFiles files,
             long attachmentMaxBytes) {
@@ -67,7 +67,7 @@ public final class MicrosoftGrpcService extends MicrosoftServiceGrpc.MicrosoftSe
      *
      * @param config connector config
      * @param files the authorized files API
-     * @param attachmentMaxBytes inline file byte cap; must be positive
+     * @param attachmentMaxBytes inline file byte cap; 0 or less means no cap
      * @param downstream optional extra sink for {@code Sync} emissions;
      *        {@code null} for none
      */
@@ -76,9 +76,6 @@ public final class MicrosoftGrpcService extends MicrosoftServiceGrpc.MicrosoftSe
         this.config = Objects.requireNonNull(config, "config");
         this.files = Objects.requireNonNull(files, "files");
         this.mapper = new MicrosoftMapper();
-        if (attachmentMaxBytes <= 0) {
-            throw new IllegalArgumentException("attachmentMaxBytes must be positive");
-        }
         this.attachmentMaxBytes = attachmentMaxBytes;
         this.downstream = downstream;
     }
@@ -226,20 +223,24 @@ public final class MicrosoftGrpcService extends MicrosoftServiceGrpc.MicrosoftSe
         }
     }
 
+    private boolean overCap(long size) {
+        return attachmentMaxBytes > 0 && size > attachmentMaxBytes;
+    }
+
     private DriveItem withContent(DriveItem item) throws IOException, InterruptedException {
         if (item.getFolder()) {
             throw Status.FAILED_PRECONDITION
                     .withDescription("item " + item.getId() + " is a folder; no binary")
                     .asRuntimeException();
         }
-        if (item.getSize() > attachmentMaxBytes) {
+        if (overCap(item.getSize())) {
             throw Status.FAILED_PRECONDITION
                     .withDescription("item " + item.getId() + " is " + item.getSize()
                             + " bytes, above the " + attachmentMaxBytes + " byte inline cap")
                     .asRuntimeException();
         }
         byte[] bytes = files.download(item.getDriveId(), item.getId());
-        if (bytes.length > attachmentMaxBytes) {
+        if (overCap(bytes.length)) {
             throw Status.FAILED_PRECONDITION
                     .withDescription("item " + item.getId() + " downloaded to " + bytes.length
                             + " bytes, above the " + attachmentMaxBytes + " byte inline cap")
