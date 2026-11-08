@@ -444,6 +444,93 @@ class MicrosoftRpcSurfaceTest {
     }
 
     @Test
+    void downloadContentOffsetAtOrPastTheEndIsOutOfRange() {
+        fake.stub("/drives/d1/items/x1", MicrosoftFixtures.fileJson("x1", "a.txt", "d1"));
+        fake.stub("/drives/d1/items/x1/content", FakeGraphServer.Stub.bytes(
+                "0123456789".getBytes(StandardCharsets.UTF_8), "text/plain"));
+        for (long offset : new long[] {10, 12}) {
+            assertThat(code(() -> drain(stub.downloadContent(DownloadContentRequest.newBuilder()
+                    .setDriveId("d1").setItemId("x1").setOffset(offset).build()))))
+                    .as("offset %d", offset).isEqualTo(Status.Code.OUT_OF_RANGE);
+        }
+        List<DownloadContentResponse> last = drain(stub.downloadContent(DownloadContentRequest
+                .newBuilder().setDriveId("d1").setItemId("x1").setOffset(9).build()));
+        assertThat(last.get(1).getChunk().toStringUtf8()).isEqualTo("9");
+    }
+
+    @Test
+    void deltaDriveItemsKeepsGoingWhenAnItemIsGoneBeforeItsPermissionsAreRead() {
+        String link = fake.baseUrl() + "/drives/d1/root/delta?token=n";
+        fake.stub("/drives/d1/root/delta", MicrosoftFixtures.deltaJson(link,
+                MicrosoftFixtures.fileJson("x1", "a.txt", "d1")));
+        // /drives/d1/items/x1/permissions is not stubbed: the fake answers 404.
+        List<DeltaDriveItemsResponse> events = drain(stub.deltaDriveItems(DeltaDriveItemsRequest
+                .newBuilder().setDriveId("d1")
+                .setInclude(DriveItemInclude.newBuilder().setPermissions(true)).build()));
+        assertThat(fake.requestsTo("/drives/d1/items/x1/permissions")).hasSize(1);
+        assertThat(events.get(0).getItem().getPermissionsList()).isEmpty();
+        assertThat(events.getLast().getDeltaLink()).isEqualTo(link);
+    }
+
+    @Test
+    void streamsWaitForTheClientAndStopPagingWhenItCancels() throws Exception {
+        for (int i = 0; i < 5; i++) {
+            String item = MicrosoftFixtures.fileJson("x" + i, "f" + i + ".txt", "d1");
+            String body = i == 4 ? MicrosoftFixtures.deltaJson(fake.baseUrl() + "/drives/d1/root/delta?token=end", item)
+                    : MicrosoftFixtures.pageJson(fake.baseUrl() + "/drives/d1/root/delta?page=" + (i + 1), item);
+            fake.stub(i == 0 ? "/drives/d1/root/delta" : "/drives/d1/root/delta?page=" + i, body);
+        }
+        java.util.concurrent.CountDownLatch first = new java.util.concurrent.CountDownLatch(1);
+        java.util.concurrent.CountDownLatch closed = new java.util.concurrent.CountDownLatch(1);
+        java.util.concurrent.atomic.AtomicReference<io.grpc.stub.ClientCallStreamObserver<DeltaDriveItemsRequest>>
+                call = new java.util.concurrent.atomic.AtomicReference<>();
+        MicrosoftServiceGrpc.newStub(channels.get(0)).deltaDriveItems(
+                DeltaDriveItemsRequest.newBuilder().setDriveId("d1").build(),
+                new io.grpc.stub.ClientResponseObserver<DeltaDriveItemsRequest, DeltaDriveItemsResponse>() {
+                    @Override
+                    public void beforeStart(
+                            io.grpc.stub.ClientCallStreamObserver<DeltaDriveItemsRequest> requestStream) {
+                        call.set(requestStream);
+                        requestStream.disableAutoRequestWithInitial(1);
+                    }
+
+                    @Override
+                    public void onNext(DeltaDriveItemsResponse value) {
+                        first.countDown();
+                    }
+
+                    @Override
+                    public void onError(Throwable t) {
+                        closed.countDown();
+                    }
+
+                    @Override
+                    public void onCompleted() {
+                        closed.countDown();
+                    }
+                });
+        assertThat(first.await(5, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+        Thread.sleep(300);
+        assertThat(fake.requestsTo("/drives/d1/root/delta")).hasSizeLessThanOrEqualTo(2);
+        call.get().cancel("done", null);
+        assertThat(closed.await(5, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+        Thread.sleep(300);
+        assertThat(fake.requestsTo("/drives/d1/root/delta")).hasSizeLessThanOrEqualTo(2);
+    }
+
+    @Test
+    void aRepeatedNextLinkIsInternalNotASpin() {
+        String again = fake.baseUrl() + "/sites/" + SITE + "/drives?page=again";
+        fake.stub("/sites/" + SITE + "/drives", MicrosoftFixtures.pageJson(again,
+                "{\"id\":\"d1\",\"driveType\":\"documentLibrary\"}"));
+        fake.stub("/sites/" + SITE + "/drives?page=again", MicrosoftFixtures.pageJson(again,
+                "{\"id\":\"d2\",\"driveType\":\"documentLibrary\"}"));
+        assertThat(code(() -> stub.listDrives(ListDrivesRequest.newBuilder().setSiteId(SITE).build())))
+                .isEqualTo(Status.Code.INTERNAL);
+        assertThat(fake.requestsTo("/sites/" + SITE + "/drives")).hasSize(2);
+    }
+
+    @Test
     void deltaDriveItemsSendsPreferHeadersAndFlagsSharingChanges() {
         String d1 = fake.baseUrl() + "/drives/d1/root/delta(token='abc')";
         fake.stub("/drives/d1/root/delta", MicrosoftFixtures.deltaJson(d1, """

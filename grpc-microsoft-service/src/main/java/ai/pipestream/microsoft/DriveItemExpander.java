@@ -17,8 +17,9 @@ import java.util.Objects;
  * item ({@code /listItem?$expand=fields}: id, content type, typed columns), the
  * item's permissions ({@code /permissions}, all pages) and its retention label
  * ({@code /retentionLabel}); the publication facet is a {@code $select} on the
- * item read itself. Personal-OneDrive files have no list item and items without
- * a label answer 404; both leave the field empty instead of failing.
+ * item read itself. Personal-OneDrive files have no list item, items without
+ * a label answer 404, and an item deleted after it was listed answers 404 on
+ * every expansion; each leaves the field empty instead of failing.
  */
 final class DriveItemExpander {
 
@@ -88,11 +89,19 @@ final class DriveItemExpander {
                     .setDriveItem(DriveItemRef.newBuilder().setDriveId(driveId).setItemId(item.getId()))
                     .build();
             DriveItem.Builder b = item.toBuilder().clearPermissions();
-            pager.forEach(List.of(GraphPaths.item(driveId, item.getId()) + "/permissions"), Map.of(),
-                    node -> {
-                        b.addPermissions(mapper.toPermission(node, target));
-                        return true;
-                    });
+            try {
+                pager.forEach(List.of(GraphPaths.item(driveId, item.getId()) + "/permissions"),
+                        Map.of(), node -> {
+                            b.addPermissions(mapper.toPermission(node, target));
+                            return true;
+                        });
+            } catch (GraphClient.GraphApiException e) {
+                // Gone since it was listed (a delta races deletes): no permissions, not a failure.
+                if (e.status() != 404) {
+                    throw e;
+                }
+                b.clearPermissions();
+            }
             item = b.build();
         }
         if (flags.retentionLabel() && !item.getFolder()) {

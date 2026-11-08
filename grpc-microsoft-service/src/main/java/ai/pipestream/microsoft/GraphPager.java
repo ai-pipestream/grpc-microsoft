@@ -69,6 +69,41 @@ public final class GraphPager {
     public record DeltaOutcome(String deltaLink, boolean resynced) {
     }
 
+    /**
+     * Graph handed back a {@code @odata.nextLink} it had already returned in
+     * the same enumeration: following it would loop forever.
+     */
+    public static final class RepeatedLinkException extends IOException {
+        /** Serialization identifier. */
+        @java.io.Serial
+        private static final long serialVersionUID = 1L;
+
+        RepeatedLinkException(String link) {
+            super("Graph repeated the next link " + link + "; refusing to loop");
+        }
+    }
+
+    /**
+     * Admits the next link of one enumeration: {@link RepeatedLinkException}
+     * when it was already followed, {@code CANCELLED} when the gRPC client
+     * that the enumeration serves has gone.
+     *
+     * @param seen links already followed in this enumeration
+     * @param link the next link
+     * @return {@code link}
+     * @throws RepeatedLinkException when {@code link} repeats
+     */
+    static String admit(java.util.Set<String> seen, String link) throws RepeatedLinkException {
+        if (!seen.add(link)) {
+            throw new RepeatedLinkException(link);
+        }
+        if (io.grpc.Context.current().isCancelled()) {
+            throw io.grpc.Status.CANCELLED.withDescription("the client cancelled the call")
+                    .asRuntimeException();
+        }
+        return link;
+    }
+
     private final GraphClient graph;
 
     /**
@@ -114,6 +149,7 @@ public final class GraphPager {
     public void forEach(List<String> candidates, Map<String, String> headers, Visitor visitor)
             throws IOException, InterruptedException {
         JsonNode page = get(candidates, headers);
+        java.util.Set<String> seen = new java.util.HashSet<>();
         while (true) {
             for (JsonNode item : page.path("value")) {
                 if (!visitor.visit(item)) {
@@ -124,7 +160,7 @@ public final class GraphPager {
             if (next.isBlank()) {
                 return;
             }
-            page = graph.get(next, headers);
+            page = graph.get(admit(seen, next), headers);
         }
     }
 
@@ -145,6 +181,7 @@ public final class GraphPager {
             DeltaVisitor visitor) throws IOException, InterruptedException {
         boolean resynced = false;
         String next = startLink == null || startLink.isEmpty() ? null : startLink;
+        java.util.Set<String> seen = new java.util.HashSet<>();
         while (true) {
             JsonNode page;
             try {
@@ -170,7 +207,7 @@ public final class GraphPager {
             }
             String nextLink = page.path("@odata.nextLink").asText("");
             if (!nextLink.isBlank()) {
-                next = nextLink;
+                next = admit(seen, nextLink);
                 continue;
             }
             String deltaLink = page.path("@odata.deltaLink").asText("");

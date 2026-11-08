@@ -144,7 +144,9 @@ class MicrosoftSyncTableWireTest {
                 .build();
         GraphFiles files = new GraphFiles(new GraphClient(fake.baseUrl(), () -> "token"));
         microsoftServer = InProcessServerBuilder.forName(msName)
-                .directExecutor()
+                // The service blocks on outbound flow control, as in production:
+                // a direct executor would run it on the client thread and stall.
+                .executor(java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor())
                 .addService(new MicrosoftGrpcService(config, files,
                         MicrosoftGrpcService.DEFAULT_ATTACHMENT_MAX_BYTES,
                         new SyncTableMicrosoftChangeSink(syncChannel)))

@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -145,13 +146,14 @@ public final class GraphFiles {
             throws IOException, InterruptedException {
         java.util.List<JsonNode> items = new java.util.ArrayList<>();
         JsonNode page = children(driveId, folderPath);
+        java.util.Set<String> seen = new java.util.HashSet<>();
         while (true) {
             page.path("value").forEach(items::add);
             String next = page.path("@odata.nextLink").asText("");
             if (next.isBlank()) {
                 return items;
             }
-            page = graph.get(next);
+            page = graph.get(GraphPager.admit(seen, next), Map.of());
         }
     }
 

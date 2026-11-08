@@ -43,7 +43,9 @@ class MicrosoftGrpcServiceTest {
         GraphFiles files = new GraphFiles(new GraphClient(fake.baseUrl(), () -> "token"));
         String name = InProcessServerBuilder.generateName();
         server = InProcessServerBuilder.forName(name)
-                .directExecutor()
+                // The service blocks on outbound flow control, as in production:
+                // a direct executor would run it on the client thread and stall.
+                .executor(java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor())
                 .addService(new MicrosoftGrpcService(config, files,
                         MicrosoftGrpcService.DEFAULT_ATTACHMENT_MAX_BYTES))
                 .build()

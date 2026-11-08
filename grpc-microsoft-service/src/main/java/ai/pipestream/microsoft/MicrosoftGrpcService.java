@@ -66,7 +66,6 @@ import com.google.protobuf.ByteString;
 import com.google.protobuf.Message;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
-import io.grpc.stub.ServerCallStreamObserver;
 import io.grpc.stub.StreamObserver;
 
 import java.io.IOException;
@@ -86,7 +85,22 @@ import java.util.Objects;
  * resume cursor is validated against the configured Graph host and the route it
  * claims before the server's token is sent to it.
  */
-public final class MicrosoftGrpcService extends MicrosoftServiceGrpc.MicrosoftServiceImplBase {
+public final class MicrosoftGrpcService
+        implements MicrosoftServiceGrpc.AsyncService, io.grpc.BindableService {
+
+    /**
+     * The service definition, with every server-streaming rpc behind
+     * {@link FlowControlInterceptor} (isReady-aware sends that stop on
+     * cancellation).
+     *
+     * @return the bound service
+     */
+    @Override
+    public io.grpc.ServerServiceDefinition bindService() {
+        return io.grpc.ServerInterceptors.intercept(MicrosoftServiceGrpc.bindService(this),
+                new FlowControlInterceptor());
+    }
+
 
     /** Default cap for inlined file bytes: 25 MiB. */
     public static final long DEFAULT_ATTACHMENT_MAX_BYTES = 25L * 1024 * 1024;
@@ -439,7 +453,19 @@ public final class MicrosoftGrpcService extends MicrosoftServiceGrpc.MicrosoftSe
             try (GraphClient.Content content = session.graph().openContent(route, range)) {
                 InputStream in = content.body();
                 if (content.status() != 206 && offset > 0) {
-                    in.skipNBytes(offset);
+                    // Graph ignored the range: apply it here, with HTTP 416's rule
+                    // (an offset at or past the end is not satisfiable).
+                    try {
+                        in.skipNBytes(offset);
+                    } catch (java.io.EOFException e) {
+                        throw outOfRange(item, offset);
+                    }
+                    int probe = in.read();
+                    if (probe < 0) {
+                        throw outOfRange(item, offset);
+                    }
+                    in = new java.io.SequenceInputStream(
+                            new java.io.ByteArrayInputStream(new byte[] {(byte) probe}), in);
                 }
                 long remaining = length > 0 ? length : Long.MAX_VALUE;
                 while (remaining > 0) {
@@ -454,6 +480,12 @@ public final class MicrosoftGrpcService extends MicrosoftServiceGrpc.MicrosoftSe
                 }
             }
         });
+    }
+
+    private static StatusRuntimeException outOfRange(DriveItem item, long offset) {
+        return Status.OUT_OF_RANGE
+                .withDescription("offset " + offset + " is at or past the end of item " + item.getId())
+                .asRuntimeException();
     }
 
     @Override
@@ -906,6 +938,8 @@ public final class MicrosoftGrpcService extends MicrosoftServiceGrpc.MicrosoftSe
                 case 503, 504 -> Status.UNAVAILABLE;
                 default -> Status.INTERNAL;
             }).withDescription(e.getMessage());
+        } else if (cause instanceof GraphPager.RepeatedLinkException e) {
+            status = Status.INTERNAL.withDescription(e.getMessage());
         } else if (cause instanceof IllegalArgumentException e) {
             status = Status.INVALID_ARGUMENT.withDescription(e.getMessage());
         } else if (cause instanceof InterruptedException e) {
@@ -922,42 +956,21 @@ public final class MicrosoftGrpcService extends MicrosoftServiceGrpc.MicrosoftSe
     }
 
     /**
-     * Server-side flow control for bulk streams: waits (on the handler's virtual
-     * thread) until the transport can take another message, so a slow client
-     * never makes the server buffer a whole file. Cancellation ends the wait.
+     * The download loop's cancellation check. Readiness itself is enforced
+     * for every stream by {@link FlowControlInterceptor} (each send parks the
+     * handler's virtual thread until the transport is ready, so a slow
+     * client never makes the server buffer a whole file); this stops the
+     * read loop as soon as the client has gone.
      */
     private static final class FlowControl {
-        private final ServerCallStreamObserver<?> call;
-        private final Object lock = new Object();
-
-        private FlowControl(ServerCallStreamObserver<?> call) {
-            this.call = call;
-            if (call != null) {
-                call.setOnReadyHandler(this::signal);
-                call.setOnCancelHandler(this::signal);
-            }
-        }
+        private final io.grpc.Context context = io.grpc.Context.current();
 
         static FlowControl of(StreamObserver<?> observer) {
-            return new FlowControl(observer instanceof ServerCallStreamObserver<?> s ? s : null);
+            return new FlowControl();
         }
 
-        private void signal() {
-            synchronized (lock) {
-                lock.notifyAll();
-            }
-        }
-
-        void awaitReady() throws InterruptedException {
-            if (call == null) {
-                return;
-            }
-            synchronized (lock) {
-                while (!call.isReady() && !call.isCancelled()) {
-                    lock.wait(1000);
-                }
-            }
-            if (call.isCancelled()) {
+        void awaitReady() {
+            if (context.isCancelled()) {
                 throw Status.CANCELLED.withDescription("client cancelled the download")
                         .asRuntimeException();
             }
