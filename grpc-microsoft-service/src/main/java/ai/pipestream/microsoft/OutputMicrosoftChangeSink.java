@@ -2,6 +2,7 @@ package ai.pipestream.microsoft;
 
 import ai.pipestream.microsoft.v1.MicrosoftChange;
 import ai.pipestream.microsoft.v1.MicrosoftSnapshot;
+import ai.pipestream.microsoft.output.MicrosoftObjectKeys;
 import ai.pipestream.output.ObjectKeys;
 import ai.pipestream.output.OutputEnv;
 import ai.pipestream.output.OutputFormat;
@@ -91,7 +92,7 @@ public final class OutputMicrosoftChangeSink implements MicrosoftChangeSink, Aut
     @Override
     public void emit(MicrosoftChange change) {
         records.add(change);
-        String key = ObjectKeys.under(prefix, ObjectKeys.of(change));
+        String key = ObjectKeys.under(prefix, MicrosoftObjectKeys.of(change));
         try {
             for (OutputFormat format : formats) {
                 if (format.supports(change)) {
