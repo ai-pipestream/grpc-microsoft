@@ -369,7 +369,7 @@ public final class GraphFiles {
         if (!cleaned.startsWith("/")) {
             cleaned = "/" + cleaned;
         }
-        return cleaned.replaceAll("/+$", "");
+        return GraphLinks.stripTrailingSlashes(cleaned);
     }
 
     private static String fileName(String destPath) {
@@ -379,14 +379,6 @@ public final class GraphFiles {
     }
 
     private static String encodePath(String path) {
-        StringBuilder encoded = new StringBuilder();
-        for (String segment : normalize(path).split("/")) {
-            if (segment.isEmpty()) {
-                continue;
-            }
-            encoded.append('/').append(URLEncoder.encode(segment, StandardCharsets.UTF_8)
-                    .replace("+", "%20"));
-        }
-        return encoded.toString();
+        return GraphPaths.encodePath(normalize(path));
     }
 }

@@ -88,4 +88,18 @@ class GraphHelpersTest {
         assertThat(GraphPaths.encodePath("/")).isEmpty();
         assertThatThrownBy(() -> GraphPaths.encodePath("/a/../b")).isInstanceOf(IllegalArgumentException.class);
     }
+
+    @Test
+    void emailShapeMatchesTheFormerPattern() {
+        // The rule ^[^ @]+@[^ @]+[.][^ @]+$, without java.util.regex.
+        assertThat(MicrosoftValidator.isEmailShaped("ada@contoso.com")).isTrue();
+        assertThat(MicrosoftValidator.isEmailShaped("guest_x.com#EXT#@contoso.onmicrosoft.com")).isTrue();
+        assertThat(MicrosoftValidator.isEmailShaped("a@b.c.")).isTrue();
+        assertThat(MicrosoftValidator.isEmailShaped("a@.b")).isFalse();
+        assertThat(MicrosoftValidator.isEmailShaped("a@b.")).isFalse();
+        assertThat(MicrosoftValidator.isEmailShaped("@b.c")).isFalse();
+        assertThat(MicrosoftValidator.isEmailShaped("a@b@c.d")).isFalse();
+        assertThat(MicrosoftValidator.isEmailShaped("a b@c.d")).isFalse();
+        assertThat(MicrosoftValidator.isEmailShaped("a@bc")).isFalse();
+    }
 }
