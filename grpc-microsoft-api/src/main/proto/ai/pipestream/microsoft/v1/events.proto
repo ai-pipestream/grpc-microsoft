@@ -1,0 +1,136 @@
+syntax = "proto3";
+
+package ai.pipestream.microsoft.v1;
+
+import "ai/pipestream/microsoft/v1/common.proto";
+import "ai/pipestream/microsoft/v1/drive.proto";
+import "ai/pipestream/microsoft/v1/list.proto";
+import "ai/pipestream/microsoft/v1/permission.proto";
+import "ai/pipestream/microsoft/v1/site.proto";
+import "google/protobuf/timestamp.proto";
+
+option java_multiple_files = true;
+option java_package = "ai.pipestream.microsoft.v1";
+
+// ============================================================================
+// CRAWL ENVELOPES - what the crawler emits and what Sync streams.
+//
+// These messages moved here from common.proto so the entity files can be
+// split per Graph resource without an import cycle. Fully qualified names,
+// field numbers and the generated Java classes (java_multiple_files) are
+// unchanged; only the generated outer descriptor class differs.
+// ============================================================================
+
+// One Microsoft Graph entity as the crawler read it.
+message MicrosoftEntity {
+  // Graph id of the wrapped entity.
+  string entity_id = 1;
+  // When the crawler ingested this record.
+  google.protobuf.Timestamp ingested_at = 2;
+  // The wrapped entity. Exactly one arm is set.
+  oneof entity {
+    // Set when the wrapped entity is a SharePoint site.
+    Site site = 10;
+    // Set when the wrapped entity is a drive.
+    Drive drive = 11;
+    // Set when the wrapped entity is a file or folder.
+    DriveItem drive_item = 12;
+    // Set when the wrapped entity is a Graph user.
+    GraphUser user = 13;
+    // Set when the wrapped entity is a SharePoint list.
+    SharePointList list = 14;
+    // Set when the wrapped entity is a SharePoint list item.
+    ListItem list_item = 15;
+    // Set when the wrapped entity is a permission (ACL entry); its
+    // `target` says which item it belongs to.
+    Permission permission = 16;
+    // Set when the wrapped entity is a drive item version.
+    DriveItemVersion drive_item_version = 17;
+    // Set when the wrapped entity is a list item version.
+    ListItemVersion list_item_version = 18;
+    // Set when the wrapped entity is a column definition.
+    ColumnDefinition column_definition = 19;
+    // Set when the wrapped entity is a content type.
+    ContentType content_type = 20;
+  }
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// Where a change record came from.
+enum ChangeSource {
+  // Zero value; the change source is unknown or was not recorded.
+  CHANGE_SOURCE_UNSPECIFIED = 0;
+  // Full crawl of the drive (children walk or initial delta enumeration).
+  CHANGE_SOURCE_CRAWL = 1;
+  // Incremental sync driven by a Graph delta token.
+  CHANGE_SOURCE_DELTA = 2;
+}
+
+// The kind of change applied to the wrapped entity.
+enum ChangeOperation {
+  // Zero value; the operation is unknown or was not recorded.
+  CHANGE_OPERATION_UNSPECIFIED = 0;
+  // The entity was created or updated; the entity payload is present.
+  CHANGE_OPERATION_UPSERT = 1;
+  // The entity was deleted; only the identity fields are meaningful.
+  CHANGE_OPERATION_DELETE = 2;
+}
+
+// A full-sync marker for one completed sweep of a drive, list, or the site
+// catalog.
+message MicrosoftSnapshot {
+  // Unique id of this snapshot run (run id plus scope id).
+  string snapshot_id = 1;
+  // Drive the sweep covered; empty for a list or site sweep.
+  string drive_id = 2;
+  // Number of entities emitted per kind (e.g. "file": 12, "folder": 3).
+  map<string, int64> entity_counts = 3;
+  // The `@odata.deltaLink` the sweep ended on, for the drive, list or site
+  // catalog it covered. Feed it back through SyncRequest.since_cursor (via
+  // the terminal resume cursor) or the matching delta rpc.
+  string cursor = 4;
+  // When the sweep started.
+  google.protobuf.Timestamp started_at = 5;
+  // When the sweep completed (unset while the sweep is running).
+  optional google.protobuf.Timestamp completed_at = 6;
+  // Site the sweep covered, for list sweeps and site-scoped drive sweeps.
+  string site_id = 7;
+  // List the sweep covered; empty for drive and site sweeps.
+  string list_id = 8;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// One upsert or delete against the Microsoft Graph mirror.
+message MicrosoftChange {
+  // Unique id of this change record.
+  string change_id = 1;
+  // The kind of change (UPSERT carries the entity; DELETE is identity-only).
+  ChangeOperation operation = 2;
+  // The entity payload (full for UPSERT; identity-only for DELETE).
+  MicrosoftEntity entity = 3;
+  // The crawl run id (full crawl) or the delta link the change was read
+  // under (incremental).
+  string cursor = 4;
+  // Where this change record came from.
+  ChangeSource source = 5;
+  // When the change was observed.
+  google.protobuf.Timestamp occurred_at = 6;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// The typed content of a Sync resume cursor. The terminal
+// SyncResponse.resume_cursor string is the base64 (URL-safe, unpadded)
+// binary encoding of this message so that a client can carry it opaquely
+// while the server keeps every Graph delta link it needs to resume.
+message SyncCursor {
+  // Drive id to the `@odata.deltaLink` its last sweep ended on.
+  map<string, string> drive_delta_links = 1;
+  // `site_id/list_id` to the `@odata.deltaLink` its last sweep ended on.
+  map<string, string> list_delta_links = 2;
+  // `@odata.deltaLink` of the site catalog (`/sites/delta`), when the pass
+  // enumerated sites.
+  string sites_delta_link = 3;
+}

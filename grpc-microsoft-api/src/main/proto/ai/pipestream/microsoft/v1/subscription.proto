@@ -1,0 +1,55 @@
+syntax = "proto3";
+
+package ai.pipestream.microsoft.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option java_multiple_files = true;
+option java_package = "ai.pipestream.microsoft.v1";
+
+// ============================================================================
+// CHANGE NOTIFICATION SUBSCRIPTIONS - the Graph `subscription` resource.
+//
+// Webhooks are how a connector stops polling delta on a timer: Graph POSTs a
+// (payload-less) notification to the subscription's HTTPS endpoint when a
+// drive root or list changes, and the connector then runs the delta rpc.
+// Receiving the notification is an HTTP concern outside this gRPC contract;
+// managing the subscription is a Graph call and belongs here.
+// ============================================================================
+
+// A change notification subscription on a drive root
+// (`/drives/{id}/root`, `/users/{id}/drive/root`) or a list
+// (`/sites/{id}/lists/{id}`).
+message Subscription {
+  // Subscription id.
+  string id = 1;
+  // Monitored resource path relative to the Graph base URL
+  // (e.g. `drives/{drive-id}/root`).
+  string resource = 2;
+  // Change types that raise a notification; drive roots and lists support
+  // `updated` only.
+  string change_type = 3;
+  // HTTPS endpoint that receives notifications.
+  string notification_url = 4;
+  // HTTPS endpoint that receives lifecycle notifications
+  // (`reauthorizationRequired`, `subscriptionRemoved`, `missed`).
+  string lifecycle_notification_url = 5;
+  // When the subscription expires (at most about 30 days for drives and
+  // lists; renew before then).
+  google.protobuf.Timestamp expires_at = 6;
+  // Opaque client state echoed in every notification (max 128 chars).
+  string client_state = 7;
+  // Application that created the subscription.
+  string application_id = 8;
+  // User or service principal that created the subscription.
+  string creator_id = 9;
+  // Whether notifications carry resource data (not supported for drives and
+  // lists; always false there).
+  bool include_resource_data = 10;
+  // Latest TLS version the notification endpoint supports (`v1_2`, ...).
+  string latest_supported_tls_version = 11;
+  // App id used to generate the validation token, when set.
+  string notification_url_app_id = 12;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}

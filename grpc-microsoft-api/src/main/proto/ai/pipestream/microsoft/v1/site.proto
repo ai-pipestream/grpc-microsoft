@@ -1,0 +1,68 @@
+syntax = "proto3";
+
+package ai.pipestream.microsoft.v1;
+
+import "ai/pipestream/microsoft/v1/common.proto";
+import "google/protobuf/timestamp.proto";
+
+option java_multiple_files = true;
+option java_package = "ai.pipestream.microsoft.v1";
+
+// ============================================================================
+// SITE - a SharePoint site (root site, subsite, or a user's personal
+// OneDrive site). Site ids are the composite
+// `hostname,siteCollectionId,siteId` form Graph returns.
+// ============================================================================
+
+// Details of the site collection a root site belongs to (the
+// `siteCollection` facet). Only present on root sites.
+message SiteCollection {
+  // Hostname of the site collection (e.g. `contoso.sharepoint.com`).
+  string hostname = 1;
+  // Geographic region code for multi-geo tenants (e.g. `NAM`); empty
+  // otherwise.
+  string data_location_code = 2;
+  // True when this is the tenant's root site collection.
+  bool is_root = 3;
+  // Archival state: `recentlyArchived`, `fullyArchived`, `reactivating`;
+  // empty when the collection is active.
+  string archival_state = 4;
+}
+
+// A SharePoint site.
+message Site {
+  // Site id (`hostname,siteCollectionId,siteId`).
+  string id = 1;
+  // Site name (URL segment).
+  string name = 2;
+  // Site display name (title).
+  string display_name = 3;
+  // Web URL of the site.
+  string web_url = 4;
+  // Site description, empty when omitted.
+  string description = 5;
+  // When the site was created.
+  google.protobuf.Timestamp created_at = 6;
+  // When the site was last modified.
+  google.protobuf.Timestamp last_modified_at = 7;
+  // Who created the site, when Graph returned it.
+  IdentitySet created_by = 8;
+  // Who last modified the site, when Graph returned it.
+  IdentitySet last_modified_by = 9;
+  // Graph eTag of the site, empty when omitted.
+  string etag = 10;
+  // True for a user's personal (OneDrive) site.
+  bool is_personal_site = 11;
+  // True when the site is the root site of its site collection.
+  bool is_root = 12;
+  // Site collection details; present on root sites only.
+  SiteCollection site_collection = 13;
+  // SharePoint REST identifiers (siteId, webId, tenantId, siteUrl).
+  SharepointIds sharepoint_ids = 14;
+  // Parent reference for subsites (the parent site id in `site_id`).
+  ItemReference parent_reference = 15;
+  // Present when a sites delta enumeration reports the site as deleted.
+  Deleted deleted = 16;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}

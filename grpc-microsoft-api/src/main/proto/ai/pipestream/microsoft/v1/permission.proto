@@ -1,0 +1,108 @@
+syntax = "proto3";
+
+package ai.pipestream.microsoft.v1;
+
+import "ai/pipestream/microsoft/v1/common.proto";
+import "google/protobuf/timestamp.proto";
+
+option java_multiple_files = true;
+option java_package = "ai.pipestream.microsoft.v1";
+
+// ============================================================================
+// PERMISSIONS AND SHARING - the Graph `permission` resource as it appears on
+// driveItems, listItems, lists and sites. This is the ACL an indexer uses for
+// search security trimming: who (user, group, application, SharePoint group,
+// link) can do what (roles) on the item, and whether the grant is explicit or
+// inherited.
+//
+// Graph deprecated `grantedTo` / `grantedToIdentities` in favour of the V2
+// properties; this model carries only the V2 shape. A server mapping an old
+// response folds the deprecated properties into `granted_to` /
+// `granted_to_identities`.
+// ============================================================================
+
+// A sharing link (the `sharingLink` facet). Anyone holding the link URL has
+// the access described by the link's type and scope.
+message SharingLink {
+  // Link type: `view`, `edit`, `embed`, `blocksDownload`, `createOnly`,
+  // `addressBar`, `adminDefault`. Open string: Graph adds values over time.
+  string type = 1;
+  // Link scope: `anonymous` (anyone with the link, no sign-in),
+  // `organization` (anyone signed in to the tenant), `users` (specific
+  // people), `existingAccess` (grants nothing beyond existing permissions).
+  string scope = 2;
+  // URL that opens the item in the browser.
+  string web_url = 3;
+  // For embed links, the HTML of an iframe that embeds the item.
+  string web_html = 4;
+  // True when the link only allows viewing on the web, not downloading.
+  bool prevents_download = 5;
+  // The application the link is associated with, when any.
+  Identity application = 6;
+}
+
+// A sharing invitation (the `sharingInvitation` facet): access granted by
+// inviting a specific email address.
+message SharingInvitation {
+  // Email address the invitation was sent to.
+  string email = 1;
+  // Who sent the invitation, when known.
+  IdentitySet invited_by = 2;
+  // Identity that redeemed the invitation, when known.
+  string redeemed_by = 3;
+  // True when the recipient must sign in to access the item.
+  bool sign_in_required = 4;
+}
+
+// The item, list or site a permission belongs to. Graph permissions carry no
+// back-reference; the server fills this in so a permission can travel on its
+// own (for example as a Sync change).
+message PermissionTarget {
+  // Exactly one arm identifies the resource the permission is on.
+  oneof target {
+    // A drive item (file or folder).
+    DriveItemRef drive_item = 1;
+    // A SharePoint list item.
+    ListItemRef list_item = 2;
+    // A SharePoint list or document library.
+    ListRef list = 3;
+    // A SharePoint site (application grants such as Sites.Selected).
+    string site_id = 4;
+  }
+}
+
+// One permission (ACL entry) on a drive item, list item, list or site.
+message Permission {
+  // Permission id, unique among the permissions of the target.
+  string id = 1;
+  // Roles granted: `read`, `write`, `owner`; SharePoint also reports
+  // `sp.full control`, `sp.limited access`, `sp.view only` style values and
+  // site permissions report `read`, `write`, `manage`, `fullcontrol`. Open
+  // string collection, kept verbatim.
+  repeated string roles = 2;
+  // The grantee of a user- or application-type permission (`grantedToV2`).
+  SharePointIdentitySet granted_to = 3;
+  // The grantees of a link-type permission scoped to specific people, and
+  // of SharePoint role assignments that list several principals
+  // (`grantedToIdentitiesV2`).
+  repeated SharePointIdentitySet granted_to_identities = 4;
+  // Set when this is a sharing-link permission.
+  SharingLink link = 5;
+  // Set when this permission came from a sharing invitation.
+  SharingInvitation invitation = 6;
+  // The ancestor the permission is inherited from; unset for permissions
+  // granted directly on the target. OneDrive for Business and SharePoint
+  // document libraries do not return it even for inherited permissions.
+  ItemReference inherited_from = 7;
+  // Token usable with the shares API (`/shares/{share_id}`).
+  string share_id = 8;
+  // When the permission expires; unset when it does not expire (Graph
+  // reports DateTime.MinValue for that case and the server drops it).
+  google.protobuf.Timestamp expires_at = 9;
+  // True when the sharing link is password-protected (OneDrive Personal).
+  bool has_password = 10;
+  // The resource this permission is on; set by the server.
+  PermissionTarget target = 11;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}

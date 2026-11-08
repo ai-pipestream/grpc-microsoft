@@ -7,15 +7,37 @@ import "google/protobuf/timestamp.proto";
 option java_multiple_files = true;
 option java_package = "ai.pipestream.microsoft.v1";
 
-// A Microsoft Graph identity: user, device, or application.
+// ============================================================================
+// MICROSOFT GRAPH DOMAIN MODEL - shared sub-structures.
+//
+// This package is a domain model of the Microsoft Graph v1.0 SharePoint and
+// OneDrive surface (sites, drives, driveItems, lists, listItems, columns,
+// content types, permissions, versions), not a serialization of REST response
+// shapes. OData annotations (@odata.*, @microsoft.graph.*) and pagination
+// transport (@odata.nextLink) are deliberately absent; list rpcs stream and
+// delta rpcs surface @odata.deltaLink as a typed resume cursor. Graph facets
+// (file, folder, deleted, shared, remoteItem, ...) become sub-messages whose
+// presence carries the same meaning as the facet's presence in Graph.
+//
+// Graph declares most of its enumerations as open strings (driveType, link
+// scope, roles, list template, ...). Those stay strings here so an unknown
+// upstream value is never lost; only values Graph itself declares as closed
+// OData enums become protobuf enums.
+//
+// Entity messages live in site.proto, drive.proto, list.proto and
+// permission.proto; the crawl envelopes live in events.proto.
+// ============================================================================
+
+// A Microsoft Graph identity: user, device, group, or application.
 message Identity {
-  // Graph object id of the identity.
+  // Graph object id of the identity (directory object id for users, groups
+  // and applications).
   string id = 1;
-  // Display name of the identity.
+  // Display name of the identity as Graph recorded it; may be stale.
   string display_name = 2;
 }
 
-// Identity set on a drive item (createdBy / lastModifiedBy).
+// Identity set on a Graph item (createdBy / lastModifiedBy / owner).
 message IdentitySet {
   // User identity, when the actor is a user.
   Identity user = 1;
@@ -23,6 +45,52 @@ message IdentitySet {
   Identity application = 2;
   // Device identity, when the actor is a device.
   Identity device = 3;
+}
+
+// A SharePoint-scoped identity (the `sharePointIdentity` type): a site user or
+// site group whose id is unique only within the site collection.
+message SharePointIdentity {
+  // SharePoint principal id (unique within the site collection).
+  string id = 1;
+  // Display name of the principal.
+  string display_name = 2;
+  // SharePoint sign-in (login) name, e.g. `i:0#.f|membership|user@tenant`.
+  string login_name = 3;
+}
+
+// A SharePoint group identified by a tenant-wide id (the
+// `sharePointGroupIdentity` type). Graph recommends it over `siteGroup`.
+message SharePointGroupIdentity {
+  // Globally unique id of the SharePoint group.
+  string id = 1;
+  // Display name of the group.
+  string display_name = 2;
+  // Principal id of the SharePoint group in the tenant.
+  string principal_id = 3;
+  // Title of the SharePoint group.
+  string title = 4;
+}
+
+// Identity set with SharePoint principals (the `sharePointIdentitySet` type),
+// used on permissions. The directory identities (user/group/application) are
+// what an indexer resolves for security trimming; the site-scoped principals
+// identify SharePoint-only groups that have no Entra object.
+message SharePointIdentitySet {
+  // Entra user, when the grantee is a user.
+  Identity user = 1;
+  // Application, when the grantee is an app.
+  Identity application = 2;
+  // Device, when the grantee is a device.
+  Identity device = 3;
+  // Entra (Microsoft 365 / security) group, when the grantee is a group.
+  Identity group = 4;
+  // SharePoint site user record for the same principal, when known.
+  SharePointIdentity site_user = 5;
+  // SharePoint site group identified by a site-scoped principal id.
+  SharePointIdentity site_group = 6;
+  // SharePoint group identified by a tenant-wide id; preferred over
+  // site_group when both are present.
+  SharePointGroupIdentity share_point_group = 7;
 }
 
 // A Microsoft Graph user (the /me or /users shape we keep).
@@ -35,39 +103,76 @@ message GraphUser {
   string user_principal_name = 3;
   // Mail address when present; empty when omitted.
   string mail = 4;
+  // Given (first) name, empty when omitted.
+  string given_name = 5;
+  // Surname (last name), empty when omitted.
+  string surname = 6;
+  // Job title, empty when omitted.
+  string job_title = 7;
+  // Department, empty when omitted.
+  string department = 8;
+  // Office location, empty when omitted.
+  string office_location = 9;
+  // User type: `Member` or `Guest`; empty when omitted. Guests matter for
+  // security trimming because sharing to them is external sharing.
+  string user_type = 10;
+  // Whether the account is enabled; unset when Graph omitted it.
+  optional bool account_enabled = 11;
+  // Preferred language (BCP 47), empty when omitted.
+  string preferred_language = 12;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
 }
 
-// A SharePoint site.
-message Site {
-  // Site id.
-  string id = 1;
-  // Site name.
-  string name = 2;
-  // Site display name.
-  string display_name = 3;
-  // Web URL of the site.
-  string web_url = 4;
+// SharePoint REST-compatible identifiers of an item (the `sharepointIds`
+// facet). These are the keys an enterprise indexer needs to join Graph data
+// with SharePoint search, audit logs, and CSOM/REST exports.
+message SharepointIds {
+  // GUID of the list that contains the item.
+  string list_id = 1;
+  // Integer id of the item within its list, as a string.
+  string list_item_id = 2;
+  // GUID of the item within OneDrive for Business or SharePoint.
+  string list_item_unique_id = 3;
+  // GUID of the site collection (SPSite).
+  string site_id = 4;
+  // SharePoint URL of the site that contains the item.
+  string site_url = 5;
+  // GUID of the tenancy.
+  string tenant_id = 6;
+  // GUID of the site (SPWeb).
+  string web_id = 7;
 }
 
-// A drive (OneDrive or a SharePoint document library).
-message Drive {
-  // Drive id.
-  string id = 1;
-  // Drive name.
-  string name = 2;
-  // Drive type: personal, business, documentLibrary.
-  string drive_type = 3;
-  // Web URL of the drive.
-  string web_url = 4;
-  // Owning site id when the drive belongs to a SharePoint site.
-  string site_id = 5;
+// A reference to an item's parent, or to the item a permission or content
+// type was inherited from (the `itemReference` type).
+message ItemReference {
+  // Drive id that contains the referenced item; empty outside drives.
+  string drive_id = 1;
+  // Drive type of that drive (personal, business, documentLibrary).
+  string drive_type = 2;
+  // Id of the referenced driveItem or listItem.
+  string id = 3;
+  // Name of the referenced item.
+  string name = 4;
+  // Percent-encoded path of the referenced item (`/drive/root:/Folder`).
+  // Graph does not populate it in delta responses.
+  string path = 5;
+  // Share id when the reference was reached through the shares API.
+  string share_id = 6;
+  // Site id that contains the parent document library (OneDrive for
+  // Business and SharePoint only).
+  string site_id = 7;
+  // SharePoint identifiers of the referenced item, when Graph returned them.
+  SharepointIds sharepoint_ids = 8;
 }
 
 // Content hashes Graph reports on a file (the `file.hashes` object).
 message FileHashes {
   // SHA-1 hex digest, empty when Graph omitted it.
   string sha1 = 1;
-  // SHA-256 hex digest, empty when Graph omitted it.
+  // SHA-256 hex digest, empty when Graph omitted it. Graph documents this
+  // property as unsupported; it is kept for wire compatibility.
   string sha256 = 2;
   // QuickXOR hash (Graph's SharePoint hash), empty when omitted.
   string quick_xor = 3;
@@ -75,9 +180,10 @@ message FileHashes {
   string crc32 = 4;
 }
 
-// One SharePoint list-item column. Nested objects are flattened one level
-// (`Parent.Child`); `@odata.*` annotations are skipped. No JSON/Struct arm:
-// Graph column values are scalars or one-level objects of scalars.
+// One SharePoint list-item column (one entry of a `fieldValueSet`). Nested
+// objects are flattened one level (`Parent.Child`); `@odata.*` annotations
+// are skipped. No JSON/Struct arm: Graph column values are scalars, arrays of
+// scalars, or one-level objects of scalars.
 message ListColumn {
   // SharePoint internal column name (for example `FileLeafRef`).
   string name = 1;
@@ -94,121 +200,122 @@ message ListColumn {
     // Date-only or date-time column parsed as RFC3339.
     google.protobuf.Timestamp timestamp_value = 6;
   }
+  // The individual values of a multi-value column (multi-choice, multi-lookup,
+  // multi-person). Set alongside the joined `string_value`, which stays for
+  // compatibility; empty for single-value columns.
+  repeated string string_values = 7;
 }
 
-// A file or folder in a drive.
-message DriveItem {
-  // Item id.
+// Identity of a SharePoint content type as carried on items (the
+// `contentTypeInfo` type).
+message ContentTypeInfo {
+  // Content type id (e.g. `0x0101...`).
   string id = 1;
-  // File or folder name.
+  // Content type name (e.g. `Document`).
   string name = 2;
-  // Parent drive id.
-  string drive_id = 3;
-  // Parent item id, empty for the drive root.
-  string parent_id = 4;
-  // Web URL of the item.
-  string web_url = 5;
-  // Download URL for the binary (content pointer, not navigation).
-  string download_url = 6;
-  // MIME type when the item is a file.
-  string mime_type = 7;
-  // File size in bytes; 0 for folders or when unknown.
-  int64 size = 8;
-  // True when the item is a folder.
-  bool folder = 9;
-  // When the item was created.
-  google.protobuf.Timestamp created_at = 10;
-  // When the item was last modified.
-  google.protobuf.Timestamp last_modified_at = 11;
-  // Who created the item.
-  IdentitySet created_by = 12;
-  // Who last modified the item.
-  IdentitySet last_modified_by = 13;
-  // Item description, empty when Graph omitted it.
-  string description = 14;
-  // Graph eTag of the item, empty when omitted.
-  string etag = 15;
-  // Folder child count; 0 when the item is not a folder or Graph omitted it.
-  int32 child_count = 16;
-  // File content hashes; unset when Graph omitted `file.hashes`.
-  FileHashes hashes = 17;
-  // SharePoint list-item columns behind this document, flattened and typed.
-  repeated ListColumn list_columns = 18;
-  // File bytes when a download was requested and the size cap allows it.
-  optional bytes content = 21;
-  // Extensible key-value metadata (extension-metadata map - see convention).
-  map<string, string> metadata = 99;
 }
 
-// One Microsoft Graph entity as the crawler read it.
-message MicrosoftEntity {
-  // Graph id of the wrapped entity.
-  string entity_id = 1;
-  // When the crawler ingested this record.
-  google.protobuf.Timestamp ingested_at = 2;
-  // The wrapped entity. Exactly one arm is set.
-  oneof entity {
-    // Set when the wrapped entity is a SharePoint site.
-    Site site = 10;
-    // Set when the wrapped entity is a drive.
-    Drive drive = 11;
-    // Set when the wrapped entity is a file or folder.
-    DriveItem drive_item = 12;
-    // Set when the wrapped entity is a Graph user.
-    GraphUser user = 13;
-  }
-  // Extensible key-value metadata (extension-metadata map - see convention).
-  map<string, string> metadata = 99;
+// The `deleted` facet: present on items returned by a delta enumeration (or
+// by a sync pass) that were deleted upstream.
+message Deleted {
+  // State of the deleted item as Graph reports it (`deleted`, ...).
+  string state = 1;
 }
 
-// Where a change record came from.
-enum ChangeSource {
-  // Zero value; the change source is unknown or was not recorded.
-  CHANGE_SOURCE_UNSPECIFIED = 0;
-  // Full crawl of the drive.
-  CHANGE_SOURCE_CRAWL = 1;
-  // Incremental sync driven by a Graph delta token.
-  CHANGE_SOURCE_DELTA = 2;
+// Publication (versioning) state of an item or version (the
+// `publicationFacet` type). Only returned when requested via $select.
+message PublicationFacet {
+  // `published` or `checkout`.
+  string level = 1;
+  // The version id visible to the current caller.
+  string version_id = 2;
+  // Who has the file checked out, when level is `checkout`.
+  IdentitySet checked_out_by = 3;
 }
 
-// The kind of change applied to the wrapped entity.
-enum ChangeOperation {
-  // Zero value; the operation is unknown or was not recorded.
-  CHANGE_OPERATION_UNSPECIFIED = 0;
-  // The entity was created or updated; the entity payload is present.
-  CHANGE_OPERATION_UPSERT = 1;
-  // The entity was deleted; only the identity fields are meaningful.
-  CHANGE_OPERATION_DELETE = 2;
+// Client-side file system timestamps (the `fileSystemInfo` facet). These are
+// the timestamps users see; `created_at` / `last_modified_at` on the item are
+// the service-side ones.
+message FileSystemInfo {
+  // When the file was created on the client.
+  google.protobuf.Timestamp created_at = 1;
+  // When the file was last modified on the client.
+  google.protobuf.Timestamp last_modified_at = 2;
+  // When the file was last accessed; recent-files listings only.
+  google.protobuf.Timestamp last_accessed_at = 3;
 }
 
-// A full-sync marker for one completed drive sweep.
-message MicrosoftSnapshot {
-  // Unique id of this snapshot run (run id plus drive id).
-  string snapshot_id = 1;
-  // Drive the sweep covered.
-  string drive_id = 2;
-  // Number of entities emitted per kind (e.g. "file": 12, "folder": 3).
-  map<string, int64> entity_counts = 3;
-  // Opaque cursor the sweep ended on.
-  string cursor = 4;
-  // When the sweep started.
-  google.protobuf.Timestamp started_at = 5;
-  // When the sweep completed (unset while the sweep is running).
-  optional google.protobuf.Timestamp completed_at = 6;
+// Counts for one kind of action in an analytics interval (the
+// `itemActionStat` type).
+message ItemActionStat {
+  // How many times the action took place.
+  int32 action_count = 1;
+  // How many distinct actors performed it.
+  int32 actor_count = 2;
 }
 
-// One upsert or delete against the Microsoft Graph mirror.
-message MicrosoftChange {
-  // Unique id of this change record.
-  string change_id = 1;
-  // The kind of change (UPSERT carries the entity; DELETE is identity-only).
-  ChangeOperation operation = 2;
-  // The entity payload (full for UPSERT; identity-only for DELETE).
-  MicrosoftEntity entity = 3;
-  // The crawl run id (full crawl) or delta token (incremental).
-  string cursor = 4;
-  // Where this change record came from.
-  ChangeSource source = 5;
-  // When the change was observed.
-  google.protobuf.Timestamp occurred_at = 6;
+// Marks an analytics interval whose data is incomplete (the `incompleteData`
+// type).
+message IncompleteData {
+  // The service has no data before this time.
+  google.protobuf.Timestamp missing_data_before = 1;
+  // Some data was not recorded because of excessive activity.
+  bool was_throttled = 2;
+}
+
+// Activity statistics for one interval (the `itemActivityStat` type).
+message ItemActivityStat {
+  // Start of the interval.
+  google.protobuf.Timestamp started_at = 1;
+  // End of the interval.
+  google.protobuf.Timestamp ended_at = 2;
+  // Access (view) statistics.
+  ItemActionStat access = 3;
+  // Create statistics.
+  ItemActionStat create = 4;
+  // Delete statistics.
+  ItemActionStat delete = 5;
+  // Edit statistics.
+  ItemActionStat edit = 6;
+  // Move statistics.
+  ItemActionStat move = 7;
+  // Whether the item is trending in this interval.
+  bool is_trending = 8;
+  // Present when the interval's statistics are based on incomplete data.
+  IncompleteData incomplete_data = 9;
+}
+
+// View/edit analytics of a site, drive item, or list item (the
+// `itemAnalytics` type). Useful as a popularity ranking signal.
+message ItemAnalytics {
+  // Statistics over the item's lifetime.
+  ItemActivityStat all_time = 1;
+  // Statistics over the last seven days.
+  ItemActivityStat last_seven_days = 2;
+}
+
+// A reference to one drive item by drive and item id.
+message DriveItemRef {
+  // Drive id that owns the item.
+  string drive_id = 1;
+  // Item id within the drive.
+  string item_id = 2;
+}
+
+// A reference to one SharePoint list by site and list id.
+message ListRef {
+  // Site id that owns the list.
+  string site_id = 1;
+  // List id within the site.
+  string list_id = 2;
+}
+
+// A reference to one SharePoint list item by site, list and item id.
+message ListItemRef {
+  // Site id that owns the list.
+  string site_id = 1;
+  // List id within the site.
+  string list_id = 2;
+  // List item id within the list.
+  string item_id = 3;
 }

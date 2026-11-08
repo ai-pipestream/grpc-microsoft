@@ -1,0 +1,433 @@
+syntax = "proto3";
+
+package ai.pipestream.microsoft.v1;
+
+import "ai/pipestream/microsoft/v1/common.proto";
+import "ai/pipestream/microsoft/v1/permission.proto";
+import "google/protobuf/timestamp.proto";
+
+option java_multiple_files = true;
+option java_package = "ai.pipestream.microsoft.v1";
+
+// ============================================================================
+// DRIVE and DRIVE ITEM - OneDrive (personal / business) and SharePoint
+// document libraries, and the files and folders inside them. Facets that are
+// objects in Graph are sub-messages here; the file and folder facets stay
+// flattened on DriveItem (mime_type / hashes / folder / child_count) for
+// compatibility with the first revision of this contract.
+// ============================================================================
+
+// Storage quota of a drive (the `quota` facet).
+message Quota {
+  // Total allowed storage, in bytes.
+  int64 total = 1;
+  // Storage used, in bytes.
+  int64 used = 2;
+  // Storage remaining, in bytes.
+  int64 remaining = 3;
+  // Storage consumed by the recycle bin, in bytes.
+  int64 deleted = 4;
+  // Quota state: `normal`, `nearing`, `critical`, `exceeded`.
+  string state = 5;
+}
+
+// A drive (OneDrive or a SharePoint document library).
+message Drive {
+  // Drive id.
+  string id = 1;
+  // Drive name.
+  string name = 2;
+  // Drive type: personal, business, documentLibrary.
+  string drive_type = 3;
+  // Web URL of the drive.
+  string web_url = 4;
+  // Owning site id when the drive belongs to a SharePoint site.
+  string site_id = 5;
+  // Drive description, empty when omitted.
+  string description = 6;
+  // When the drive was created.
+  google.protobuf.Timestamp created_at = 7;
+  // When the drive was last modified.
+  google.protobuf.Timestamp last_modified_at = 8;
+  // Who created the drive.
+  IdentitySet created_by = 9;
+  // Who last modified the drive.
+  IdentitySet last_modified_by = 10;
+  // The user account that owns the drive (OneDrive) or the group / site
+  // identity for a library.
+  IdentitySet owner = 11;
+  // Storage quota, when Graph returned it.
+  Quota quota = 12;
+  // SharePoint REST identifiers of the underlying library list.
+  SharepointIds sharepoint_ids = 13;
+  // True when Graph marks the drive as system-managed (the `system` facet);
+  // such libraries (e.g. Site Assets, Form Templates) are usually skipped by
+  // indexers.
+  bool is_system = 14;
+  // Graph eTag of the drive, empty when omitted.
+  string etag = 15;
+  // Id of the SharePoint list behind this document library; empty for
+  // personal OneDrive. Join key to the list rpcs.
+  string list_id = 16;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// The `package` facet: the item is a package (e.g. a OneNote notebook) that
+// is a folder on the wire but a single document to users.
+message Package {
+  // Package type; `oneNote` is the only documented value, others may appear.
+  string type = 1;
+}
+
+// The `shared` facet: the item has been shared with others.
+message Shared {
+  // How the item is shared: `anonymous`, `organization`, or `users`.
+  string scope = 1;
+  // Owner of the shared item.
+  IdentitySet owner = 2;
+  // Who shared the item.
+  IdentitySet shared_by = 3;
+  // When the item was shared.
+  google.protobuf.Timestamp shared_at = 4;
+}
+
+// The `specialFolder` facet: the item is one of the drive's well-known
+// folders.
+message SpecialFolder {
+  // Special folder name (`documents`, `photos`, `approot`, ...).
+  string name = 1;
+}
+
+// The `image` facet.
+message Image {
+  // Width in pixels.
+  int32 width = 1;
+  // Height in pixels.
+  int32 height = 2;
+}
+
+// The `photo` facet (camera EXIF data).
+message Photo {
+  // Camera manufacturer.
+  string camera_make = 1;
+  // Camera model.
+  string camera_model = 2;
+  // Exposure time numerator; unset when omitted.
+  optional double exposure_numerator = 3;
+  // Exposure time denominator; unset when omitted.
+  optional double exposure_denominator = 4;
+  // F-stop value; unset when omitted.
+  optional double f_number = 5;
+  // Focal length; unset when omitted.
+  optional double focal_length = 6;
+  // ISO value; unset when omitted.
+  optional int32 iso = 7;
+  // EXIF orientation; unset when omitted.
+  optional int32 orientation = 8;
+  // When the photo was taken.
+  google.protobuf.Timestamp taken_at = 9;
+}
+
+// The `video` facet.
+message Video {
+  // Audio bits per sample.
+  int32 audio_bits_per_sample = 1;
+  // Number of audio channels.
+  int32 audio_channels = 2;
+  // Audio format name (AAC, MP3, ...).
+  string audio_format = 3;
+  // Audio samples per second.
+  int32 audio_samples_per_second = 4;
+  // Video bit rate, bits per second.
+  int32 bitrate = 5;
+  // Duration in milliseconds.
+  int64 duration_ms = 6;
+  // FourCC code of the video format.
+  string four_cc = 7;
+  // Frame rate; unset when omitted.
+  optional double frame_rate = 8;
+  // Height in pixels.
+  int32 height = 9;
+  // Width in pixels.
+  int32 width = 10;
+}
+
+// The `audio` facet (OneDrive Personal only).
+message Audio {
+  // Album title.
+  string album = 1;
+  // Album artist.
+  string album_artist = 2;
+  // Performing artist.
+  string artist = 3;
+  // Bit rate in kbps.
+  int64 bitrate = 4;
+  // Composer(s).
+  string composers = 5;
+  // Copyright notice.
+  string copyright = 6;
+  // Disc number.
+  int32 disc = 7;
+  // Total discs in the album.
+  int32 disc_count = 8;
+  // Duration in milliseconds.
+  int64 duration_ms = 9;
+  // Genre.
+  string genre = 10;
+  // True when DRM-protected.
+  bool has_drm = 11;
+  // True when encoded with a variable bit rate.
+  bool is_variable_bitrate = 12;
+  // Track title.
+  string title = 13;
+  // Track number.
+  int32 track = 14;
+  // Total tracks on the disc.
+  int32 track_count = 15;
+  // Recording year.
+  int32 year = 16;
+}
+
+// The `location` facet (geographic coordinates).
+message GeoCoordinates {
+  // Altitude in feet above sea level; unset when omitted.
+  optional double altitude = 1;
+  // Latitude in decimal degrees; unset when omitted.
+  optional double latitude = 2;
+  // Longitude in decimal degrees; unset when omitted.
+  optional double longitude = 3;
+}
+
+// The `malware` facet: the item was detected to contain malware. Indexers
+// must not download such items.
+message Malware {
+  // Virus details.
+  string description = 1;
+}
+
+// The `remoteItem` facet: the item is a shortcut to, or a shared-with-me
+// pointer at, an item in another drive. The real item lives at
+// `parent_reference.drive_id` / `id`; index that, not the pointer.
+message RemoteItem {
+  // Id of the item in its own (remote) drive.
+  string id = 1;
+  // Name of the remote item.
+  string name = 2;
+  // Parent of the remote item; `drive_id` is the remote drive.
+  ItemReference parent_reference = 3;
+  // Web URL of the remote item.
+  string web_url = 4;
+  // WebDAV URL of the remote item.
+  string web_dav_url = 5;
+  // Size of the remote item in bytes.
+  int64 size = 6;
+  // When the remote item was created.
+  google.protobuf.Timestamp created_at = 7;
+  // When the remote item was last modified.
+  google.protobuf.Timestamp last_modified_at = 8;
+  // Who created the remote item.
+  IdentitySet created_by = 9;
+  // Who last modified the remote item.
+  IdentitySet last_modified_by = 10;
+  // True when the remote item is a folder.
+  bool folder = 11;
+  // Folder child count; 0 when not a folder or omitted.
+  int32 child_count = 12;
+  // MIME type when the remote item is a file.
+  string mime_type = 13;
+  // Content hashes when the remote item is a file.
+  FileHashes hashes = 14;
+  // Client file system timestamps.
+  FileSystemInfo file_system_info = 15;
+  // Present when the remote item is a package.
+  Package package = 16;
+  // Present when the remote item is shared.
+  Shared shared = 17;
+  // SharePoint identifiers of the remote item.
+  SharepointIds sharepoint_ids = 18;
+  // Present when the remote item is a special folder.
+  SpecialFolder special_folder = 19;
+  // Image facet of the remote item.
+  Image image = 20;
+  // Video facet of the remote item.
+  Video video = 21;
+}
+
+// How a retention label treats the item during its retention period (the
+// `security.behaviorDuringRetentionPeriod` enum).
+enum RetentionBehavior {
+  // Zero value; not returned by Graph.
+  RETENTION_BEHAVIOR_UNSPECIFIED = 0;
+  // Content is not retained.
+  RETENTION_BEHAVIOR_DO_NOT_RETAIN = 1;
+  // Content is retained.
+  RETENTION_BEHAVIOR_RETAIN = 2;
+  // Content is retained as a record.
+  RETENTION_BEHAVIOR_RETAIN_AS_RECORD = 3;
+  // Content is retained as a regulatory record.
+  RETENTION_BEHAVIOR_RETAIN_AS_REGULATORY_RECORD = 4;
+  // Graph's forward-compatibility sentinel.
+  RETENTION_BEHAVIOR_UNKNOWN_FUTURE_VALUE = 5;
+}
+
+// Retention settings enforced on an item (the `retentionLabelSettings` type).
+message RetentionLabelSettings {
+  // Behaviour during the retention period.
+  RetentionBehavior behavior_during_retention_period = 1;
+  // Whether content updates are allowed.
+  bool is_content_update_allowed = 2;
+  // Whether deletion is allowed.
+  bool is_delete_allowed = 3;
+  // Whether the label may be changed.
+  bool is_label_update_allowed = 4;
+  // Whether metadata updates are allowed.
+  bool is_metadata_update_allowed = 5;
+  // Whether the item is locked as a record.
+  bool is_record_locked = 6;
+}
+
+// The retention label applied to a drive item (the `itemRetentionLabel`
+// resource at `/drives/{id}/items/{id}/retentionLabel`).
+message ItemRetentionLabel {
+  // Retention label name.
+  string name = 1;
+  // True when applied explicitly on the item, false when inherited.
+  bool is_label_applied_explicitly = 2;
+  // Who applied the label.
+  IdentitySet label_applied_by = 3;
+  // When the label was applied.
+  google.protobuf.Timestamp label_applied_at = 4;
+  // The retention settings the label enforces.
+  RetentionLabelSettings retention_settings = 5;
+}
+
+// A file or folder in a drive.
+message DriveItem {
+  // Item id.
+  string id = 1;
+  // File or folder name.
+  string name = 2;
+  // Parent drive id.
+  string drive_id = 3;
+  // Parent item id, empty for the drive root.
+  string parent_id = 4;
+  // Web URL of the item.
+  string web_url = 5;
+  // Pre-authenticated download URL for the binary (content pointer, not
+  // navigation); short-lived (about an hour) and absent on folders.
+  string download_url = 6;
+  // MIME type when the item is a file.
+  string mime_type = 7;
+  // File size in bytes; 0 for folders or when unknown.
+  int64 size = 8;
+  // True when the item is a folder.
+  bool folder = 9;
+  // When the item was created.
+  google.protobuf.Timestamp created_at = 10;
+  // When the item was last modified.
+  google.protobuf.Timestamp last_modified_at = 11;
+  // Who created the item.
+  IdentitySet created_by = 12;
+  // Who last modified the item.
+  IdentitySet last_modified_by = 13;
+  // Item description, empty when Graph omitted it.
+  string description = 14;
+  // Graph eTag of the item (changes on metadata and content edits).
+  string etag = 15;
+  // Folder child count; 0 when the item is not a folder or Graph omitted it.
+  int32 child_count = 16;
+  // File content hashes; unset when Graph omitted `file.hashes`.
+  FileHashes hashes = 17;
+  // SharePoint list-item columns behind this document, flattened and typed.
+  // Populated when the request asked for list columns.
+  repeated ListColumn list_columns = 18;
+  // File bytes, inlined only when the request asked for content and the
+  // request's inline byte limit allowed it (0 = no limit). Bulk downloads
+  // should use the streaming DownloadContent rpc instead.
+  optional bytes content = 21;
+  // Content eTag: changes only when the binary changes, not on metadata-only
+  // edits. Compare it to skip re-downloading unchanged files. Absent on
+  // folders and on delta delete records.
+  string ctag = 22;
+  // WebDAV URL of the item.
+  string web_dav_url = 23;
+  // Full parent reference (drive, site, path, SharePoint ids). `drive_id`
+  // and `parent_id` above are the flattened keys of the same reference.
+  ItemReference parent_reference = 24;
+  // Client-side file system timestamps.
+  FileSystemInfo file_system_info = 25;
+  // Present when a delta enumeration (or a sync pass) reports the item as
+  // deleted. Deleted records carry only identity fields.
+  Deleted deleted = 26;
+  // True when the item is the root folder of its drive.
+  bool is_root = 27;
+  // Present when the item is a package (e.g. OneNote notebook).
+  Package package = 28;
+  // Present when the item points at an item in another drive (shortcut or
+  // shared-with-me entry).
+  RemoteItem remote_item = 29;
+  // Present when the item has been shared; `scope` tells how widely.
+  Shared shared = 30;
+  // Present when the item is a well-known special folder.
+  SpecialFolder special_folder = 31;
+  // Image facet, when the file is an image.
+  Image image = 32;
+  // Photo facet, when the file is a photo with EXIF data.
+  Photo photo = 33;
+  // Video facet, when the file is a video.
+  Video video = 34;
+  // Audio facet, when the file is an audio file.
+  Audio audio = 35;
+  // Location facet, when the item has geo coordinates.
+  GeoCoordinates location = 36;
+  // Malware facet: present when Graph detected malware. Do not download.
+  Malware malware = 37;
+  // Publication (check-out / published) state; only when requested.
+  PublicationFacet publication = 38;
+  // SharePoint REST identifiers (list, list item, site, web, tenant).
+  SharepointIds sharepoint_ids = 39;
+  // True when Graph reports a pending content update (the
+  // `pendingOperations.pendingContentUpdate` facet); the binary may change
+  // shortly.
+  bool pending_content_update = 40;
+  // Retention label; populated when the request asked for it.
+  ItemRetentionLabel retention_label = 41;
+  // Content type of the backing list item (document libraries only).
+  ContentTypeInfo content_type = 42;
+  // Id of the backing SharePoint list item (document libraries only); join
+  // key to the list-item rpcs. The list id is `sharepoint_ids.list_id` or
+  // the drive's `list_id`.
+  string list_item_id = 43;
+  // Permissions (ACL) on the item; populated when the request asked for
+  // permissions.
+  repeated Permission permissions = 44;
+  // True when a delta enumeration returned the item only because its
+  // sharing changed (the `@microsoft.graph.sharedChanged` annotation,
+  // requires the show-sharing-changes preference). Re-read permissions.
+  bool sharing_changed = 45;
+  // View/edit analytics; populated when the request asked for analytics.
+  ItemAnalytics analytics = 46;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// One previous version of a drive item (the `driveItemVersion` resource).
+message DriveItemVersion {
+  // Version id (e.g. `3.0`).
+  string id = 1;
+  // When this version was last modified.
+  google.protobuf.Timestamp last_modified_at = 2;
+  // Who last modified this version.
+  IdentitySet last_modified_by = 3;
+  // Publication state of this version.
+  PublicationFacet publication = 4;
+  // Size of this version's content, in bytes.
+  int64 size = 5;
+  // Drive that owns the item; set by the server.
+  string drive_id = 6;
+  // Item this is a version of; set by the server.
+  string item_id = 7;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
