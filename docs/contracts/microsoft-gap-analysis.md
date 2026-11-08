@@ -537,3 +537,100 @@ Lists: `ListLists`, `GetList`, `ListListItems`, `GetListItem`,
 `DeltaListItems`, `ListColumns`.
 ACL: `ListPermissions`.
 Crawl: `Sync`.
+
+## Implementation notes
+
+The implementation is in `grpc-microsoft-service` (plain grpc-java). All 23 rpcs
+are implemented. Each one has a test against the in-process fake Graph
+(`MicrosoftRpcSurfaceTest`) that asserts the exact path, query and `Prefer`
+header and the typed reply. No test has run against a live Microsoft 365
+tenant, because none is available. Everything below marked *unverified* follows
+the Graph v1.0 OpenAPI document and learn.microsoft.com, not observed tenant
+behaviour.
+
+### Contract additions (wire compatible, new field numbers only)
+
+- `Identity.email = 3`: Graph's `identity` carries `email` for
+  external and SharePoint identities.
+- `IdentitySet.group = 4`: permissions granted to a group were
+  previously dropped.
+- `ListColumn` comment: nested objects flatten at any depth
+  (`Lookup.Nested.x`). Arrays of objects become `Name.Child` columns with
+  `string_values`. No field changed.
+
+### Delta and Sync
+
+- Drives always use `/drives/{id}/root/delta`, because item-scoped delta is
+  personal-only. `folder_path` scoping filters the whole-drive feed by
+  ancestry. Unknown parents are resolved with
+  `GET items/{id}?$select=id,parentReference`.
+- Each sweep emits `MicrosoftSnapshot.source`: `CRAWL` for a fresh
+  enumeration or a 410 restart, `DELTA` for an incremental pass. A change's
+  `cursor` is the run id for a crawl and the incoming delta link for a
+  delta pass.
+- A 410 is followed once, via its `Location` header or a fresh enumeration.
+  `DeltaDriveItems`/`DeltaListItems`/`DeltaSites` emit the typed resync event
+  (`resyncChangesApplyDifferences` / `UploadDifferences`).
+- `SyncResponse.resume_cursor` is a base64url, unpadded `SyncCursor`.
+  `SyncCursors.decode` rejects it unless each link is on the configured
+  Graph host and on the route of the drive, list or sites feed it is keyed
+  to (`GraphLinks.requireDeltaLink`). Client-supplied `delta_link` values on
+  the Delta rpcs are checked the same way. `"latest"` maps to `?token=latest`.
+- Sinks: `MicrosoftChangeSink.completeRun(runId, fullSweep)`.
+  - The sync table reconciles only when every sweep in the run was a
+    `CRAWL`.
+  - The Output and OKF sinks keep a mirror. A full sweep replaces it. An
+    incremental run merges into it, and deletes become tombstones (OKF
+    `status: deprecated`). With no baseline in the process, the run writes
+    beside the bundle under `increments/{run-id}`.
+- `MicrosoftCatalog` (grpc-okf) now maps `LIST`, `LIST_ITEM` and `PERMISSION`
+  entities.
+- A permission's `entity_id` is `{target}/{permission_id}`, for example
+  `drive_item/{drive}/{item}/{perm}`. A list item's is `{list_id}/{item_id}`.
+
+### Download
+
+- `DownloadContent` sends metadata first, then chunks of `chunk_bytes`.
+  When `chunk_bytes` is 0 it uses `MicrosoftGrpcService.DEFAULT_DOWNLOAD_CHUNK_BYTES`
+  (1 MiB), which `MICROSOFT_DOWNLOAD_CHUNK_BYTES` can override.
+- A `max_bytes` of 0 means no cap, and there is no total-size cap. The
+  stream honours flow control (`isReady`/`onReady`).
+- `/content` 302 redirects are followed without the bearer, and `Range` is
+  sent only to the redirect target. A 200 reply to a range request is
+  sliced locally.
+- `DownloadItem` (deprecated) still works. Inline content in `Sync` uses
+  the request's `max_inline_bytes` when it is > 0, and otherwise the server
+  `MICROSOFT_ATTACHMENT_MAX_BYTES`. PR #10's "0 = no cap" therefore applies
+  unchanged.
+
+### Robustness without a tenant (fallbacks)
+
+- Explicit `$select` lists (`GraphPaths`) are needed for `sharepointIds`,
+  `publication`, `system` and `@microsoft.graph.downloadUrl`. If Graph
+  answers 400, the request is retried once with Graph's default
+  projection (`GraphPager`).
+- List-item reads try `$select` + `$expand=fields,driveItem`, then
+  `$expand` alone, then bare. They re-fetch an item when the delta payload
+  lacks `fields`.
+
+### Unverified against a tenant
+
+- The exact `$select` lists, including `downloadUrl` in `$select`.
+- `$expand` on `lists/{id}/items/delta`.
+- The sites delta delete marker: none is documented, so either `deleted` or
+  `@removed` is treated as a delete.
+- The 410 `Location` shape.
+- `sites/getAllSites` behaviour on application tokens.
+
+### Not done
+
+- Subscriptions (cut by the review).
+- Per-connection `ConnectionOutput` binding. Every connection writes to the
+  process-wide output and OKF sinks; the sync table is per connection.
+- `grpc-connect`'s `MicrosoftSourceTask` does not yet pass `since_cursor`,
+  so connect-driven runs are always full sweeps.
+- `Sync` emits permissions inline on drive items and list items, not as
+  standalone `PERMISSION` entities.
+- A run that mixes `DELTA` and `CRAWL` sweeps (one drive restarted by a 410)
+  is not reconciled. `ReconcileRequest` has no scope, so the restarted
+  drive's stale rows remain until the next full sweep.
