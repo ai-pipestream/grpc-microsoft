@@ -35,6 +35,10 @@ message Identity {
   string id = 1;
   // Display name of the identity as Graph recorded it; may be stale.
   string display_name = 2;
+  // Email address Graph adds to user identities on SharePoint and OneDrive
+  // for Business items (an open property outside the `identity` schema);
+  // empty when Graph omitted it.
+  string email = 3;
 }
 
 // Identity set on a Graph item (createdBy / lastModifiedBy / owner).
@@ -45,6 +49,9 @@ message IdentitySet {
   Identity application = 2;
   // Device identity, when the actor is a device.
   Identity device = 3;
+  // Group identity, when the actor or owner is a Microsoft 365 group (for
+  // example the `owner` of a group or Teams drive).
+  Identity group = 4;
 }
 
 // A SharePoint-scoped identity (the `sharePointIdentity` type): a site user or
@@ -181,9 +188,11 @@ message FileHashes {
 }
 
 // One SharePoint list-item column (one entry of a `fieldValueSet`). Nested
-// objects are flattened one level (`Parent.Child`); `@odata.*` annotations
-// are skipped. No JSON/Struct arm: Graph column values are scalars, arrays of
-// scalars, or one-level objects of scalars.
+// objects are flattened into dotted names (`Parent.Child`, at any depth);
+// arrays of objects (multi-value lookups, managed-metadata terms, people)
+// become one column per object property whose `string_values` hold that
+// property of every element in order; `@odata.*` annotations are skipped. No
+// JSON/Struct arm: every leaf value lands in a typed arm.
 message ListColumn {
   // SharePoint internal column name (for example `FileLeafRef`).
   string name = 1;
