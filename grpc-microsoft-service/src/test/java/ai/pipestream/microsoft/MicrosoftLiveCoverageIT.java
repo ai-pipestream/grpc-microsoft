@@ -99,7 +99,6 @@ class MicrosoftLiveCoverageIT {
     /** Calls that need more than Sites.Read.All + Files.Read.All upstream. */
     private static final Map<String, String> LABEL_NOTES = Map.of(
             "ListPermissions [site]", "needs Sites.FullControl.All",
-            "ListPermissions [list]", "needs Sites.FullControl.All",
             "ListPermissions [list item]", "may need Sites.FullControl.All");
 
     /** Office Open XML / legacy Office extensions: SharePoint rewrites their properties on download. */
