@@ -4,9 +4,7 @@
 # bar, not ours).
 version: v2
 modules:
-  - path: grpc-confluence-api/src/main/proto
   - path: grpc-microsoft-api/src/main/proto
-  - path: grpc-sync-api/src/main/proto
 lint:
   use:
     - STANDARD

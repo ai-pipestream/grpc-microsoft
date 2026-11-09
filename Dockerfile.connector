@@ -1,10 +1,17 @@
+# Builds against the published ai.pipestream.integration snapshots, or
+# against a local grpc-integration checkout when one is passed as a named
+# build context (it replaces the empty "integration" stage below):
+#   docker build --build-context integration=../grpc-integration -f Dockerfile.connector .
+FROM scratch AS integration
+
 FROM eclipse-temurin:25-jdk AS build
-WORKDIR /src
+COPY --from=integration . /src/grpc-integration
+WORKDIR /src/grpc-microsoft
 COPY . .
 RUN ./gradlew --no-daemon build :grpc-microsoft-connector:installDist
 
 FROM eclipse-temurin:25-jre
-COPY --from=build /src/grpc-microsoft-connector/build/install/grpc-microsoft-connector /opt/connector
+COPY --from=build /src/grpc-microsoft/grpc-microsoft-connector/build/install/grpc-microsoft-connector /opt/connector
 RUN useradd --system --no-create-home connector
 USER connector
 EXPOSE 30303
