@@ -6,8 +6,10 @@ rootProject.name = "grpc-confluence"
 
 include("grpc-confluence-api")
 include("grpc-confluence-service")
+include("grpc-confluence-output")
 include("grpc-microsoft-api")
 include("grpc-microsoft-service")
+include("grpc-microsoft-output")
 include("grpc-microsoft-connector")
 include("grpc-connect")
 include("grpc-sync-api")

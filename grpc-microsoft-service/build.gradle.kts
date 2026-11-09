@@ -6,6 +6,7 @@ dependencies {
     implementation(project(":grpc-microsoft-api"))
     implementation(project(":grpc-sync-api"))
     implementation(project(":grpc-okf"))
+    implementation(project(":grpc-microsoft-output"))
     implementation(project(":grpc-output-spi"))
     runtimeOnly(project(":grpc-output-filesystem"))
     runtimeOnly(project(":grpc-output-s3"))

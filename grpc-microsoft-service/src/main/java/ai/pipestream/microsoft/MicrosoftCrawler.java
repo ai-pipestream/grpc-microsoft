@@ -28,8 +28,8 @@ import java.util.UUID;
  */
 public final class MicrosoftCrawler {
 
-    /** Default cap for inlined file bytes: 25 MiB. */
-    public static final long DEFAULT_ATTACHMENT_MAX_BYTES = 25L * 1024 * 1024;
+    /** Default cap for inlined file bytes: 0, meaning no cap. */
+    public static final long DEFAULT_ATTACHMENT_MAX_BYTES = 0L;
 
     private final MicrosoftConnectorConfig config;
     private final GraphFiles files;
@@ -58,7 +58,7 @@ public final class MicrosoftCrawler {
      * @param config crawl scope and credentials
      * @param files the authorized files API
      * @param sink where changes and snapshots go
-     * @param attachmentMaxBytes inline file byte cap; must be positive
+     * @param attachmentMaxBytes inline file byte cap; 0 or less means no cap
      * @param includeContent whether to fetch file content
      */
     public MicrosoftCrawler(MicrosoftConnectorConfig config, GraphFiles files,
@@ -67,9 +67,6 @@ public final class MicrosoftCrawler {
         this.files = Objects.requireNonNull(files, "files");
         this.mapper = new MicrosoftMapper();
         this.sink = Objects.requireNonNull(sink, "sink");
-        if (attachmentMaxBytes <= 0) {
-            throw new IllegalArgumentException("attachmentMaxBytes must be positive");
-        }
         this.attachmentMaxBytes = attachmentMaxBytes;
         this.includeContent = includeContent;
     }
@@ -123,6 +120,10 @@ public final class MicrosoftCrawler {
         return drives;
     }
 
+    private boolean withinCap(long size) {
+        return attachmentMaxBytes <= 0 || size <= attachmentMaxBytes;
+    }
+
     private void crawlFolder(String driveId, String folderPath, ChangeSource source,
             String cursor, Map<String, Long> counts) throws IOException, InterruptedException {
         for (JsonNode node : files.childrenAll(driveId, folderPath)) {
@@ -130,9 +131,9 @@ public final class MicrosoftCrawler {
             item = mapper.withListColumns(item,
                     files.listItemFieldsOrEmpty(driveId, item.getId()));
             if (includeContent && !item.getFolder() && item.getSize() > 0
-                    && item.getSize() <= attachmentMaxBytes) {
+                    && withinCap(item.getSize())) {
                 byte[] bytes = files.download(driveId, item.getId());
-                if (bytes.length <= attachmentMaxBytes) {
+                if (withinCap(bytes.length)) {
                     item = item.toBuilder().setContent(ByteString.copyFrom(bytes)).build();
                 }
             }

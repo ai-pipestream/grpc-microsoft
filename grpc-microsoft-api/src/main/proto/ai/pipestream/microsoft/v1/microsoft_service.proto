@@ -126,8 +126,9 @@ message DownloadItemRequest {
   // Item id to fetch.
   string item_id = 2;
   // When true, the binary is downloaded and inlined as DriveItem.content.
-  // Refused with FAILED_PRECONDITION above MICROSOFT_ATTACHMENT_MAX_BYTES
-  // (default 25 MiB).
+  // No size cap by default; when the operator sets
+  // MICROSOFT_ATTACHMENT_MAX_BYTES, larger items are refused with
+  // FAILED_PRECONDITION.
   bool include_content = 3;
   // Extensible key-value metadata (extension-metadata map - see convention).
   map<string, string> metadata = 99;
