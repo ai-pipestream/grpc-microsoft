@@ -1,0 +1,392 @@
+syntax = "proto3";
+
+package ai.pipestream.microsoft.v1;
+
+import "ai/pipestream/microsoft/v1/common.proto";
+import "ai/pipestream/microsoft/v1/drive.proto";
+import "ai/pipestream/microsoft/v1/permission.proto";
+import "google/protobuf/timestamp.proto";
+
+option java_multiple_files = true;
+option java_package = "ai.pipestream.microsoft.v1";
+option java_outer_classname = "ListProto";
+
+// ============================================================================
+// LISTS, LIST ITEMS, COLUMNS - SharePoint lists beyond document libraries
+// (generic lists, task lists, calendars, ...) and the column schema that
+// gives list-item field values their meaning. Content types are carried as
+// the per-item ContentTypeInfo only; the contentType resource is not
+// modelled.
+// ============================================================================
+
+// Extra details about a list (the `listInfo` facet).
+message ListInfo {
+  // True when content types are enabled for the list.
+  bool content_types_enabled = 1;
+  // True when the list is hidden from the SharePoint UI.
+  bool hidden = 2;
+  // Base template: `documentLibrary`, `genericList`, `task`, `survey`,
+  // `announcements`, `contacts`, `events`, `links`, `webPageLibrary`, ...
+  // Open string.
+  string template = 3;
+}
+
+// A SharePoint list (Graph `list`; named SharePointList so the generated Java
+// class does not collide with java.util.List). A document library is a list
+// with template
+// `documentLibrary` and a non-empty `drive_id`.
+message SharePointList {
+  // List id (GUID).
+  string id = 1;
+  // List name (URL segment).
+  string name = 2;
+  // Displayable title of the list.
+  string display_name = 3;
+  // List description, empty when omitted.
+  string description = 4;
+  // Web URL of the list.
+  string web_url = 5;
+  // When the list was created.
+  google.protobuf.Timestamp created_at = 6;
+  // When the list was last modified.
+  google.protobuf.Timestamp last_modified_at = 7;
+  // Who created the list.
+  IdentitySet created_by = 8;
+  // Who last modified the list.
+  IdentitySet last_modified_by = 9;
+  // Graph eTag of the list, empty when omitted.
+  string etag = 10;
+  // Site that owns the list.
+  string site_id = 11;
+  // Template / visibility details.
+  ListInfo list = 12;
+  // SharePoint REST identifiers.
+  SharepointIds sharepoint_ids = 13;
+  // True when Graph marks the list as system-managed (the `system` facet).
+  bool is_system = 14;
+  // Drive id when the list is a document library; empty otherwise.
+  string drive_id = 15;
+  // Parent reference (site).
+  ItemReference parent_reference = 16;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// An item in a SharePoint list, with its typed column values.
+message ListItem {
+  // List item id (integer as string).
+  string id = 1;
+  // Item name, when Graph returned one.
+  string name = 2;
+  // Web URL of the item.
+  string web_url = 3;
+  // Description, empty when omitted.
+  string description = 4;
+  // When the item was created.
+  google.protobuf.Timestamp created_at = 5;
+  // When the item was last modified.
+  google.protobuf.Timestamp last_modified_at = 6;
+  // Who created the item.
+  IdentitySet created_by = 7;
+  // Who last modified the item.
+  IdentitySet last_modified_by = 8;
+  // Graph eTag of the item, empty when omitted.
+  string etag = 9;
+  // Site that owns the list; set by the server.
+  string site_id = 10;
+  // List that owns the item; set by the server.
+  string list_id = 11;
+  // Content type of the item.
+  ContentTypeInfo content_type = 12;
+  // Column values (`fields`), flattened and typed.
+  repeated ListColumn fields = 13;
+  // SharePoint REST identifiers.
+  SharepointIds sharepoint_ids = 14;
+  // Present when a delta enumeration (or a sync pass) reports the item as
+  // deleted. Deleted records carry only identity fields and content type.
+  Deleted deleted = 15;
+  // The drive item view of this list item (document libraries only);
+  // populated when the request asked for it.
+  DriveItem drive_item = 16;
+  // Parent reference (site, and list via `sharepoint_ids.list_id`).
+  ItemReference parent_reference = 17;
+  // Permissions on the item; populated when the request asked for them.
+  repeated Permission permissions = 18;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// The site-column type (the closed `columnTypes` OData enum).
+enum ColumnType {
+  // Zero value; the type was not returned (list-scoped columns report the
+  // type through their facet instead).
+  COLUMN_TYPE_UNSPECIFIED = 0;
+  // Multi-line text.
+  COLUMN_TYPE_NOTE = 1;
+  // Single-line text.
+  COLUMN_TYPE_TEXT = 2;
+  // Single choice.
+  COLUMN_TYPE_CHOICE = 3;
+  // Multiple choice.
+  COLUMN_TYPE_MULTICHOICE = 4;
+  // Number.
+  COLUMN_TYPE_NUMBER = 5;
+  // Currency.
+  COLUMN_TYPE_CURRENCY = 6;
+  // Date or date-time.
+  COLUMN_TYPE_DATE_TIME = 7;
+  // Lookup into another list.
+  COLUMN_TYPE_LOOKUP = 8;
+  // Yes/no.
+  COLUMN_TYPE_BOOLEAN = 9;
+  // Person or group.
+  COLUMN_TYPE_USER = 10;
+  // Hyperlink or picture.
+  COLUMN_TYPE_URL = 11;
+  // Calculated from other columns.
+  COLUMN_TYPE_CALCULATED = 12;
+  // Location.
+  COLUMN_TYPE_LOCATION = 13;
+  // Geolocation.
+  COLUMN_TYPE_GEOLOCATION = 14;
+  // Single managed-metadata term.
+  COLUMN_TYPE_TERM = 15;
+  // Multiple managed-metadata terms.
+  COLUMN_TYPE_MULTITERM = 16;
+  // Thumbnail image.
+  COLUMN_TYPE_THUMBNAIL = 17;
+  // Content approval status.
+  COLUMN_TYPE_APPROVAL_STATUS = 18;
+  // Graph's forward-compatibility sentinel.
+  COLUMN_TYPE_UNKNOWN_FUTURE_VALUE = 19;
+}
+
+// The `text` column facet.
+message TextColumn {
+  // Whether multiple lines are allowed.
+  bool allow_multiple_lines = 1;
+  // Whether updates append to existing text rather than replace it.
+  bool append_changes_to_existing_text = 2;
+  // Size of the editing text box, in lines.
+  int32 lines_for_editing = 3;
+  // Maximum number of characters.
+  int32 max_length = 4;
+  // `plain` or `richText`.
+  string text_type = 5;
+}
+
+// The `choice` column facet.
+message ChoiceColumn {
+  // Whether custom values outside `choices` are allowed.
+  bool allow_text_entry = 1;
+  // The available choices.
+  repeated string choices = 2;
+  // `checkBoxes`, `dropDownMenu`, or `radioButtons`.
+  string display_as = 3;
+}
+
+// The `lookup` column facet.
+message LookupColumn {
+  // Whether multiple values may be selected.
+  bool allow_multiple_values = 1;
+  // Whether values may exceed 255 characters.
+  bool allow_unlimited_length = 2;
+  // Name of the source column in the looked-up list.
+  string column_name = 3;
+  // Id of the looked-up list.
+  string list_id = 4;
+  // For secondary lookups, the id of the primary lookup column.
+  string primary_lookup_column_id = 5;
+}
+
+// The `personOrGroup` column facet.
+message PersonOrGroupColumn {
+  // Whether multiple principals may be selected.
+  bool allow_multiple_selection = 1;
+  // `peopleOnly` or `peopleAndGroups`.
+  string choose_from_type = 2;
+  // How the principal is displayed (`nameWithPresence`, `account`, ...).
+  string display_as = 3;
+}
+
+// The `dateTime` column facet.
+message DateTimeColumn {
+  // `default`, `friendly`, or `standard`.
+  string display_as = 1;
+  // `dateOnly` or `dateTime`.
+  string format = 2;
+}
+
+// The `number` column facet.
+message NumberColumn {
+  // Decimal places to display (`automatic`, `none`, `one`, ... `five`).
+  string decimal_places = 1;
+  // `number` or `percentage`.
+  string display_as = 2;
+  // Maximum permitted value; unset when none.
+  optional double maximum = 3;
+  // Minimum permitted value; unset when none.
+  optional double minimum = 4;
+}
+
+// The `currency` column facet.
+message CurrencyColumn {
+  // Locale the currency symbol is inferred from.
+  string locale = 1;
+}
+
+// The `calculated` column facet.
+message CalculatedColumn {
+  // For dateTime output, `dateOnly` or `dateTime`.
+  string format = 1;
+  // The formula.
+  string formula = 2;
+  // `boolean`, `currency`, `dateTime`, `number`, or `text`.
+  string output_type = 3;
+}
+
+// The `hyperlinkOrPicture` column facet.
+message HyperlinkOrPictureColumn {
+  // True when rendered as a picture rather than a hyperlink.
+  bool is_picture = 1;
+}
+
+// The `term` (managed metadata) column facet.
+message TermColumn {
+  // Whether multiple terms may be selected.
+  bool allow_multiple_values = 1;
+  // Whether the full term path is shown rather than the label only.
+  bool show_fully_qualified_name = 2;
+  // Id of the term set the column draws from, when returned.
+  string term_set_id = 3;
+  // Id of the parent term the column is restricted to, when returned.
+  string parent_term_id = 4;
+}
+
+// The `boolean` column facet (no properties; presence is the type).
+message BooleanColumn {
+}
+
+// The `geolocation` column facet (no properties; presence is the type).
+message GeolocationColumn {
+}
+
+// The `thumbnail` column facet (no properties; presence is the type).
+message ThumbnailColumn {
+}
+
+// The `contentApprovalStatus` column facet (no properties; presence is the
+// type).
+message ContentApprovalStatusColumn {
+}
+
+// A column's default value (the `defaultColumnValue` type).
+message DefaultColumnValue {
+  // Formula computing the default, when formula-based.
+  string formula = 1;
+  // Literal default value.
+  string value = 2;
+}
+
+// A localized display string (the `displayNameLocalization` type).
+message DisplayNameLocalization {
+  // The localized text.
+  string display_name = 1;
+  // BCP 47 language tag of the text.
+  string language_tag = 2;
+}
+
+// Validation rule on a column (the `columnValidation` type).
+message ColumnValidation {
+  // Default BCP 47 language of the descriptions.
+  string default_language = 1;
+  // Localized messages shown when validation fails.
+  repeated DisplayNameLocalization descriptions = 2;
+  // The validation formula.
+  string formula = 3;
+}
+
+// A column definition on a site, list, or content type (the
+// `columnDefinition` resource). Field values on list items are keyed by
+// `name`; `display_name` is the user-facing label.
+message ColumnDefinition {
+  // Column id (GUID).
+  string id = 1;
+  // API-facing name; the key used in list-item fields.
+  string name = 2;
+  // User-facing name.
+  string display_name = 3;
+  // User-facing description.
+  string description = 4;
+  // For site columns, the group the column belongs to.
+  string column_group = 5;
+  // For site columns, the column type.
+  ColumnType type = 6;
+  // Whether the column is hidden in the UI.
+  bool hidden = 7;
+  // Whether the column is indexed (sortable / filterable).
+  bool indexed = 8;
+  // Whether values are read-only.
+  bool read_only = 9;
+  // Whether a value is required.
+  bool required = 10;
+  // Whether values must be unique across items.
+  bool enforce_unique_values = 11;
+  // Whether the column can be deleted.
+  bool is_deletable = 12;
+  // Whether values can be reordered.
+  bool is_reorderable = 13;
+  // Whether the column is sealed against changes.
+  bool is_sealed = 14;
+  // Whether changes propagate to lists implementing the column.
+  bool propagate_changes = 15;
+  // Default value, when any.
+  DefaultColumnValue default_value = 16;
+  // Validation rule, when any.
+  ColumnValidation validation = 17;
+  // Content type the column is inherited from (content-type scoped columns
+  // only).
+  ContentTypeInfo source_content_type = 18;
+  // The type-specific facet. Graph sets exactly one; a column with none set
+  // is of a type this contract does not model.
+  oneof kind {
+    // Text column.
+    TextColumn text = 20;
+    // Choice column.
+    ChoiceColumn choice = 21;
+    // Lookup column.
+    LookupColumn lookup = 22;
+    // Person or group column.
+    PersonOrGroupColumn person_or_group = 23;
+    // Date/time column.
+    DateTimeColumn date_time = 24;
+    // Number column.
+    NumberColumn number = 25;
+    // Currency column.
+    CurrencyColumn currency = 26;
+    // Calculated column.
+    CalculatedColumn calculated = 27;
+    // Hyperlink or picture column.
+    HyperlinkOrPictureColumn hyperlink_or_picture = 28;
+    // Managed-metadata term column.
+    TermColumn term = 29;
+    // Yes/no column.
+    BooleanColumn boolean = 30;
+    // Geolocation column.
+    GeolocationColumn geolocation = 31;
+    // Thumbnail column.
+    ThumbnailColumn thumbnail = 32;
+    // Content approval status column.
+    ContentApprovalStatusColumn content_approval_status = 33;
+  }
+  // Site the column was read from; set by the server.
+  string site_id = 40;
+  // List the column was read from; empty for site and content-type scoped
+  // columns. Set by the server.
+  string list_id = 41;
+  // Content type the column was read from; empty for site and list scoped
+  // columns. Set by the server.
+  string content_type_id = 42;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}

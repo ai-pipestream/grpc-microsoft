@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -31,6 +32,15 @@ public final class GraphFiles {
      */
     public GraphFiles(GraphClient graph) {
         this.graph = Objects.requireNonNull(graph, "graph");
+    }
+
+    /**
+     * The authorized REST client this API wraps.
+     *
+     * @return the client
+     */
+    public GraphClient client() {
+        return graph;
     }
 
     /**
@@ -136,13 +146,14 @@ public final class GraphFiles {
             throws IOException, InterruptedException {
         java.util.List<JsonNode> items = new java.util.ArrayList<>();
         JsonNode page = children(driveId, folderPath);
+        java.util.Set<String> seen = new java.util.HashSet<>();
         while (true) {
             page.path("value").forEach(items::add);
             String next = page.path("@odata.nextLink").asText("");
             if (next.isBlank()) {
                 return items;
             }
-            page = graph.get(next);
+            page = graph.get(GraphPager.admit(seen, next), Map.of());
         }
     }
 
@@ -360,7 +371,7 @@ public final class GraphFiles {
         if (!cleaned.startsWith("/")) {
             cleaned = "/" + cleaned;
         }
-        return cleaned.replaceAll("/+$", "");
+        return GraphLinks.stripTrailingSlashes(cleaned);
     }
 
     private static String fileName(String destPath) {
@@ -370,14 +381,6 @@ public final class GraphFiles {
     }
 
     private static String encodePath(String path) {
-        StringBuilder encoded = new StringBuilder();
-        for (String segment : normalize(path).split("/")) {
-            if (segment.isEmpty()) {
-                continue;
-            }
-            encoded.append('/').append(URLEncoder.encode(segment, StandardCharsets.UTF_8)
-                    .replace("+", "%20"));
-        }
-        return encoded.toString();
+        return GraphPaths.encodePath(normalize(path));
     }
 }

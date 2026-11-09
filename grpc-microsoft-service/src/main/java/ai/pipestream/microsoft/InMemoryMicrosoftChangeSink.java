@@ -15,6 +15,7 @@ public final class InMemoryMicrosoftChangeSink implements MicrosoftChangeSink {
     private final List<MicrosoftChange> changes = new CopyOnWriteArrayList<>();
     private final List<MicrosoftSnapshot> snapshots = new CopyOnWriteArrayList<>();
     private final List<String> completedRuns = new CopyOnWriteArrayList<>();
+    private final List<Boolean> fullSweeps = new CopyOnWriteArrayList<>();
 
     /** Creates an empty collector. */
     public InMemoryMicrosoftChangeSink() {
@@ -50,7 +51,22 @@ public final class InMemoryMicrosoftChangeSink implements MicrosoftChangeSink {
 
     @Override
     public void completeRun(String runId) {
+        completeRun(runId, true);
+    }
+
+    @Override
+    public void completeRun(String runId, boolean fullSweep) {
         completedRuns.add(runId);
+        fullSweeps.add(fullSweep);
+    }
+
+    /**
+     * For each entry of {@link #completedRuns()}, whether that run was a full sweep.
+     *
+     * @return an immutable copy, in call order
+     */
+    public List<Boolean> fullSweeps() {
+        return List.copyOf(fullSweeps);
     }
 
     /**

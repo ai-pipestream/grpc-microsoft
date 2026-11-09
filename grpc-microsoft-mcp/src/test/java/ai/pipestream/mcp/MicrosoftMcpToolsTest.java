@@ -3,10 +3,10 @@ package ai.pipestream.mcp;
 import ai.pipestream.confluence.v1.ConfluenceServiceGrpc;
 import ai.pipestream.confluence.v1.GetPageRequest;
 import ai.pipestream.confluence.v1.GetPageResponse;
-import ai.pipestream.confluence.v1.ListSpacesRequest;
-import ai.pipestream.confluence.v1.ListSpacesResponse;
 import ai.pipestream.confluence.v1.Page;
 import ai.pipestream.confluence.v1.Space;
+import ai.pipestream.confluence.v1.StreamSpacesRequest;
+import ai.pipestream.confluence.v1.StreamSpacesResponse;
 import ai.pipestream.microsoft.v1.GetMeRequest;
 import ai.pipestream.microsoft.v1.GetMeResponse;
 import ai.pipestream.microsoft.v1.GraphUser;
@@ -51,10 +51,10 @@ class ConnectorMcpToolsTest {
                 .directExecutor()
                 .addService(new ConfluenceServiceGrpc.ConfluenceServiceImplBase() {
                     @Override
-                    public void listSpaces(ListSpacesRequest request,
-                            StreamObserver<ListSpacesResponse> observer) {
-                        observer.onNext(ListSpacesResponse.newBuilder()
-                                .addSpaces(Space.newBuilder()
+                    public void streamSpaces(StreamSpacesRequest request,
+                            StreamObserver<StreamSpacesResponse> observer) {
+                        observer.onNext(StreamSpacesResponse.newBuilder()
+                                .setSpace(Space.newBuilder()
                                         .setId("100")
                                         .setKey("ENG")
                                         .setName("Engineering"))
@@ -112,22 +112,19 @@ class ConnectorMcpToolsTest {
                     .contains("confluence_list_spaces", "confluence_get_page",
                             "microsoft_get_me", "microsoft_sync");
 
-            McpSchema.CallToolResult spaces = client.callTool(McpSchema.CallToolRequest.builder()
-                    .name("confluence_list_spaces")
+            McpSchema.CallToolResult spaces = client.callTool(McpSchema.CallToolRequest.builder("confluence_list_spaces")
                     .arguments(Map.of("limit", 1))
                     .build());
             assertThat(spaces.isError()).isFalse();
             assertThat(spaces.content().get(0).toString()).contains("ENG");
 
-            McpSchema.CallToolResult page = client.callTool(McpSchema.CallToolRequest.builder()
-                    .name("confluence_get_page")
+            McpSchema.CallToolResult page = client.callTool(McpSchema.CallToolRequest.builder("confluence_get_page")
                     .arguments(Map.of("id", "200"))
                     .build());
             assertThat(page.isError()).isFalse();
             assertThat(page.content().get(0).toString()).contains("Design");
 
-            McpSchema.CallToolResult me = client.callTool(McpSchema.CallToolRequest.builder()
-                    .name("microsoft_get_me")
+            McpSchema.CallToolResult me = client.callTool(McpSchema.CallToolRequest.builder("microsoft_get_me")
                     .arguments(Map.of())
                     .build());
             assertThat(me.isError()).isFalse();

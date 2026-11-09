@@ -89,11 +89,11 @@ public record MicrosoftConnectorConfig(
         if (graphBaseUrl == null || graphBaseUrl.isBlank()) {
             graphBaseUrl = "https://graph.microsoft.com/v1.0";
         }
-        graphBaseUrl = graphBaseUrl.trim().replaceAll("/+$", "");
+        graphBaseUrl = GraphLinks.stripTrailingSlashes(graphBaseUrl.trim());
         if (authority == null || authority.isBlank()) {
             authority = "https://login.microsoftonline.com";
         }
-        authority = authority.trim().replaceAll("/+$", "");
+        authority = GraphLinks.stripTrailingSlashes(authority.trim());
     }
 
     /**
@@ -158,10 +158,18 @@ public record MicrosoftConnectorConfig(
         if (value == null || value.isBlank()) {
             return List.of();
         }
-        return java.util.Arrays.stream(value.split(","))
-                .map(String::trim)
-                .filter(s -> !s.isEmpty())
-                .toList();
+        List<String> out = new java.util.ArrayList<>();
+        int start = 0;
+        while (start <= value.length()) {
+            int comma = value.indexOf(',', start);
+            int end = comma < 0 ? value.length() : comma;
+            String item = value.substring(start, end).trim();
+            if (!item.isEmpty()) {
+                out.add(item);
+            }
+            start = end + 1;
+        }
+        return List.copyOf(out);
     }
 
     /** Secrets stay out of any log line this record lands in. */

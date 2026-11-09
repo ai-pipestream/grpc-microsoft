@@ -43,7 +43,9 @@ class MicrosoftGrpcServiceTest {
         GraphFiles files = new GraphFiles(new GraphClient(fake.baseUrl(), () -> "token"));
         String name = InProcessServerBuilder.generateName();
         server = InProcessServerBuilder.forName(name)
-                .directExecutor()
+                // The service blocks on outbound flow control, as in production:
+                // a direct executor would run it on the client thread and stall.
+                .executor(java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor())
                 .addService(new MicrosoftGrpcService(config, files,
                         MicrosoftGrpcService.DEFAULT_ATTACHMENT_MAX_BYTES))
                 .build()
@@ -71,6 +73,9 @@ class MicrosoftGrpcServiceTest {
         fake.stub("/me/drive", MicrosoftFixtures.driveJson("drive-1", "Docs"));
         fake.stub("/drives/drive-1/root/children", MicrosoftFixtures.childrenJson(
                 MicrosoftFixtures.fileJson("file-1", "notes.txt", "drive-1")));
+        fake.stub("/drives/drive-1/root/delta", MicrosoftFixtures.deltaJson(
+                fake.baseUrl() + "/drives/drive-1/root/delta?token=t1",
+                MicrosoftFixtures.fileJson("file-1", "notes.txt", "drive-1")));
 
         assertThat(stub.getMe(GetMeRequest.getDefaultInstance()).getUser().getId())
                 .isEqualTo("user-1");
@@ -93,7 +98,8 @@ class MicrosoftGrpcServiceTest {
     void listSitesDrivesAndGetItem() {
         fake.stub("/sites", MicrosoftFixtures.sitesJson(
                 MicrosoftFixtures.siteJson("site-1", "Docs")));
-        fake.stub("/me/drive", MicrosoftFixtures.driveJson("drive-1", "Docs"));
+        fake.stub("/me/drives", MicrosoftFixtures.drivesJson(
+                MicrosoftFixtures.driveJson("drive-1", "Docs")));
         fake.stub("/sites/site-1/drives", MicrosoftFixtures.drivesJson(
                 MicrosoftFixtures.driveJson("drive-2", "Library")));
         fake.stub("/drives/drive-1/items/file-1",
@@ -111,6 +117,8 @@ class MicrosoftGrpcServiceTest {
                 .build()).getItem().getName()).isEqualTo("notes.txt");
     }
 
+    // Covers the deprecated DownloadItem rpc, which the service still serves.
+    @SuppressWarnings("deprecation")
     @Test
     void getItemAndDownloadItemAttachListColumns() {
         fake.stub("/drives/drive-1/items/file-1",
@@ -143,6 +151,8 @@ class MicrosoftGrpcServiceTest {
                 .contains("Title", "Count");
     }
 
+    // Covers the deprecated DownloadItem rpc, which the service still serves.
+    @SuppressWarnings("deprecation")
     @Test
     void downloadItemHasNoInlineCapByDefault() {
         long thirtyMiB = 30L * 1024 * 1024;

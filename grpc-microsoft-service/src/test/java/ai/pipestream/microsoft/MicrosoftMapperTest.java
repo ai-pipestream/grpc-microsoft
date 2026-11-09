@@ -90,7 +90,7 @@ class MicrosoftMapperTest {
     }
 
     @Test
-    void listColumnsSkipNullEmptyArrayAndSecondNesting() throws Exception {
+    void listColumnsSkipNullAndEmptyArrayButKeepEveryNestedLeaf() throws Exception {
         assertThat(mapper.toListColumns(null)).isEmpty();
         assertThat(mapper.toListColumns(JSON.readTree("[]"))).isEmpty();
         assertThat(mapper.toListColumns(JSON.readTree("""
@@ -104,10 +104,11 @@ class MicrosoftMapperTest {
                 }
                 """))).satisfies(columns -> {
             assertThat(columns).extracting(c -> c.getName())
-                    .containsExactly("Ratio", "Day", "Lookup.Id");
+                    .containsExactly("Ratio", "Day", "Lookup.Id", "Lookup.Nested.x");
             assertThat(columns.get(0).getDoubleValue()).isEqualTo(1.5d);
             assertThat(columns.get(1).getStringValue()).isEqualTo("2024-03-02");
             assertThat(columns.get(2).getIntValue()).isEqualTo(9);
+            assertThat(columns.get(3).getIntValue()).isEqualTo(1);
         });
     }
 

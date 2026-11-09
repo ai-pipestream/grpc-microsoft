@@ -3,6 +3,7 @@ package ai.pipestream.microsoft;
 import ai.pipestream.microsoft.v1.ChangeOperation;
 import ai.pipestream.microsoft.v1.ChangeSource;
 import ai.pipestream.microsoft.v1.DriveItem;
+import ai.pipestream.microsoft.v1.ListItem;
 import ai.pipestream.microsoft.v1.MicrosoftChange;
 import ai.pipestream.microsoft.v1.MicrosoftEntity;
 import ai.pipestream.microsoft.v1.MicrosoftSnapshot;
@@ -40,6 +41,8 @@ public final class SyncTableMicrosoftChangeSink implements MicrosoftChangeSink, 
     private final ManagedChannel channel;
     private final SyncTableServiceGrpc.SyncTableServiceBlockingStub stub;
     private final String connectionId;
+    /** False for a {@link #forConnection} view, which shares (and never closes) the channel. */
+    private final boolean ownsChannel;
 
     /**
      * Creates a sink over an existing channel (takes ownership for {@link #close()}).
@@ -58,10 +61,31 @@ public final class SyncTableMicrosoftChangeSink implements MicrosoftChangeSink, 
      * @param connectionId catalog connection
      */
     public SyncTableMicrosoftChangeSink(ManagedChannel channel, String connectionId) {
+        this(channel, connectionId, true);
+    }
+
+    private SyncTableMicrosoftChangeSink(ManagedChannel channel, String connectionId,
+            boolean ownsChannel) {
         this.channel = Objects.requireNonNull(channel, "channel");
         this.stub = SyncTableServiceGrpc.newBlockingStub(channel);
         this.connectionId = connectionId == null || connectionId.isBlank()
                 ? DEFAULT_CONNECTION_ID : connectionId;
+        this.ownsChannel = ownsChannel;
+    }
+
+    /**
+     * A view of this sink that stamps {@code connectionId}; it shares the channel
+     * and its {@link #close()} leaves the channel open.
+     *
+     * @param connectionId catalog connection
+     * @return the bound view
+     */
+    @Override
+    public MicrosoftChangeSink forConnection(String connectionId) {
+        if (connectionId == null || connectionId.isBlank() || connectionId.equals(this.connectionId)) {
+            return this;
+        }
+        return new SyncTableMicrosoftChangeSink(channel, connectionId, false);
     }
 
     /**
@@ -118,7 +142,7 @@ public final class SyncTableMicrosoftChangeSink implements MicrosoftChangeSink, 
                     .setCheckpoint(Checkpoint.newBuilder()
                             .setSource(SOURCE)
                             .setConnectionId(connectionId)
-                            .setScope(snapshot.getDriveId())
+                            .setScope(scope(snapshot))
                             .setCursor(snapshot.getCursor()))
                     .build());
         } catch (RuntimeException e) {
@@ -126,6 +150,28 @@ public final class SyncTableMicrosoftChangeSink implements MicrosoftChangeSink, 
         }
     }
 
+    /**
+     * Checkpoint scope of a snapshot: the drive id for a drive sweep,
+     * {@code site_id/list_id} for a list sweep.
+     */
+    static String scope(MicrosoftSnapshot snapshot) {
+        if (!snapshot.getDriveId().isEmpty()) {
+            return snapshot.getDriveId();
+        }
+        if (!snapshot.getListId().isEmpty()) {
+            return SyncCursors.listKey(snapshot.getSiteId(), snapshot.getListId());
+        }
+        return snapshot.getSiteId();
+    }
+
+    /**
+     * Reconciles by run id: rows of this connection the run did not write are
+     * marked deleted. Only called for full-sweep runs (see
+     * {@link MicrosoftChangeSink#completeRun(String, boolean)}); an incremental
+     * pass never reconciles, because unchanged rows keep their older run id.
+     *
+     * @param runId identifier of the completed full-sweep run
+     */
     @Override
     public void completeRun(String runId) {
         if (runId == null || runId.isBlank()) {
@@ -178,6 +224,16 @@ public final class SyncTableMicrosoftChangeSink implements MicrosoftChangeSink, 
             asset.setTitle(entity.getDrive().getName()).setSourceUri(entity.getDrive().getWebUrl());
         } else if (entity.getEntityCase() == MicrosoftEntity.EntityCase.SITE) {
             asset.setTitle(entity.getSite().getDisplayName()).setSourceUri(entity.getSite().getWebUrl());
+        } else if (entity.getEntityCase() == MicrosoftEntity.EntityCase.LIST) {
+            asset.setTitle(entity.getList().getDisplayName()).setSourceUri(entity.getList().getWebUrl());
+        } else if (entity.getEntityCase() == MicrosoftEntity.EntityCase.LIST_ITEM) {
+            ListItem item = entity.getListItem();
+            asset.setTitle(item.getName()).setSourceUri(item.getWebUrl());
+            if (!item.getListId().isEmpty()) {
+                asset.setParentAssetId(SOURCE + ":" + connection + ":list:" + item.getListId());
+            }
+        } else if (entity.getEntityCase() == MicrosoftEntity.EntityCase.PERMISSION) {
+            asset.setTitle(String.join(",", entity.getPermission().getRolesList()));
         }
         return asset.build();
     }
@@ -205,9 +261,12 @@ public final class SyncTableMicrosoftChangeSink implements MicrosoftChangeSink, 
                 : AssetPhase.ASSET_PHASE_UPDATE;
     }
 
-    /** Shuts down the underlying channel. */
+    /** Shuts down the underlying channel (a {@link #forConnection} view leaves it open). */
     @Override
     public void close() {
+        if (!ownsChannel) {
+            return;
+        }
         channel.shutdown();
         try {
             if (!channel.awaitTermination(5, TimeUnit.SECONDS)) {

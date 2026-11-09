@@ -13,6 +13,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -21,7 +22,14 @@ import java.util.concurrent.ConcurrentHashMap;
  * Accumulates Microsoft Graph changes into an OKF v0.2 directory tree, zip,
  * and sibling WARC 1.1 file. Optionally uploads that payload to a SharePoint
  * library ({@code OKF_SPO_DRIVE_ID}). Materializes on
- * {@link #completeRun(String)}.
+ * {@link #completeRun(String, boolean)}.
+ *
+ * <p>The bundle is a mirror: a full-sweep run replaces it with exactly the
+ * entries it emitted, an incremental run merges its entries (deletes become
+ * {@code status: deprecated}) into the last full sweep's, so unchanged entities
+ * are never dropped. An incremental run with no full sweep earlier in this
+ * process writes only its own entries, beside the configured bundle under an
+ * {@code increments} name, never over it.</p>
  */
 public final class OkfMicrosoftChangeSink implements MicrosoftChangeSink {
 
@@ -29,7 +37,9 @@ public final class OkfMicrosoftChangeSink implements MicrosoftChangeSink {
 
     private final OkfOutput output;
     private final SharePointOkfPublisher publisher;
-    private final Map<String, CatalogEntry> entries = new ConcurrentHashMap<>();
+    private final Map<String, CatalogEntry> run = new ConcurrentHashMap<>();
+    private final Map<String, CatalogEntry> mirror = new LinkedHashMap<>();
+    private boolean baseline;
 
     /**
      * Creates a sink.
@@ -68,7 +78,7 @@ public final class OkfMicrosoftChangeSink implements MicrosoftChangeSink {
      */
     @Override
     public void emit(MicrosoftChange change) {
-        MicrosoftCatalog.from(change).ifPresent(entry -> entries.put(entry.path(), entry));
+        MicrosoftCatalog.from(change).ifPresent(entry -> run.put(entry.path(), entry));
     }
 
     /**
@@ -84,10 +94,37 @@ public final class OkfMicrosoftChangeSink implements MicrosoftChangeSink {
      */
     @Override
     public void completeRun(String runId) {
-        List<CatalogEntry> captured = new ArrayList<>(entries.values());
+        completeRun(runId, true);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public synchronized void completeRun(String runId, boolean fullSweep) {
+        List<CatalogEntry> captured;
+        boolean increment = false;
+        if (fullSweep) {
+            mirror.clear();
+            mirror.putAll(run);
+            baseline = true;
+            captured = new ArrayList<>(mirror.values());
+        } else if (baseline) {
+            mirror.putAll(run);
+            captured = new ArrayList<>(mirror.values());
+        } else {
+            captured = new ArrayList<>(run.values());
+            increment = true;
+        }
+        run.clear();
+        write(runId, captured, increment);
+    }
+
+    private void write(String runId, List<CatalogEntry> captured, boolean increment) {
         Path scratch = null;
+        String suffix = "increments-" + ai.pipestream.okf.OkfPaths.segment(runId);
         try {
-            OkfOutput dest = output;
+            OkfOutput dest = increment ? beside(output, suffix) : output;
             if (!dest.enabled()) {
                 scratch = Files.createTempDirectory("okf-microsoft-");
                 dest = new OkfOutput(scratch, scratch.resolve("bundle.zip"),
@@ -102,7 +139,8 @@ public final class OkfMicrosoftChangeSink implements MicrosoftChangeSink {
                     captured);
             bundle.write(dest);
             if (publisher != null) {
-                publisher.publish(bundle.okf(), dest);
+                (increment ? publisher.under("increments/" + ai.pipestream.okf.OkfPaths.segment(runId))
+                        : publisher).publish(bundle.okf(), dest);
             }
             LOG.log(System.Logger.Level.INFO,
                     "microsoft-proxy OKF wrote {0} concepts dir={1} zip={2} warc={3} spo={4}",
@@ -118,6 +156,25 @@ public final class OkfMicrosoftChangeSink implements MicrosoftChangeSink {
                 deleteQuietly(scratch);
             }
         }
+    }
+
+    /** The configured destinations renamed with {@code suffix}, beside the originals. */
+    static OkfOutput beside(OkfOutput output, String suffix) {
+        return new OkfOutput(
+                output.directory() == null ? null
+                        : output.directory().resolveSibling(name(output.directory()) + "-" + suffix),
+                output.zip() == null ? null : output.zip().resolveSibling(
+                        stem(name(output.zip()), ".zip") + "-" + suffix + ".zip"),
+                output.warc() == null ? null : output.warc().resolveSibling(
+                        stem(name(output.warc()), ".warc.gz") + "-" + suffix + ".warc.gz"));
+    }
+
+    private static String name(Path path) {
+        return path.getFileName() == null ? "bundle" : path.getFileName().toString();
+    }
+
+    private static String stem(String name, String extension) {
+        return name.endsWith(extension) ? name.substring(0, name.length() - extension.length()) : name;
     }
 
     private static void deleteQuietly(Path root) {

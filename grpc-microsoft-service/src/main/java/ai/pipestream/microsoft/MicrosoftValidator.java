@@ -1,6 +1,11 @@
 package ai.pipestream.microsoft;
 
 import ai.pipestream.microsoft.v1.ChangeOperation;
+import ai.pipestream.microsoft.v1.ColumnDefinition;
+import ai.pipestream.microsoft.v1.DriveItemVersion;
+import ai.pipestream.microsoft.v1.ListItem;
+import ai.pipestream.microsoft.v1.Permission;
+import ai.pipestream.microsoft.v1.SharePointList;
 import ai.pipestream.microsoft.v1.Drive;
 import ai.pipestream.microsoft.v1.DriveItem;
 import ai.pipestream.microsoft.v1.GraphUser;
@@ -14,7 +19,6 @@ import io.grpc.Status;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.regex.Pattern;
 
 /**
  * Programmatic identity and numeric-floor rules for the Microsoft Graph
@@ -24,7 +28,6 @@ import java.util.regex.Pattern;
 public final class MicrosoftValidator {
 
     private static final MicrosoftValidator INSTANCE = new MicrosoftValidator();
-    private static final Pattern EMAIL = Pattern.compile("^[^ @]+@[^ @]+[.][^ @]+$");
 
     private MicrosoftValidator() {
     }
@@ -110,6 +113,11 @@ public final class MicrosoftValidator {
             case Drive drive -> required(prefix, "id", drive.getId(), out);
             case DriveItem item -> visitDriveItem(prefix, item, out);
             case GraphUser user -> visitUser(prefix, user, out);
+            case SharePointList list -> required(prefix, "id", list.getId(), out);
+            case ListItem item -> required(prefix, "id", item.getId(), out);
+            case Permission permission -> required(prefix, "id", permission.getId(), out);
+            case ColumnDefinition column -> required(prefix, "id", column.getId(), out);
+            case DriveItemVersion version -> required(prefix, "id", version.getId(), out);
             case MicrosoftEntity entity -> visitEntity(prefix, entity, out);
             case MicrosoftSnapshot snapshot -> required(prefix, "snapshot_id", snapshot.getSnapshotId(), out);
             case MicrosoftChange change -> visitChange(prefix, change, out);
@@ -125,9 +133,26 @@ public final class MicrosoftValidator {
         }
     }
 
+    /**
+     * {@code local@domain.tld} with no spaces: one {@code @} with text before
+     * it, and a {@code .} in the domain with text on both sides.
+     */
+    static boolean isEmailShaped(String value) {
+        if (value.indexOf(' ') >= 0) {
+            return false;
+        }
+        int at = value.indexOf('@');
+        if (at <= 0 || value.indexOf('@', at + 1) >= 0) {
+            return false;
+        }
+        String domain = value.substring(at + 1);
+        int dot = domain.indexOf('.', 1);
+        return dot > 0 && dot < domain.length() - 1;
+    }
+
     private static void visitUser(String prefix, GraphUser user, List<Violation> out) {
         required(prefix, "id", user.getId(), out);
-        if (!user.getMail().isEmpty() && !EMAIL.matcher(user.getMail()).matches()) {
+        if (!user.getMail().isEmpty() && !isEmailShaped(user.getMail())) {
             out.add(new Violation(child(prefix, "mail"), "user.mail_format",
                     "mail must be empty or a valid address"));
         }
@@ -142,6 +167,9 @@ public final class MicrosoftValidator {
                 case DRIVE -> entity.getDrive();
                 case DRIVE_ITEM -> entity.getDriveItem();
                 case USER -> entity.getUser();
+                case LIST -> entity.getList();
+                case LIST_ITEM -> entity.getListItem();
+                case PERMISSION -> entity.getPermission();
                 case ENTITY_NOT_SET -> entity;
             };
             visit(child(prefix, entity.getEntityCase().name().toLowerCase()), nested, out);

@@ -41,8 +41,19 @@ public final class CompositeMicrosoftChangeSink implements MicrosoftChangeSink {
 
     @Override
     public void completeRun(String runId) {
+        completeRun(runId, true);
+    }
+
+    @Override
+    public void completeRun(String runId, boolean fullSweep) {
         for (MicrosoftChangeSink sink : sinks) {
-            sink.completeRun(runId);
+            sink.completeRun(runId, fullSweep);
         }
+    }
+
+    @Override
+    public MicrosoftChangeSink forConnection(String connectionId) {
+        return new CompositeMicrosoftChangeSink(sinks.stream()
+                .map(sink -> sink.forConnection(connectionId)).toList());
     }
 }

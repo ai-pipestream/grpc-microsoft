@@ -7,6 +7,10 @@ import ai.pipestream.microsoft.v1.GraphUser;
 import ai.pipestream.microsoft.v1.Identity;
 import ai.pipestream.microsoft.v1.IdentitySet;
 import ai.pipestream.microsoft.v1.ListColumn;
+import ai.pipestream.microsoft.v1.ListItem;
+import ai.pipestream.microsoft.v1.Permission;
+import ai.pipestream.microsoft.v1.SharePointIdentitySet;
+import ai.pipestream.microsoft.v1.SharePointList;
 import ai.pipestream.microsoft.v1.MicrosoftChange;
 import ai.pipestream.microsoft.v1.MicrosoftEntity;
 import ai.pipestream.microsoft.v1.Site;
@@ -20,6 +24,7 @@ import com.google.protobuf.Timestamp;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -67,6 +72,9 @@ public final class MicrosoftCatalog {
             case DRIVE -> drive(entity.getDrive(), at);
             case DRIVE_ITEM -> driveItem(entity.getDriveItem(), at);
             case USER -> user(entity.getUser(), at);
+            case LIST -> list(entity.getList(), at);
+            case LIST_ITEM -> listItem(entity.getListItem(), at);
+            case PERMISSION -> permission(entity.getEntityId(), entity.getPermission(), at);
             case ENTITY_NOT_SET -> fallback(entity, at);
         };
     }
@@ -176,6 +184,116 @@ public final class MicrosoftCatalog {
             b.extra("sha256", WarcDigest.sha256Hex(payload));
         }
         return new CatalogEntry(path, b.build(), uri, media, payload, kind);
+    }
+
+    private static CatalogEntry list(SharePointList list, Instant at) {
+        String path = OkfPaths.join("lists", OkfPaths.segment(list.getId()) + ".md");
+        String uri = uriOrUrn(list.getWebUrl(), "list", list.getId());
+        String title = list.getDisplayName().isBlank() ? list.getName() : list.getDisplayName();
+        StringBuilder body = new StringBuilder();
+        if (!list.getDescription().isBlank()) {
+            body.append(list.getDescription()).append("\n\n");
+        }
+        body.append("* Template: ").append(list.getList().getTemplate()).append('\n');
+        body.append("* Hidden: ").append(list.getList().getHidden()).append('\n');
+        appendIdentity(body, "Created by", list.getCreatedBy());
+        OkfConcept concept = base("List", title, list.getDescription(), uri, at)
+                .extra("graph_id", list.getId())
+                .extra("site_id", list.getSiteId())
+                .extra("template", list.getList().getTemplate())
+                .extra("drive_id", list.getDriveId())
+                .body(body.toString())
+                .build();
+        return CatalogEntry.text(path, concept, uri, "text/plain", title, "list");
+    }
+
+    private static CatalogEntry listItem(ListItem item, Instant at) {
+        String path = OkfPaths.join("lists", OkfPaths.segment(item.getListId()), "items",
+                OkfPaths.segment(item.getId()) + ".md");
+        String uri = uriOrUrn(item.getWebUrl(), "list_item", item.getListId() + "/" + item.getId());
+        String title = firstNonBlank(item.getName(), titleColumn(item));
+        if (title.isBlank()) {
+            title = item.getId();
+        }
+        StringBuilder body = new StringBuilder();
+        if (!item.getContentType().getName().isBlank()) {
+            body.append("* Content type: ").append(item.getContentType().getName()).append('\n');
+        }
+        appendIdentity(body, "Created by", item.getCreatedBy());
+        appendIdentity(body, "Last modified by", item.getLastModifiedBy());
+        appendColumns(body, item.getFieldsList());
+        OkfConcept concept = base("ListItem", title, item.getContentType().getName(), uri, at)
+                .extra("graph_id", item.getId())
+                .extra("site_id", item.getSiteId())
+                .extra("list_id", item.getListId())
+                .extra("etag", item.getEtag())
+                .body(body.toString())
+                .build();
+        return CatalogEntry.text(path, concept, uri, "text/plain", title, "list_item");
+    }
+
+    private static CatalogEntry permission(String entityId, Permission permission, Instant at) {
+        String path = OkfPaths.join("permissions", OkfPaths.segment(entityId) + ".md");
+        String uri = uriOrUrn("", "permission", entityId);
+        String roles = String.join(", ", permission.getRolesList());
+        StringBuilder body = new StringBuilder();
+        body.append("* Roles: ").append(roles).append('\n');
+        if (permission.hasLink()) {
+            body.append("* Link: ").append(permission.getLink().getType()).append(" / ")
+                    .append(permission.getLink().getScope()).append('\n');
+        }
+        if (permission.hasGrantedTo()) {
+            appendGrantee(body, permission.getGrantedTo());
+        }
+        for (SharePointIdentitySet grantee : permission.getGrantedToIdentitiesList()) {
+            appendGrantee(body, grantee);
+        }
+        body.append("* Inherited: ").append(permission.hasInheritedFrom()).append('\n');
+        OkfConcept concept = base("Permission", roles.isBlank() ? permission.getId() : roles, roles,
+                uri, at)
+                .extra("graph_id", permission.getId())
+                .body(body.toString())
+                .build();
+        return CatalogEntry.text(path, concept, uri, "text/plain", permission.getId(), "permission");
+    }
+
+    private static void appendGrantee(StringBuilder body, SharePointIdentitySet grantee) {
+        for (Identity identity : List.of(grantee.getUser(), grantee.getGroup(),
+                grantee.getApplication(), grantee.getDevice())) {
+            if (!identity.getId().isBlank() || !identity.getDisplayName().isBlank()) {
+                body.append("* Grantee: ").append(identity.getDisplayName())
+                        .append(" (`").append(identity.getId()).append("`)\n");
+            }
+        }
+        if (grantee.hasSharePointGroup()) {
+            body.append("* Grantee: SharePoint group ").append(grantee.getSharePointGroup().getDisplayName())
+                    .append(" (`").append(grantee.getSharePointGroup().getId()).append("`)\n");
+        }
+        if (grantee.hasSiteGroup()) {
+            body.append("* Grantee: site group ").append(grantee.getSiteGroup().getDisplayName())
+                    .append(" (`").append(grantee.getSiteGroup().getId()).append("`)\n");
+        }
+    }
+
+    private static String titleColumn(ListItem item) {
+        for (ListColumn column : item.getFieldsList()) {
+            if (column.getName().equals("Title")) {
+                return columnValue(column);
+            }
+        }
+        return "";
+    }
+
+    private static void appendColumns(StringBuilder body, List<ListColumn> columns) {
+        if (columns.isEmpty()) {
+            return;
+        }
+        body.append("\n## SharePoint columns\n\n");
+        body.append("| Column | Value |\n| --- | --- |\n");
+        for (ListColumn column : columns) {
+            body.append("| ").append(escapeCell(column.getName())).append(" | ")
+                    .append(escapeCell(columnValue(column))).append(" |\n");
+        }
     }
 
     private static CatalogEntry fallback(MicrosoftEntity entity, Instant at) {
