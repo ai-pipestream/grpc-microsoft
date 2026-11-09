@@ -1,0 +1,16 @@
+# Buf STANDARD + COMMENTS. Lint only — codegen stays protoc /
+# protobuf-gradle-plugin. The Microsoft GCA Contracts/ tree is a frozen
+# MIT copy of Microsoft's wire and is not in this workspace (their lint
+# bar, not ours).
+version: v2
+modules:
+  - path: grpc-confluence-api/src/main/proto
+  - path: grpc-microsoft-api/src/main/proto
+  - path: grpc-sync-api/src/main/proto
+lint:
+  use:
+    - STANDARD
+    - COMMENTS
+breaking:
+  use:
+    - FILE

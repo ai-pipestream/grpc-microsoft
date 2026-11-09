@@ -1,0 +1,11 @@
+FROM eclipse-temurin:25-jdk AS build
+WORKDIR /src
+COPY . .
+RUN ./gradlew --no-daemon build :grpc-microsoft-service:installDist
+
+FROM eclipse-temurin:25-jre
+COPY --from=build /src/grpc-microsoft-service/build/install/grpc-microsoft-service /opt/microsoft
+RUN useradd --system --no-create-home microsoft
+USER microsoft
+EXPOSE 9096
+ENTRYPOINT ["/opt/microsoft/bin/grpc-microsoft-service"]

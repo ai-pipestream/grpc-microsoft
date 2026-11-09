@@ -1,0 +1,866 @@
+syntax = "proto3";
+
+package ai.pipestream.microsoft.v1;
+
+import "ai/pipestream/microsoft/v1/common.proto";
+import "ai/pipestream/microsoft/v1/drive.proto";
+import "ai/pipestream/microsoft/v1/events.proto";
+import "ai/pipestream/microsoft/v1/list.proto";
+import "ai/pipestream/microsoft/v1/permission.proto";
+import "ai/pipestream/microsoft/v1/site.proto";
+
+option java_multiple_files = true;
+option java_package = "ai.pipestream.microsoft.v1";
+
+// ============================================================================
+// MICROSOFT SERVICE - the gRPC read proxy over Microsoft Graph v1.0.
+//
+// Every rpc maps to one Graph route (named in its comment). REST pagination
+// is transport and stays hidden: list rpcs stream one entity per message and
+// walk @odata.nextLink server-side; delta rpcs stream changes and end with
+// the @odata.deltaLink as a typed resume cursor. Binary content streams in
+// chunks; nothing in this contract caps a payload size - any limit is a
+// per-request field where 0 means no limit.
+//
+// Auth modes: the server holds either an application (client-credentials)
+// token or a delegated token. Routes that exist only in one mode say so;
+// the server answers FAILED_PRECONDITION when the held token cannot call
+// the route (for example /me or /me/drives on an app-only token, or
+// /sites/getAllSites and /sites/delta on a delegated token).
+// ============================================================================
+
+// The Microsoft Graph read proxy. Server reflection and the gRPC health
+// service are always registered alongside it.
+service MicrosoftService {
+  // --- Identity and connection ------------------------------------------
+
+  // GET /me. The signed-in user (delegated). App-only tokens have no /me;
+  // the server reports FAILED_PRECONDITION in that case — ProbeConnection
+  // or ListAllSites is the app-only probe.
+  rpc GetMe(GetMeRequest) returns (GetMeResponse);
+
+  // Probe a catalog (or inline) connection: GET /sites?search=* on a
+  // delegated token, GET /sites/getAllSites on an application token, and
+  // report which auth mode the token has and whether the call worked. Does
+  // not start a crawl.
+  rpc ProbeConnection(ProbeConnectionRequest) returns (ProbeConnectionResponse);
+
+  // --- Sites -------------------------------------------------------------
+
+  // GET /sites?search={query}. Keyword search over sites the credentials
+  // can see; walks pages up to the requested limit.
+  rpc ListSites(ListSitesRequest) returns (ListSitesResponse);
+
+  // GET /sites/getAllSites. Every site collection in the tenant, personal
+  // (OneDrive) sites included, as a stream. Application permission only.
+  rpc ListAllSites(ListAllSitesRequest) returns (stream ListAllSitesResponse);
+
+  // GET /sites/{site-id}. One site by composite id, or by
+  // `{hostname}:/{server-relative-path}` (Graph accepts both in the id
+  // segment).
+  rpc GetSite(GetSiteRequest) returns (GetSiteResponse);
+
+  // GET /sites/{site-id}/sites. Subsites of a site as a stream.
+  rpc ListSubsites(ListSubsitesRequest) returns (stream ListSubsitesResponse);
+
+  // GET /sites/delta. Created, updated and deleted sites since a delta
+  // link, or a full enumeration when none is given. Application permission
+  // only.
+  rpc DeltaSites(DeltaSitesRequest) returns (stream DeltaSitesResponse);
+
+  // --- Drives and drive items --------------------------------------------
+
+  // GET /sites/{site-id}/drives, /users/{user-id}/drives,
+  // /groups/{group-id}/drives, or /me/drives when no scope is given.
+  rpc ListDrives(ListDrivesRequest) returns (ListDrivesResponse);
+
+  // GET /drives/{drive-id}. One drive by id.
+  rpc GetDrive(GetDriveRequest) returns (GetDriveResponse);
+
+  // GET /drives/{drive-id}/root:/{path}:/children or
+  // /drives/{drive-id}/items/{folder-id}/children. Children of a folder as
+  // a stream; REST pagination stays hidden. Not guaranteed complete while
+  // writes happen; use DeltaDriveItems for a consistent full enumeration.
+  rpc ListChildren(ListChildrenRequest) returns (stream ListChildrenResponse);
+
+  // GET /drives/{drive-id}/items/{item-id} or /drives/{drive-id}/root:/{path}.
+  // One drive item (metadata always; expansions on request).
+  rpc GetItem(GetItemRequest) returns (GetItemResponse);
+
+  // Deprecated: unary download that inlines the whole binary in one message.
+  // Use DownloadContent, which streams. Kept for existing clients; the
+  // request's max_inline_bytes (0 = no limit) replaces the former fixed cap.
+  rpc DownloadItem(DownloadItemRequest) returns (DownloadItemResponse) {
+    option deprecated = true;
+  }
+
+  // GET /drives/{drive-id}/items/{item-id}/content, or
+  // .../versions/{version-id}/content when a version is named. The item's
+  // metadata first, then the binary as a stream of chunks.
+  rpc DownloadContent(DownloadContentRequest) returns (stream DownloadContentResponse);
+
+  // GET /drives/{drive-id}/root/delta (or /items/{item-id}/delta on OneDrive
+  // personal). Changed items (deletes carry the `deleted` facet) since a
+  // delta link, or a full enumeration when none is given, ending with the new
+  // delta link. HTTP 410 Gone on a stale link becomes a leading DeltaResync
+  // event followed by the fresh enumeration.
+  rpc DeltaDriveItems(DeltaDriveItemsRequest) returns (stream DeltaDriveItemsResponse);
+
+  // GET /drives/{drive-id}/items/{item-id}/versions. Previous versions of a
+  // drive item as a stream.
+  rpc ListItemVersions(ListItemVersionsRequest) returns (stream ListItemVersionsResponse);
+
+  // --- Lists, list items, columns, content types -------------------------
+
+  // GET /sites/{site-id}/lists. Lists of a site (document libraries
+  // included) as a stream.
+  rpc ListLists(ListListsRequest) returns (stream ListListsResponse);
+
+  // GET /sites/{site-id}/lists/{list-id} or /drives/{drive-id}/list. One
+  // list by id, or the list behind a document library.
+  rpc GetList(GetListRequest) returns (GetListResponse);
+
+  // GET /sites/{site-id}/lists/{list-id}/items?$expand=fields. Items of a
+  // list with their column values as a stream.
+  rpc ListListItems(ListListItemsRequest) returns (stream ListListItemsResponse);
+
+  // GET /sites/{site-id}/lists/{list-id}/items/{item-id}?$expand=fields.
+  // One list item with its column values.
+  rpc GetListItem(GetListItemRequest) returns (GetListItemResponse);
+
+  // GET /sites/{site-id}/lists/{list-id}/items/delta. Changed list items
+  // (deletes carry the `deleted` facet) since a delta link, or a full
+  // enumeration when none is given, ending with the new delta link.
+  rpc DeltaListItems(DeltaListItemsRequest) returns (stream DeltaListItemsResponse);
+
+  // GET /sites/{site-id}/columns, /sites/{site-id}/lists/{list-id}/columns,
+  // or /sites/{site-id}/contentTypes/{content-type-id}/columns. Column
+  // definitions of a site, list, or content type as a stream.
+  rpc ListColumns(ListColumnsRequest) returns (stream ListColumnsResponse);
+
+  // --- Permissions --------------------------------------------------------
+
+  // GET /drives/{drive-id}/items/{item-id}/permissions,
+  // /sites/{site-id}/lists/{list-id}/items/{item-id}/permissions,
+  // /sites/{site-id}/lists/{list-id}/permissions, or
+  // /sites/{site-id}/permissions. The ACL of one resource as a stream.
+  rpc ListPermissions(ListPermissionsRequest) returns (stream ListPermissionsResponse);
+
+  // --- Sync ----------------------------------------------------------------
+
+  // One bounded sync pass over the requested scope: a full enumeration via
+  // delta on the first pass, incremental changes (upserts and deletes) on
+  // later passes driven by the previous resume cursor. Emits changes, one
+  // snapshot per completed drive / list sweep, then the terminal resume
+  // cursor. Deliberately bounded; a continuously tailing rpc is a possible
+  // additive later.
+  rpc Sync(SyncRequest) returns (stream SyncResponse);
+}
+
+// ============================================================================
+// Shared request options
+// ============================================================================
+
+// Which per-item expansions a drive-item rpc should fetch. Each costs a
+// Graph call (or an $expand) per item. When a request leaves its `include`
+// field unset the rpc keeps its first-revision behaviour (GetItem,
+// DownloadItem, DownloadContent and Sync fetch list columns; ListChildren
+// and DeltaDriveItems fetch nothing extra); when `include` is set, exactly
+// the flags set to true are fetched.
+message DriveItemInclude {
+  // Fetch the backing list item's column values into
+  // DriveItem.list_columns ($expand=listItem($expand=fields)).
+  bool list_columns = 1;
+  // Fetch the item's permissions into DriveItem.permissions
+  // (/permissions per item).
+  bool permissions = 2;
+  // Fetch the retention label into DriveItem.retention_label
+  // (/retentionLabel per item).
+  bool retention_label = 3;
+  // Request the publication facet ($select=publication).
+  bool publication = 5;
+}
+
+// Which per-item expansions a list-item rpc should fetch. Column values
+// (`fields`) are always fetched. Each extra costs a Graph call (or an
+// $expand) per item, so all default to off.
+message ListItemInclude {
+  // Fetch the drive item view into ListItem.drive_item
+  // ($expand=driveItem; document libraries only).
+  bool drive_item = 1;
+  // Fetch the item's permissions into ListItem.permissions.
+  bool permissions = 2;
+}
+
+// How a delta enumeration should report sharing and visibility changes
+// (the Graph `Prefer` request preferences). All default to off, which is
+// Graph's default behaviour.
+message DeltaPreferences {
+  // `Prefer: hierarchicalsharing` - return sharing information only on the
+  // root of a permission hierarchy and on items whose sharing changed,
+  // instead of on every item that merely inherits.
+  bool hierarchical_sharing = 1;
+  // `Prefer: deltashowremovedasdeleted` - items the caller lost access to
+  // are reported with the `deleted` facet.
+  bool show_removed_as_deleted = 2;
+  // `Prefer: deltatraversepermissiongaps` - keep traversing through folders
+  // the caller cannot read so shared children below them still appear.
+  bool traverse_permission_gaps = 3;
+  // `Prefer: deltashowsharingchanges` - items whose permissions changed are
+  // returned (flagged DriveItem.sharing_changed) even when nothing else
+  // changed. Graph requires show_removed_as_deleted and
+  // traverse_permission_gaps alongside it.
+  bool show_sharing_changes = 4;
+  // `Prefer: deltaExcludeParent` - do not include the unchanged parent
+  // folders of changed items.
+  bool exclude_parent = 5;
+}
+
+// Why a delta token was rejected (HTTP 410 Gone) and what to do with the
+// fresh enumeration that follows.
+enum DeltaResyncReason {
+  // Zero value; the reason was not recorded.
+  DELTA_RESYNC_REASON_UNSPECIFIED = 0;
+  // `resyncChangesApplyDifferences`: replace local state with the server's
+  // version of every returned item and delete local items not returned.
+  DELTA_RESYNC_REASON_APPLY_DIFFERENCES = 1;
+  // `resyncChangesUploadDifferences`: the server is missing local changes;
+  // for a read-only indexer, treat as APPLY_DIFFERENCES.
+  DELTA_RESYNC_REASON_UPLOAD_DIFFERENCES = 2;
+}
+
+// Emitted first in a delta stream when Graph rejected the supplied delta
+// link with 410 Gone. The server then continues with the fresh full
+// enumeration Graph pointed it at; the client must reconcile deletes by
+// comparing against its local state.
+message DeltaResync {
+  // Graph's resync instruction.
+  DeltaResyncReason reason = 1;
+  // Graph's error message.
+  string message = 2;
+}
+
+// Which auth mode the held token has.
+enum AuthMode {
+  // Zero value; not determined.
+  AUTH_MODE_UNSPECIFIED = 0;
+  // Application (client-credentials) token: no /me, full tenant discovery.
+  AUTH_MODE_APPLICATION = 1;
+  // Delegated (signed-in user) token: /me works, discovery limited to what
+  // the user can see.
+  AUTH_MODE_DELEGATED = 2;
+}
+
+// ============================================================================
+// Identity and connection
+// ============================================================================
+
+// Request for the signed-in Graph user.
+message GetMeRequest {
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 1;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// The signed-in Graph user.
+message GetMeResponse {
+  // The user Graph returned for /me.
+  GraphUser user = 1;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// Request to probe whether a catalog (or inline) connection can reach Graph.
+message ProbeConnectionRequest {
+  // Catalog connection to probe. Empty = use inline fields or the process
+  // default.
+  string connection_id = 1;
+  // Inline Entra tenant id for a probe that has not been saved yet.
+  string tenant_id = 2;
+  // Inline application (client) id for an unsaved probe.
+  string client_id = 3;
+  // Inline client secret for an unsaved probe. Never logged or echoed.
+  string client_secret = 4;
+  // Max site ids to return as evidence the token works; 0 = 5.
+  int32 limit = 5;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// Result of a connection probe.
+message ProbeConnectionResponse {
+  // True when the probe call succeeded.
+  bool ok = 1;
+  // Catalog id that was probed; empty for a purely inline probe.
+  string connection_id = 2;
+  // Auth mode the token turned out to have.
+  AuthMode auth_mode = 3;
+  // Site ids the token can see (capped by the request limit).
+  repeated string site_ids = 4;
+  // Failure detail when ok is false. Never contains the secret.
+  string error_message = 5;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// ============================================================================
+// Sites
+// ============================================================================
+
+// Request to search SharePoint sites.
+message ListSitesRequest {
+  // Search query; empty = `*` (every site the credentials can see).
+  string query = 1;
+  // Maximum sites to return; 0 = no cap (the server walks every
+  // @odata.nextLink page). Use ListAllSites for tenant-wide enumeration.
+  int32 limit = 2;
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 3;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// Sites the request matched.
+message ListSitesResponse {
+  // The matched sites.
+  repeated Site sites = 1;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// Request to stream every site collection in the tenant.
+message ListAllSitesRequest {
+  // When false, personal (OneDrive) sites are filtered out of the stream.
+  bool include_personal_sites = 1;
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 2;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// One streamed site.
+message ListAllSitesResponse {
+  // The streamed site.
+  Site site = 1;
+}
+
+// Request to read one site.
+message GetSiteRequest {
+  // Site id, or `{hostname}:/{server-relative-path}` (e.g.
+  // `contoso.sharepoint.com:/sites/finance`).
+  string site_id = 1;
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 2;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// The requested site.
+message GetSiteResponse {
+  // The site Graph returned.
+  Site site = 1;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// Request to stream the subsites of a site.
+message ListSubsitesRequest {
+  // Parent site id.
+  string site_id = 1;
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 2;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// One streamed subsite.
+message ListSubsitesResponse {
+  // The streamed subsite.
+  Site site = 1;
+}
+
+// Request to enumerate site changes.
+message DeltaSitesRequest {
+  // The `@odata.deltaLink` a previous DeltaSites stream ended with. Empty =
+  // full enumeration of every site; `latest` = emit no sites, only the
+  // current delta link. The server validates the link as for DeltaDriveItems.
+  string delta_link = 1;
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 2;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// One streamed site delta event.
+message DeltaSitesResponse {
+  // Exactly one of a resync notice, a changed site, or the terminal delta
+  // link.
+  oneof event {
+    // Emitted first when the supplied delta link was rejected (410 Gone).
+    DeltaResync resync = 1;
+    // A created, updated, or deleted (`deleted` facet set) site.
+    Site site = 2;
+    // Terminal message: the delta link to persist for the next call.
+    string delta_link = 3;
+  }
+}
+
+// ============================================================================
+// Drives and drive items
+// ============================================================================
+
+// Request to list drives of a site, user, or group, or the signed-in user's
+// drives.
+message ListDrivesRequest {
+  // Site id; the site's document libraries. Takes precedence over user_id
+  // and group_id.
+  string site_id = 1;
+  // User id or principal name; the user's OneDrive(s). Application tokens
+  // need User.Read.All plus Files.Read.All.
+  string user_id = 2;
+  // Group id; the group's (Teams) drives.
+  string group_id = 3;
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 4;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// Drives the request matched.
+message ListDrivesResponse {
+  // The matched drives.
+  repeated Drive drives = 1;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// Request to read one drive.
+message GetDriveRequest {
+  // Drive id.
+  string drive_id = 1;
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 2;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// The requested drive.
+message GetDriveResponse {
+  // The drive Graph returned.
+  Drive drive = 1;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// Request to stream children of a folder.
+message ListChildrenRequest {
+  // Drive id whose folder is listed.
+  string drive_id = 1;
+  // Folder path; empty or "/" lists the drive root. Ignored when folder_id
+  // is set.
+  string folder_path = 2;
+  // Folder item id; takes precedence over folder_path.
+  string folder_id = 3;
+  // Per-item expansions to fetch; unset = metadata only.
+  DriveItemInclude include = 4;
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 5;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// One streamed drive item.
+message ListChildrenResponse {
+  // The streamed child (file or folder).
+  DriveItem item = 1;
+}
+
+// Request to read one drive item by id or path.
+message GetItemRequest {
+  // Drive id that owns the item.
+  string drive_id = 1;
+  // Item id to fetch; takes precedence over path.
+  string item_id = 2;
+  // Path from the drive root (e.g. `/Shared Documents/report.docx`) when
+  // item_id is empty.
+  string path = 3;
+  // Per-item expansions to fetch; unset = metadata plus list columns (the
+  // first-revision behaviour).
+  DriveItemInclude include = 4;
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 5;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// The requested drive item (metadata).
+message GetItemResponse {
+  // The item Graph returned.
+  DriveItem item = 1;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// Request to read one drive item, optionally inlining bytes (deprecated rpc).
+message DownloadItemRequest {
+  // Drive id that owns the item.
+  string drive_id = 1;
+  // Item id to fetch.
+  string item_id = 2;
+  // When true, the binary is downloaded and inlined as DriveItem.content.
+  // No size cap by default: the limit is the tighter of max_inline_bytes
+  // (when set) and MICROSOFT_ATTACHMENT_MAX_BYTES (when the operator sets
+  // one); larger items are refused with FAILED_PRECONDITION.
+  bool include_content = 3;
+  // Largest binary to inline, in bytes; 0 = no limit.
+  int64 max_inline_bytes = 4;
+  // Per-item expansions to fetch; unset = metadata plus list columns (the
+  // first-revision behaviour).
+  DriveItemInclude include = 5;
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 6;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// The requested drive item (metadata always; bytes when include_content).
+message DownloadItemResponse {
+  // The item: metadata always, bytes when include_content was set.
+  DriveItem item = 1;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// Request to stream the binary of a drive item or of one of its versions.
+message DownloadContentRequest {
+  // Drive id that owns the item.
+  string drive_id = 1;
+  // Item id to download.
+  string item_id = 2;
+  // Version id to download instead of the current content; empty = current.
+  string version_id = 3;
+  // Graph conversion format (`?format=pdf`); empty = the stored bytes.
+  string format = 4;
+  // First byte to return (HTTP Range); 0 = from the start.
+  int64 offset = 5;
+  // Number of bytes to return from offset; 0 = to the end.
+  int64 length = 6;
+  // Preferred chunk size per streamed message, in bytes; 0 = server
+  // default.
+  int32 chunk_bytes = 7;
+  // Per-item expansions to fetch on the leading metadata message; unset =
+  // metadata plus list columns.
+  DriveItemInclude include = 8;
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 9;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// One streamed download message: the first carries the item's metadata, all
+// following carry consecutive chunks of the binary.
+message DownloadContentResponse {
+  // Exactly one of the leading metadata or a content chunk.
+  oneof payload {
+    // The item's metadata (first message of the stream; `content` unset).
+    DriveItem item = 1;
+    // The next consecutive chunk of the binary.
+    bytes chunk = 2;
+  }
+}
+
+// Request to enumerate drive item changes.
+message DeltaDriveItemsRequest {
+  // Drive id to enumerate.
+  string drive_id = 1;
+  // Folder item id to scope the enumeration to; empty = the drive root.
+  // Graph supports folder-scoped delta on OneDrive personal only; on
+  // OneDrive for Business and SharePoint the server answers
+  // INVALID_ARGUMENT for a non-root folder.
+  string item_id = 2;
+  // The `@odata.deltaLink` a previous stream ended with. Empty = full
+  // enumeration; `latest` = emit no items, only the current delta link
+  // (`?token=latest`). The server only follows a link whose host is its
+  // configured Graph endpoint and whose path is this drive's delta route,
+  // and answers INVALID_ARGUMENT otherwise (no client-chosen URLs are
+  // fetched with the server's token).
+  string delta_link = 3;
+  // Graph `Prefer` preferences controlling how sharing and lost-access
+  // changes are reported.
+  DeltaPreferences preferences = 4;
+  // Per-item expansions to fetch; unset = metadata only.
+  DriveItemInclude include = 5;
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 6;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// One streamed drive item delta event.
+message DeltaDriveItemsResponse {
+  // Exactly one of a resync notice, a changed item, or the terminal delta
+  // link.
+  oneof event {
+    // Emitted first when the supplied delta link was rejected (410 Gone).
+    DeltaResync resync = 1;
+    // A created, updated, or deleted (`deleted` facet set) item. The feed
+    // carries the latest state per item; the same id may appear more than
+    // once and the last occurrence wins.
+    DriveItem item = 2;
+    // Terminal message: the delta link to persist for the next call.
+    string delta_link = 3;
+  }
+}
+
+// Request to stream the versions of a drive item.
+message ListItemVersionsRequest {
+  // Drive id that owns the item.
+  string drive_id = 1;
+  // Item id whose versions are listed.
+  string item_id = 2;
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 3;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// One streamed drive item version.
+message ListItemVersionsResponse {
+  // The streamed version.
+  DriveItemVersion version = 1;
+}
+
+// ============================================================================
+// Lists, list items, columns, content types
+// ============================================================================
+
+// Request to stream the lists of a site.
+message ListListsRequest {
+  // Site id.
+  string site_id = 1;
+  // When false, hidden and system lists are filtered out of the stream.
+  bool include_hidden = 2;
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 3;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// One streamed list.
+message ListListsResponse {
+  // The streamed list.
+  SharePointList list = 1;
+}
+
+// Request to read one list.
+message GetListRequest {
+  // Site id that owns the list; required with list_id.
+  string site_id = 1;
+  // List id; empty when drive_id is used instead.
+  string list_id = 2;
+  // Drive id whose backing list is wanted (/drives/{id}/list) when list_id
+  // is empty.
+  string drive_id = 3;
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 4;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// The requested list.
+message GetListResponse {
+  // The list Graph returned.
+  SharePointList list = 1;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// Request to stream the items of a list.
+message ListListItemsRequest {
+  // Site id that owns the list.
+  string site_id = 1;
+  // List id.
+  string list_id = 2;
+  // OData $filter over `fields/...` (e.g. `fields/Status eq 'Active'`);
+  // empty = all items. Non-indexed columns need the Graph
+  // HonorNonIndexedQueriesWarningMayFailRandomly preference, which the
+  // server sets.
+  string filter = 3;
+  // Per-item expansions to fetch; unset = fields only.
+  ListItemInclude include = 4;
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 5;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// One streamed list item.
+message ListListItemsResponse {
+  // The streamed list item.
+  ListItem item = 1;
+}
+
+// Request to read one list item.
+message GetListItemRequest {
+  // Site id that owns the list.
+  string site_id = 1;
+  // List id.
+  string list_id = 2;
+  // List item id.
+  string item_id = 3;
+  // Per-item expansions to fetch; unset = fields only.
+  ListItemInclude include = 4;
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 5;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// The requested list item.
+message GetListItemResponse {
+  // The list item Graph returned.
+  ListItem item = 1;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// Request to enumerate list item changes.
+message DeltaListItemsRequest {
+  // Site id that owns the list.
+  string site_id = 1;
+  // List id to enumerate.
+  string list_id = 2;
+  // The `@odata.deltaLink` a previous stream ended with. Empty = full
+  // enumeration; `latest` = emit no items, only the current delta link. The
+  // server validates the link as for DeltaDriveItems.
+  string delta_link = 3;
+  // Per-item expansions to fetch; unset = fields only.
+  ListItemInclude include = 4;
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 5;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// One streamed list item delta event.
+message DeltaListItemsResponse {
+  // Exactly one of a resync notice, a changed item, or the terminal delta
+  // link.
+  oneof event {
+    // Emitted first when the supplied delta link was rejected (410 Gone).
+    DeltaResync resync = 1;
+    // A created, updated, or deleted (`deleted` facet set) list item.
+    ListItem item = 2;
+    // Terminal message: the delta link to persist for the next call.
+    string delta_link = 3;
+  }
+}
+
+// Request to stream the columns of a site, list, or content type.
+message ListColumnsRequest {
+  // Site id; required.
+  string site_id = 1;
+  // List id; when set, the list's columns are returned.
+  string list_id = 2;
+  // Content type id; when set (and list_id is empty), the content type's
+  // columns are returned. Both empty = the site's columns.
+  string content_type_id = 3;
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 4;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// One streamed column definition.
+message ListColumnsResponse {
+  // The streamed column.
+  ColumnDefinition column = 1;
+}
+
+// ============================================================================
+// Permissions
+// ============================================================================
+
+// Request to stream the permissions of a drive item, list item, list, or
+// site.
+message ListPermissionsRequest {
+  // The resource whose ACL is listed.
+  PermissionTarget target = 1;
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 2;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// One streamed permission.
+message ListPermissionsResponse {
+  // The streamed permission, with `target` set.
+  Permission permission = 1;
+}
+
+// ============================================================================
+// Sync
+// ============================================================================
+
+// Request to run one bounded Graph sync pass.
+message SyncRequest {
+  // Drive ids to sync; empty = the drives of site_ids, or the server's
+  // configured drives / site, or the signed-in user's drive.
+  repeated string drive_ids = 1;
+  // Folder path to start from on a children-walk crawl; empty = drive root.
+  // Delta-driven passes always cover the whole drive (OneDrive for Business
+  // and SharePoint support delta on the drive root only); a non-empty path
+  // filters emitted items to that subtree.
+  string folder_path = 2;
+  // When true, file bytes are inlined on file items up to max_inline_bytes.
+  bool include_content = 3;
+  // Catalog connection to crawl. Empty = the process-default (env) connection.
+  string connection_id = 4;
+  // The resume cursor a previous Sync ended with. Empty = full enumeration
+  // (and the server starts tracking delta links for the next pass); set =
+  // incremental pass emitting only changes, deletes included, since then.
+  // A drive or list whose stored link Graph rejects (410 Gone) is swept in
+  // full again; its snapshot then reports CHANGE_SOURCE_CRAWL.
+  string since_cursor = 5;
+  // Largest binary to inline when include_content is set, in bytes; 0 = no
+  // limit.
+  int64 max_inline_bytes = 6;
+  // Per-item expansions to fetch for drive items; unset = list columns only
+  // (the first-revision behaviour).
+  DriveItemInclude include = 7;
+  // Site ids whose drives (and, with include_lists, lists) are synced in
+  // addition to drive_ids.
+  repeated string site_ids = 8;
+  // When true, non-library lists of the synced sites are swept too and
+  // their items emitted as list_item changes (list items delta).
+  bool include_lists = 9;
+  // Per-item expansions to fetch for list items.
+  ListItemInclude list_item_include = 10;
+  // Delta preferences applied to every drive sweep (sharing-change
+  // reporting).
+  DeltaPreferences delta_preferences = 11;
+  // When true, system drives and hidden / system lists are swept too;
+  // default skips them.
+  bool include_system = 12;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// One streamed sync event. The stream is exactly one bounded pass: zero or
+// more change events, one snapshot per completed drive / list sweep, then
+// one terminal resume_cursor.
+message SyncResponse {
+  // The streamed event: exactly one of a change, a snapshot, or the terminal
+  // resume cursor.
+  oneof event {
+    // One entity upsert or delete from the pass.
+    MicrosoftChange change = 1;
+    // Marker for one completed drive or list sweep, carrying the delta link
+    // the sweep ended on.
+    MicrosoftSnapshot snapshot = 2;
+    // Terminal message of every Sync stream: the cursor to hand back as
+    // SyncRequest.since_cursor next time (an encoded SyncCursor).
+    string resume_cursor = 3;
+  }
+}
