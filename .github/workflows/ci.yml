@@ -25,6 +25,9 @@ jobs:
       - uses: actions/checkout@v5
         with:
           path: grpc-microsoft
+      - name: Test live gate branches offline
+        run: python3 scripts/test_microsoft_live_gate.py
+        working-directory: grpc-microsoft
       - id: core
         name: Pick the grpc-integration ref (same branch if it exists, else main)
         env:
