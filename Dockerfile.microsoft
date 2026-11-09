@@ -12,6 +12,7 @@ COPY --from=integration . /src/grpc-integration
 WORKDIR /src/grpc-microsoft
 COPY . .
 RUN --mount=type=cache,target=/root/.gradle ./gradlew --no-daemon --max-workers=${GRADLE_MAX_WORKERS} build :grpc-microsoft-service:installDist :grpc-microsoft-connector:installDist && \
+    test -n "$(find . -path '*/build/test-results/test/TEST-*.xml' -print -quit)" && \
     find . -path '*/build/test-results/test/TEST-*.xml' -exec awk -F '"' \
     '/<testsuite / { for (i=1; i<NF; i++) { if ($i ~ / tests=$/) tests+=$(i+1); if ($i ~ / failures=$/) failures+=$(i+1); if ($i ~ / errors=$/) errors+=$(i+1); if ($i ~ / skipped=$/) skipped+=$(i+1) } } END { printf "CONTAINER_TEST_TOTAL tests=%d failures=%d errors=%d skipped=%d\n", tests, failures, errors, skipped; if (tests == 0 || failures != 0 || errors != 0) exit 1 }' {} +
 
