@@ -13,8 +13,8 @@ talk to this process on the published wire.
 
 A copy of the MIT License text as published with that repository is included
 below. The Java adapter that implements those services and calls this repo's
-`MicrosoftService` is Copyright (c) 2026 ai.pipestream, also under MIT
-(see the repository LICENSE).
+`MicrosoftService` is Copyright (c) 2026 ai.pipestream, licensed under
+the Apache License, Version 2.0 (see the repository LICENSE).
 
 -------------------------------------------------------------------------------
 MIT License

@@ -12,8 +12,7 @@ val runtimeJvmArgs = listOf(
 // as protomolt). Reading it needs no credentials; publishing needs
 // FORGEJO_TOKEN (and optionally FORGEJO_ACTOR).
 val registryUrl = "https://git.rokkon.com/api/packages/ai-pipestream/maven"
-// Update to grpc-microsoft once the repository is renamed.
-val repoUrl = "https://github.com/ai-pipestream/grpc-sharepoint"
+val repoUrl = "https://github.com/ai-pipestream/grpc-microsoft"
 
 subprojects {
     group = "ai.pipestream.microsoft"

@@ -1,8 +1,4 @@
-# grpc-sharepoint (becoming grpc-microsoft)
-
-> **Rename note:** this repository will be renamed **grpc-microsoft**. The
-> Gradle root project is already called `grpc-microsoft`; GitHub keeps a
-> redirect from the old name after the rename.
+# grpc-microsoft
 
 Microsoft Graph as typed gRPC. The proxy speaks Graph REST upstream and
 gRPC downstream for SharePoint sites, drives, and files, with a
@@ -17,6 +13,9 @@ base classes) live in
 This repo was split out of
 [grpc-confluence](https://github.com/ai-pipestream/grpc-confluence) with
 its history.
+
+This repository is licensed under Apache-2.0. The third-party Microsoft
+contracts retain their MIT license and notices.
 
 The Microsoft Copilot connector wire contracts are copied from
 [Custom-Copilot-Connector-using-Connector-SDK](https://github.com/microsoft/Custom-Copilot-Connector-using-Connector-SDK)
@@ -48,7 +47,7 @@ There are two ways to get them:
 
    ```
    git clone https://github.com/ai-pipestream/grpc-integration
-   git clone https://github.com/ai-pipestream/grpc-sharepoint grpc-microsoft
+   git clone https://github.com/ai-pipestream/grpc-microsoft
    cd grpc-microsoft
    ./gradlew build
    ```
