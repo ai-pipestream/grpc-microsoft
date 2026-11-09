@@ -32,7 +32,7 @@ Group `ai.pipestream.microsoft`, version `0.1.0-SNAPSHOT`.
 | `grpc-microsoft-service` | 9096 | Live Graph proxy for sites, drives, and files. |
 | `grpc-microsoft-output` | | Graph store keys, OKF catalog mapping, the `microsoft-connector` output format, and its `OkfCatalogSource` registration. |
 | `grpc-microsoft-connector` | 30303 | Microsoft Copilot / GCA adapter that forwards crawls to MicrosoftService. |
-| `grpc-microsoft-mcp` | | `microsoft_*` tools for the combined `grpc-mcp` server (`McpToolProvider`). |
+| `grpc-microsoft-mcp` | | `microsoft_*` tools for the combined `grpc-mcp` server (`McpToolProvider`). `run` starts that server with these tools. |
 | `grpc-microsoft-connect` | | Kafka Connect source (`MicrosoftSourceConnector`) and its plugin zip. |
 
 ## Building
@@ -151,7 +151,16 @@ from grpc-integration (for the Docker image: `/opt/mcp/ext`) and it adds:
 microsoft_get_me / microsoft_sync
 ```
 
-The server dials `MICROSOFT_GRPC_TARGET` (default `localhost:9096`).
+The server dials `MICROSOFT_GRPC_TARGET` (default `localhost:9096`). To
+run that server with the Microsoft tools from this repo (plus the core
+`app_*`, `connection_*`, and `sync_table_*` tools):
+
+```
+MCP_PORT=8090
+MICROSOFT_GRPC_TARGET=localhost:9096
+SYNC_TABLE_TARGET=localhost:9097
+./gradlew :grpc-microsoft-mcp:run
+```
 
 ## Kafka Connect
 

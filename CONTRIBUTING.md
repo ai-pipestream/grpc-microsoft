@@ -10,7 +10,7 @@ shared modules come from there.
 ## Before you send a PR
 
 ```
-./gradlew build          # unit/fake tests + javadoc (-Xdoclint:all -Werror)
+./gradlew build          # unit/fake tests + javadoc (-Xdoclint:all -Xwerror)
 buf lint                 # STANDARD + COMMENTS on grpc-microsoft-api
 ```
 
@@ -36,7 +36,7 @@ GCA `Contracts/` tree is a frozen copy and is not in the Buf workspace.
   enum, and enum value needs a non-empty comment. STANDARD applies too
   (`RPC_REQUEST_RESPONSE_UNIQUE`, enum prefixes, ...).
 - **Javadoc is strict** on handwritten public/protected API
-  (`-Xdoclint:all -Werror`). Generated protobuf is excluded.
+  (`-Xdoclint:all -Xwerror`). Generated protobuf is excluded.
 - **Virtual threads.** gRPC handlers and MCP tool calls are blocking by
   design; the servers run them on virtual threads. Do not introduce a
   platform-thread pool for I/O.
