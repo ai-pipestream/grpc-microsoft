@@ -28,8 +28,11 @@ application {
     mainClass = "ai.pipestream.microsoft.MicrosoftServer"
 }
 
+// The live smoke and coverage tests hit the real tenant, so they never run
+// in the default test task (and are assumption-gated on credentials as a second guard).
 tasks.named<Test>("test") {
     exclude("**/MicrosoftLiveSmokeIT.class")
+    exclude("**/MicrosoftLiveCoverageIT.class")
 }
 
 tasks.register<Test>("liveSmokeTest") {
@@ -39,5 +42,21 @@ tasks.register<Test>("liveSmokeTest") {
     classpath = sourceSets.test.get().runtimeClasspath
     filter {
         includeTestsMatching("ai.pipestream.microsoft.MicrosoftLiveSmokeIT")
+    }
+}
+
+tasks.register<Test>("liveCoverageTest") {
+    description = "Calls every MicrosoftService rpc against the real Microsoft Graph tenant and writes build/live-coverage.md; needs MICROSOFT_TENANT_ID + MICROSOFT_CLIENT_ID + MICROSOFT_CLIENT_SECRET, optional MICROSOFT_SITE_ID / MICROSOFT_DRIVE_IDS, skips otherwise"
+    group = "verification"
+    testClassesDirs = sourceSets.test.get().output.classesDirs
+    classpath = sourceSets.test.get().runtimeClasspath
+    filter {
+        includeTestsMatching("ai.pipestream.microsoft.MicrosoftLiveCoverageIT")
+    }
+    systemProperty("liveCoverage.report", layout.buildDirectory.file("live-coverage.md").get().asFile.path)
+    // A live run is never up to date, and the report goes to stdout too.
+    outputs.upToDateWhen { false }
+    testLogging {
+        showStandardStreams = true
     }
 }
