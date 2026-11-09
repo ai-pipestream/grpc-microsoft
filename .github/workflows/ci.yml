@@ -5,6 +5,11 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+    inputs:
+      require_live_microsoft:
+        description: Fail unless the read-only Microsoft live smoke actually passes
+        type: boolean
+        default: false
 
 # The shared core (ai-pipestream/grpc-integration) is checked out next to
 # this repo and included as a Gradle composite build (-PintegrationDir), so
@@ -55,12 +60,39 @@ jobs:
       - name: buf lint STANDARD+COMMENTS
         run: buf lint
 
-  # Read-only live probes. Fork PRs never see secrets (job is skipped).
-  # Same-repo PRs / pushes / dispatch run the job; if the secret is empty
-  # the step exits 0 so a repo without credentials stays green.
-  live-microsoft:
+  # Fork PRs never enter either credential-bearing job. Optional runs report
+  # missing credentials explicitly; dispatch can require actual live evidence.
+  live-microsoft-preflight:
     needs: build
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    outputs:
+      ready: ${{ steps.credentials.outputs.ready }}
+    steps:
+      - name: Check live credentials without printing them
+        id: credentials
+        env:
+          MICROSOFT_TENANT_ID: ${{ secrets.MICROSOFT_TENANT_ID }}
+          MICROSOFT_CLIENT_ID: ${{ secrets.MICROSOFT_CLIENT_ID }}
+          MICROSOFT_CLIENT_SECRET: ${{ secrets.MICROSOFT_CLIENT_SECRET }}
+          REQUIRE_LIVE: ${{ github.event_name == 'workflow_dispatch' && inputs.require_live_microsoft }}
+        shell: bash
+        run: |
+          if [[ -z "${MICROSOFT_TENANT_ID//[[:space:]]/}" || -z "${MICROSOFT_CLIENT_ID//[[:space:]]/}" || -z "${MICROSOFT_CLIENT_SECRET//[[:space:]]/}" ]]; then
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            if [[ "$REQUIRE_LIVE" == "true" ]]; then
+              echo "::error::Required Microsoft live gate has no credentials; no live evidence produced."
+              echo "Microsoft live gate: FAILED (required credentials missing; no live evidence)." >> "$GITHUB_STEP_SUMMARY"
+              exit 1
+            fi
+            echo "Microsoft live smoke: SKIPPED (credentials missing; no live evidence)." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  live-microsoft:
+    needs: live-microsoft-preflight
+    if: needs.live-microsoft-preflight.outputs.ready == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -94,8 +126,22 @@ jobs:
           MICROSOFT_SITE_ID: ${{ secrets.MICROSOFT_SITE_ID }}
           MICROSOFT_DRIVE_IDS: ${{ secrets.MICROSOFT_DRIVE_IDS }}
         run: |
-          if [ -z "${MICROSOFT_TENANT_ID}" ] || [ -z "${MICROSOFT_CLIENT_ID}" ] || [ -z "${MICROSOFT_CLIENT_SECRET}" ]; then
-            echo "Microsoft secrets not configured; skipping live smoke"
-            exit 0
-          fi
-          ./gradlew --no-daemon -PintegrationDir=../grpc-integration :grpc-microsoft-service:liveSmokeTest
+          ./gradlew --no-daemon -PintegrationDir=../grpc-integration :grpc-microsoft-service:liveSmokeTest --rerun-tasks
+      - name: Require executed live evidence
+        working-directory: grpc-microsoft
+        shell: bash
+        run: |
+          python3 - <<'PYTHON'
+          import os
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+
+          report = Path("grpc-microsoft-service/build/test-results/liveSmokeTest/TEST-ai.pipestream.microsoft.MicrosoftLiveSmokeIT.xml")
+          if not report.is_file():
+              raise SystemExit("Missing Microsoft live smoke report; no live evidence.")
+          cases = ET.parse(report).getroot().findall("testcase")
+          if not cases or any(case.find(tag) is not None for case in cases for tag in ("skipped", "failure", "error")):
+              raise SystemExit("Microsoft live smoke did not execute successfully; no live evidence.")
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as summary:
+              summary.write(f"Microsoft live smoke: PASSED ({len(cases)} executed tests, none skipped).\n")
+          PYTHON
