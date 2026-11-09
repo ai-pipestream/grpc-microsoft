@@ -10,14 +10,9 @@ import ai.pipestream.microsoft.v1.MicrosoftChange;
 import ai.pipestream.microsoft.v1.MicrosoftServiceGrpc;
 import ai.pipestream.microsoft.v1.SyncRequest;
 import ai.pipestream.microsoft.v1.SyncResponse;
-import io.grpc.ManagedChannel;
-import io.grpc.ManagedChannelBuilder;
-import org.apache.kafka.connect.data.Schema;
-import org.apache.kafka.connect.source.SourceRecord;
-import org.apache.kafka.connect.source.SourceTask;
+import io.grpc.Channel;
 
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -27,39 +22,25 @@ import java.util.concurrent.atomic.AtomicReference;
  * One poll is one MicrosoftService.Sync (gRPC) or one crawler pass
  * (direct). Offset is the resume cursor.
  */
-public final class MicrosoftSourceTask extends SourceTask {
-
-    static final Map<String, String> PARTITION = Map.of("source", "microsoft");
+public final class MicrosoftSourceTask extends ChangeSourceTask<MicrosoftChange> {
 
     /** Kafka Connect task that pulls MicrosoftChange protobuf bytes. */
     public MicrosoftSourceTask() {
+        super("microsoft");
     }
 
-    private String topic;
-    private String grpcTarget;
-    private boolean plaintext;
     private boolean includeContent;
     private List<String> driveIds = List.of();
     private String folderPath = "/";
     private MicrosoftConnectorConfig direct;
-    private String lastCursor;
 
     @Override
-    public String version() {
-        return ConnectVersion.VALUE;
-    }
-
-    @Override
-    public void start(Map<String, String> props) {
-        topic = required(props, MicrosoftSourceConnector.TOPIC);
-        grpcTarget = props.getOrDefault(MicrosoftSourceConnector.GRPC_TARGET, "").trim();
-        plaintext = Boolean.parseBoolean(
-                props.getOrDefault(MicrosoftSourceConnector.GRPC_PLAINTEXT, "true"));
+    protected void configure(Map<String, String> props, boolean directMode) {
         includeContent = Boolean.parseBoolean(
                 props.getOrDefault(MicrosoftSourceConnector.INCLUDE_CONTENT, "false"));
         driveIds = splitCsv(props.getOrDefault(MicrosoftSourceConnector.DRIVE_IDS, ""));
         folderPath = props.getOrDefault(MicrosoftSourceConnector.FOLDER_PATH, "/");
-        if (grpcTarget.isEmpty()) {
+        if (directMode) {
             MicrosoftConnectorConfig.Builder builder = MicrosoftConnectorConfig.builder()
                     .tenantId(required(props, MicrosoftSourceConnector.TENANT_ID))
                     .clientId(required(props, MicrosoftSourceConnector.CLIENT_ID))
@@ -73,62 +54,30 @@ public final class MicrosoftSourceTask extends SourceTask {
             }
             direct = builder.build();
         }
-        Map<String, Object> offset = context.offsetStorageReader().offset(PARTITION);
-        if (offset != null && offset.get("cursor") instanceof String cursor) {
-            lastCursor = cursor;
-        }
     }
 
     @Override
-    public List<SourceRecord> poll() throws InterruptedException {
-        try {
-            List<MicrosoftChange> changes = new ArrayList<>();
-            String cursor = grpcTarget.isEmpty() ? pollDirect(changes) : pollGrpc(changes);
-            lastCursor = cursor;
-            Map<String, String> offset = Map.of("cursor", cursor);
-            List<SourceRecord> records = new ArrayList<>(changes.size());
-            for (MicrosoftChange change : changes) {
-                records.add(new SourceRecord(PARTITION, offset, topic,
-                        Schema.STRING_SCHEMA, change.getEntity().getEntityId(),
-                        Schema.BYTES_SCHEMA, change.toByteArray()));
+    protected String pollGrpc(Channel channel, String lastCursor, List<MicrosoftChange> out) {
+        MicrosoftServiceGrpc.MicrosoftServiceBlockingStub stub =
+                MicrosoftServiceGrpc.newBlockingStub(channel);
+        SyncRequest.Builder request = SyncRequest.newBuilder()
+                .setIncludeContent(includeContent);
+        request.addAllDriveIds(driveIds).setFolderPath(folderPath);
+        Iterator<SyncResponse> events = stub.sync(request.build());
+        String cursor = fallbackCursor(lastCursor);
+        while (events.hasNext()) {
+            SyncResponse event = events.next();
+            if (event.hasChange()) {
+                out.add(event.getChange());
+            } else if (event.getEventCase() == SyncResponse.EventCase.RESUME_CURSOR) {
+                cursor = event.getResumeCursor();
             }
-            return records;
-        } catch (InterruptedException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new RuntimeException("microsoft source poll failed", e);
         }
+        return cursor;
     }
 
-    private String pollGrpc(List<MicrosoftChange> out) {
-        ManagedChannelBuilder<?> builder = ManagedChannelBuilder.forTarget(grpcTarget);
-        if (plaintext) {
-            builder.usePlaintext();
-        }
-        ManagedChannel channel = builder.build();
-        try {
-            MicrosoftServiceGrpc.MicrosoftServiceBlockingStub stub =
-                    MicrosoftServiceGrpc.newBlockingStub(channel);
-            SyncRequest.Builder request = SyncRequest.newBuilder()
-                    .setIncludeContent(includeContent);
-            request.addAllDriveIds(driveIds).setFolderPath(folderPath);
-            Iterator<SyncResponse> events = stub.sync(request.build());
-            String cursor = lastCursor == null ? Instant.now().toString() : lastCursor;
-            while (events.hasNext()) {
-                SyncResponse event = events.next();
-                if (event.hasChange()) {
-                    out.add(event.getChange());
-                } else if (event.getEventCase() == SyncResponse.EventCase.RESUME_CURSOR) {
-                    cursor = event.getResumeCursor();
-                }
-            }
-            return cursor;
-        } finally {
-            channel.shutdownNow();
-        }
-    }
-
-    private String pollDirect(List<MicrosoftChange> out) throws Exception {
+    @Override
+    protected String pollDirect(String lastCursor, List<MicrosoftChange> out) throws Exception {
         InMemoryMicrosoftChangeSink sink = new InMemoryMicrosoftChangeSink();
         GraphAuth auth = new GraphAuth(direct.authConfig());
         AtomicReference<GraphAuth.Token> token = new AtomicReference<>(auth.clientCredentials());
@@ -150,24 +99,7 @@ public final class MicrosoftSourceTask extends SourceTask {
     }
 
     @Override
-    public void stop() {
-    }
-
-    private static List<String> splitCsv(String raw) {
-        if (raw == null || raw.isBlank()) {
-            return List.of();
-        }
-        return java.util.Arrays.stream(raw.split(","))
-                .map(String::trim)
-                .filter(s -> !s.isEmpty())
-                .toList();
-    }
-
-    private static String required(Map<String, String> props, String key) {
-        String value = props.get(key);
-        if (value == null || value.isBlank()) {
-            throw new IllegalArgumentException(key + " is required");
-        }
-        return value;
+    protected String recordKey(MicrosoftChange change) {
+        return change.getEntity().getEntityId();
     }
 }
