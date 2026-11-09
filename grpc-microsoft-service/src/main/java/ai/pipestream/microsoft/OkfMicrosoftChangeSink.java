@@ -5,7 +5,7 @@ import ai.pipestream.microsoft.v1.MicrosoftSnapshot;
 import ai.pipestream.okf.CatalogEntry;
 import ai.pipestream.okf.KnowledgeBundle;
 import ai.pipestream.okf.OkfOutput;
-import ai.pipestream.okf.microsoft.MicrosoftCatalog;
+import ai.pipestream.microsoft.output.MicrosoftCatalog;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;

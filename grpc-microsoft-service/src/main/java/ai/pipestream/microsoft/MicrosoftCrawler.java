@@ -42,8 +42,8 @@ import java.util.UUID;
  */
 public final class MicrosoftCrawler {
 
-    /** Default cap for inlined file bytes: 25 MiB. */
-    public static final long DEFAULT_ATTACHMENT_MAX_BYTES = 25L * 1024 * 1024;
+    /** Default cap for inlined file bytes: 0, meaning no cap. */
+    public static final long DEFAULT_ATTACHMENT_MAX_BYTES = 0L;
 
     /** Count key for the drive root item a delta enumeration returns. */
     static final String COUNT_ROOT = "root";

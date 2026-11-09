@@ -102,8 +102,8 @@ public final class MicrosoftGrpcService
     }
 
 
-    /** Default cap for inlined file bytes: 25 MiB. */
-    public static final long DEFAULT_ATTACHMENT_MAX_BYTES = 25L * 1024 * 1024;
+    /** Default inline byte cap: 0, meaning no cap. Set a positive value to enforce one. */
+    public static final long DEFAULT_ATTACHMENT_MAX_BYTES = 0L;
 
     /**
      * Server default for {@code DownloadContentRequest.chunk_bytes = 0}: 1 MiB per
@@ -778,12 +778,15 @@ public final class MicrosoftGrpcService
                 : GraphPaths.drive(driveId) + "/root:" + encoded + ":/children";
     }
 
-    /** The request's inline limit, or the server-wide one when the request leaves 0. */
+    /** The tighter of the request's inline limit and the server-wide one; 0 = no limit. */
     private long inlineLimit(long requested) {
         if (requested < 0) {
             throw new IllegalArgumentException("max_inline_bytes must not be negative");
         }
-        return requested > 0 ? requested : attachmentMaxBytes;
+        if (requested == 0) {
+            return attachmentMaxBytes;
+        }
+        return attachmentMaxBytes > 0 ? Math.min(requested, attachmentMaxBytes) : requested;
     }
 
     private DriveItem withContent(MicrosoftSessions.Session session, DriveItem item, long max)

@@ -1,10 +1,10 @@
 package ai.pipestream.microsoft;
 
+import ai.pipestream.microsoft.output.MicrosoftConnectorOutputFormat;
 import ai.pipestream.microsoft.v1.ChangeOperation;
 import ai.pipestream.microsoft.v1.DriveItem;
 import ai.pipestream.microsoft.v1.MicrosoftChange;
 import ai.pipestream.microsoft.v1.MicrosoftEntity;
-import ai.pipestream.output.MicrosoftConnectorOutputFormat;
 import ai.pipestream.output.OutputFormat;
 import ai.pipestream.output.OutputObject;
 import ai.pipestream.output.OutputStore;

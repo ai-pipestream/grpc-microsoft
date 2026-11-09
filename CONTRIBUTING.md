@@ -26,6 +26,11 @@ GCA `Contracts/` tree is a frozen copy and is not in the Buf workspace.
   S3 into either service. Connection catalog and ledger live behind
   `ConnectionService` / `SyncTableService` gRPC; callers do not open the
   store.
+- **Shared modules stay source-neutral.** `grpc-okf` and `grpc-output-spi`
+  must not depend on a source API. Source-specific keys, OKF catalog
+  mapping, and formats live in `grpc-confluence-output` /
+  `grpc-microsoft-output` and register through `OkfCatalogSource` /
+  `OutputFormat` ServiceLoader entries.
 - **Secrets stay out of git, logs, and PR text.** Live smokes read env /
   GitHub Actions secrets; they never print tokens.
 - **Buf COMMENTS is strict.** Every service, rpc, message, field, oneof,

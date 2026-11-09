@@ -1,5 +1,6 @@
 package ai.pipestream.microsoft;
 
+import ai.pipestream.microsoft.output.MicrosoftObjectKeys;
 import ai.pipestream.microsoft.v1.MicrosoftChange;
 import ai.pipestream.microsoft.v1.MicrosoftSnapshot;
 import ai.pipestream.output.ObjectKeys;
@@ -100,7 +101,7 @@ public final class OutputMicrosoftChangeSink implements MicrosoftChangeSink, Aut
 
     @Override
     public void emit(MicrosoftChange change) {
-        String relative = ObjectKeys.of(change);
+        String relative = MicrosoftObjectKeys.of(change);
         synchronized (this) {
             run.put(relative, change);
         }

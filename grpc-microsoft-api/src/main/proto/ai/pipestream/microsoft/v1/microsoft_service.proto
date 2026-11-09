@@ -509,8 +509,9 @@ message DownloadItemRequest {
   // Item id to fetch.
   string item_id = 2;
   // When true, the binary is downloaded and inlined as DriveItem.content.
-  // Refused with FAILED_PRECONDITION when the item is larger than
-  // max_inline_bytes (and that is non-zero).
+  // No size cap by default: the limit is the tighter of max_inline_bytes
+  // (when set) and MICROSOFT_ATTACHMENT_MAX_BYTES (when the operator sets
+  // one); larger items are refused with FAILED_PRECONDITION.
   bool include_content = 3;
   // Largest binary to inline, in bytes; 0 = no limit.
   int64 max_inline_bytes = 4;

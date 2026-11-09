@@ -151,6 +151,28 @@ class MicrosoftGrpcServiceTest {
                 .contains("Title", "Count");
     }
 
+    // Covers the deprecated DownloadItem rpc, which the service still serves.
+    @SuppressWarnings("deprecation")
+    @Test
+    void downloadItemHasNoInlineCapByDefault() {
+        long thirtyMiB = 30L * 1024 * 1024;
+        fake.stub("/drives/drive-1/items/file-1",
+                MicrosoftFixtures.fileJson("file-1", "notes.txt", "drive-1")
+                        .replace("\"size\": 12", "\"size\": " + thirtyMiB));
+        fake.stub("/drives/drive-1/items/file-1/content",
+                FakeGraphServer.Stub.bytes("hello".getBytes(), "text/plain"));
+
+        DriveItem downloaded = stub.downloadItem(DownloadItemRequest.newBuilder()
+                .setDriveId("drive-1")
+                .setItemId("file-1")
+                .setIncludeContent(true)
+                .build()).getItem();
+
+        assertThat(MicrosoftGrpcService.DEFAULT_ATTACHMENT_MAX_BYTES).isZero();
+        assertThat(downloaded.getSize()).isEqualTo(thirtyMiB);
+        assertThat(downloaded.getContent().toStringUtf8()).isEqualTo("hello");
+    }
+
     @Test
     void getItemWithMissingListItemHasEmptyColumns() {
         fake.stub("/drives/drive-1/items/file-1",
