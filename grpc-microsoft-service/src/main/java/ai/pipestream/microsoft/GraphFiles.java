@@ -23,6 +23,15 @@ public final class GraphFiles {
     /** Simple-upload ceiling; larger files use {@link #uploadSession}. */
     public static final int SIMPLE_UPLOAD_LIMIT = 4 * 1024 * 1024;
 
+    /** Bytes one upload-session request must be a multiple of, except the last. */
+    public static final int FRAGMENT_UNIT_BYTES = 320 * 1024;
+
+    /** Upload-session request size used when the caller names none. */
+    public static final int DEFAULT_FRAGMENT_BYTES = 32 * FRAGMENT_UNIT_BYTES;
+
+    /** Largest upload-session request Graph accepts. */
+    public static final int MAX_FRAGMENT_BYTES = 60 * 1024 * 1024;
+
     private final GraphClient graph;
 
     /**
@@ -245,28 +254,135 @@ public final class GraphFiles {
     public JsonNode uploadSession(String driveId, String destPath, byte[] content,
             String contentType) throws IOException, InterruptedException {
         String path = normalize(destPath);
-        ObjectNode body = GraphClient.object();
-        body.putObject("item")
-                .put("@microsoft.graph.conflictBehavior", "replace")
-                .put("name", fileName(path));
-        JsonNode session = graph.post(
-                "/drives/" + driveId + "/root:" + encodePath(path) + ":/createUploadSession",
-                body);
-        String uploadUrl = session.path("uploadUrl").asText("");
-        if (uploadUrl.isBlank()) {
-            throw new IOException("createUploadSession returned no uploadUrl for " + destPath);
-        }
-        final int fragment = 320 * 1024 * 10;
+        String uploadUrl = createUploadSession(
+                "/drives/" + driveId + "/root:" + encodePath(path) + ":", fileName(path),
+                "replace", "");
+        final int fragment = DEFAULT_FRAGMENT_BYTES;
         int offset = 0;
         JsonNode last = GraphClient.object();
         while (offset < content.length) {
             int end = Math.min(offset + fragment, content.length);
             byte[] chunk = java.util.Arrays.copyOfRange(content, offset, end);
-            String range = "bytes " + offset + "-" + (end - 1) + "/" + content.length;
-            last = graph.putRangeUnauthenticated(uploadUrl, chunk, contentType, range);
+            last = putFragment(uploadUrl, chunk, chunk.length, offset, content.length);
             offset = end;
         }
         return last;
+    }
+
+    /**
+     * Stores a file with one PUT.
+     *
+     * @param itemRoute the file's address ({@link GraphPaths#childByName})
+     * @param content file bytes
+     * @param length how many bytes of {@code content} to send
+     * @param contentType MIME type; blank becomes {@code application/octet-stream}
+     * @param conflictBehavior Graph {@code conflictBehavior}; blank for Graph's default
+     * @param ifMatch eTag the existing file must have; blank for unconditional
+     * @return the created or updated driveItem JSON
+     * @throws IOException if Graph returns an error
+     * @throws InterruptedException if the HTTP call is interrupted
+     */
+    public JsonNode putContent(String itemRoute, byte[] content, int length, String contentType,
+            String conflictBehavior, String ifMatch) throws IOException, InterruptedException {
+        String route = itemRoute + "/content";
+        if (conflictBehavior != null && !conflictBehavior.isBlank()) {
+            route += "?@microsoft.graph.conflictBehavior=" + conflictBehavior;
+        }
+        return graph.putBytes(route, content, length,
+                contentType == null || contentType.isBlank() ? "application/octet-stream"
+                        : contentType,
+                ifMatch == null || ifMatch.isBlank() ? Map.of() : Map.of("if-match", ifMatch));
+    }
+
+    /**
+     * Opens an upload session for a file.
+     *
+     * @param itemRoute the file's address ({@link GraphPaths#childByName})
+     * @param name file name
+     * @param conflictBehavior Graph {@code conflictBehavior}; blank for Graph's default
+     * @param ifMatch eTag the existing file must have; blank for unconditional
+     * @return the session's upload URL
+     * @throws IOException if Graph returns an error or omits {@code uploadUrl}
+     * @throws InterruptedException if the HTTP call is interrupted
+     */
+    public String createUploadSession(String itemRoute, String name, String conflictBehavior,
+            String ifMatch) throws IOException, InterruptedException {
+        ObjectNode body = GraphClient.object();
+        ObjectNode item = body.putObject("item");
+        if (conflictBehavior != null && !conflictBehavior.isBlank()) {
+            item.put("@microsoft.graph.conflictBehavior", conflictBehavior);
+        }
+        item.put("name", name);
+        JsonNode session = graph.execute(new GraphClient.Call("POST",
+                itemRoute + "/createUploadSession",
+                ifMatch == null || ifMatch.isBlank() ? Map.of() : Map.of("if-match", ifMatch),
+                body)).body();
+        String uploadUrl = session.path("uploadUrl").asText("");
+        if (uploadUrl.isBlank()) {
+            throw new IOException("createUploadSession returned no uploadUrl for " + name);
+        }
+        return uploadUrl;
+    }
+
+    /**
+     * Sends one fragment of an upload session.
+     *
+     * @param uploadUrl the session's upload URL
+     * @param content fragment bytes
+     * @param length how many bytes of {@code content} to send
+     * @param offset position of the fragment in the file
+     * @param total size of the whole file
+     * @return the session status JSON, or the driveItem JSON after the last fragment
+     * @throws IOException if Graph returns an error
+     * @throws InterruptedException if the HTTP call is interrupted
+     */
+    public JsonNode putFragment(String uploadUrl, byte[] content, int length, long offset,
+            long total) throws IOException, InterruptedException {
+        String range = "bytes " + offset + "-" + (offset + length - 1) + "/" + total;
+        return graph.putRangeUnauthenticated(uploadUrl, content, length,
+                "application/octet-stream", range);
+    }
+
+    /**
+     * Reads where an upload session expects the next byte.
+     *
+     * @param uploadUrl the session's upload URL
+     * @return the next expected offset
+     * @throws IOException if Graph returns an error
+     * @throws InterruptedException if the HTTP call is interrupted
+     */
+    public long uploadSessionOffset(String uploadUrl) throws IOException, InterruptedException {
+        return nextExpectedOffset(graph.getUnauthenticated(uploadUrl).body(), 0L);
+    }
+
+    /**
+     * Cancels an upload session.
+     *
+     * @param uploadUrl the session's upload URL
+     * @throws IOException if Graph returns an error
+     * @throws InterruptedException if the HTTP call is interrupted
+     */
+    public void cancelUploadSession(String uploadUrl) throws IOException, InterruptedException {
+        graph.deleteUnauthenticated(uploadUrl);
+    }
+
+    /**
+     * The start of the first {@code nextExpectedRanges} entry of an upload-session
+     * status.
+     *
+     * @param status the session status JSON
+     * @param fallback the offset to return when the status names no range
+     * @return the next expected offset
+     */
+    public static long nextExpectedOffset(JsonNode status, long fallback) {
+        String range = status.path("nextExpectedRanges").path(0).asText("");
+        int dash = range.indexOf('-');
+        String start = dash < 0 ? range : range.substring(0, dash);
+        try {
+            return start.isBlank() ? fallback : Long.parseLong(start.trim());
+        } catch (NumberFormatException e) {
+            return fallback;
+        }
     }
 
     /**

@@ -207,6 +207,8 @@ class MicrosoftLiveCoverageIT {
         try {
             stub = MicrosoftServiceGrpc.newBlockingStub(channel);
             exercise();
+            WRITE_RPCS.forEach(rpc -> rows.add(new Row(rpc, rpc, "SKIPPED",
+                    "write rpc; not run against the live tenant", false)));
         } finally {
             channel.shutdownNow();
             server.shutdownNow();
@@ -1088,6 +1090,12 @@ class MicrosoftLiveCoverageIT {
         }
         return digits == 3 ? value : 0;
     }
+
+    /** Write rpcs, which this read-only run does not call. */
+    private static final List<String> WRITE_RPCS = List.of(
+            "UploadItem", "CreateFolder", "UpdateDriveItem", "DeleteDriveItem",
+            "RestoreDriveItemVersion", "CopyDriveItem", "CreateListItem",
+            "UpdateListItemFields", "DeleteListItem", "EnsureColumns", "EnsureList", "Mutate");
 
     private void skip(String rpc, String reason) {
         skip(rpc, rpc, reason);

@@ -34,6 +34,7 @@ application {
 tasks.named<Test>("test") {
     exclude("**/MicrosoftLiveSmokeIT.class")
     exclude("**/MicrosoftLiveCoverageIT.class")
+    exclude("**/MicrosoftLiveWriteIT.class")
 }
 
 tasks.register<Test>("liveSmokeTest") {
@@ -55,6 +56,22 @@ tasks.register<Test>("liveCoverageTest") {
         includeTestsMatching("ai.pipestream.microsoft.MicrosoftLiveCoverageIT")
     }
     systemProperty("liveCoverage.report", layout.buildDirectory.file("live-coverage.md").get().asFile.path)
+    // A live run is never up to date, and the report goes to stdout too.
+    outputs.upToDateWhen { false }
+    testLogging {
+        showStandardStreams = true
+    }
+}
+
+tasks.register<Test>("liveWriteTest") {
+    description = "Calls every MicrosoftService write rpc against the real Microsoft Graph tenant, inside one new test folder and one new test list that it removes, and writes build/live-write.md; needs MICROSOFT_TENANT_ID + MICROSOFT_CLIENT_ID + MICROSOFT_CLIENT_SECRET + MICROSOFT_SITE_ID and MICROSOFT_LIVE_WRITE=1, optional MICROSOFT_DRIVE_IDS, skips otherwise"
+    group = "verification"
+    testClassesDirs = sourceSets.test.get().output.classesDirs
+    classpath = sourceSets.test.get().runtimeClasspath
+    filter {
+        includeTestsMatching("ai.pipestream.microsoft.MicrosoftLiveWriteIT")
+    }
+    systemProperty("liveWrite.report", layout.buildDirectory.file("live-write.md").get().asFile.path)
     // A live run is never up to date, and the report goes to stdout too.
     outputs.upToDateWhen { false }
     testLogging {

@@ -60,8 +60,40 @@ import ai.pipestream.microsoft.v1.Site;
 import ai.pipestream.microsoft.v1.SyncCursor;
 import ai.pipestream.microsoft.v1.SyncRequest;
 import ai.pipestream.microsoft.v1.SyncResponse;
+import ai.pipestream.microsoft.v1.ColumnOutcome;
+import ai.pipestream.microsoft.v1.ColumnScope;
+import ai.pipestream.microsoft.v1.ColumnSpec;
+import ai.pipestream.microsoft.v1.CopyDriveItemRequest;
+import ai.pipestream.microsoft.v1.CopyDriveItemResponse;
+import ai.pipestream.microsoft.v1.CopyProgress;
+import ai.pipestream.microsoft.v1.CreateFolderRequest;
+import ai.pipestream.microsoft.v1.CreateFolderResponse;
+import ai.pipestream.microsoft.v1.CreateListItemRequest;
+import ai.pipestream.microsoft.v1.CreateListItemResponse;
+import ai.pipestream.microsoft.v1.DeleteDriveItemRequest;
+import ai.pipestream.microsoft.v1.DeleteDriveItemResponse;
+import ai.pipestream.microsoft.v1.DeleteListItemRequest;
+import ai.pipestream.microsoft.v1.DeleteListItemResponse;
+import ai.pipestream.microsoft.v1.EnsureColumnsRequest;
+import ai.pipestream.microsoft.v1.EnsureColumnsResponse;
+import ai.pipestream.microsoft.v1.EnsureListRequest;
+import ai.pipestream.microsoft.v1.EnsureListResponse;
+import ai.pipestream.microsoft.v1.EnsureState;
+import ai.pipestream.microsoft.v1.ListTemplate;
+import ai.pipestream.microsoft.v1.MutateRequest;
+import ai.pipestream.microsoft.v1.MutateResponse;
+import ai.pipestream.microsoft.v1.RestoreDriveItemVersionRequest;
+import ai.pipestream.microsoft.v1.RestoreDriveItemVersionResponse;
+import ai.pipestream.microsoft.v1.UpdateDriveItemRequest;
+import ai.pipestream.microsoft.v1.UpdateDriveItemResponse;
+import ai.pipestream.microsoft.v1.UpdateListItemFieldsRequest;
+import ai.pipestream.microsoft.v1.UpdateListItemFieldsResponse;
+import ai.pipestream.microsoft.v1.UploadItemRequest;
+import ai.pipestream.microsoft.v1.UploadItemResponse;
 import ai.pipestream.sync.v1.ConnectionServiceGrpc;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.Message;
 import io.grpc.Status;
@@ -70,7 +102,9 @@ import io.grpc.stub.StreamObserver;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.time.Duration;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -79,7 +113,8 @@ import java.util.Objects;
  * {@code MicrosoftService} over Microsoft Graph v1.0: every rpc of the contract,
  * one Graph route each (named on the rpc), with REST paging hidden behind
  * streams, delta links surfaced as typed terminal events, and binaries streamed
- * in chunks. Every outgoing entity is checked by {@link MicrosoftValidator}.
+ * in chunks, plus the write rpcs. Every outgoing entity is checked by
+ * {@link MicrosoftValidator}.
  * Requests that name a {@code connection_id} run against that catalog
  * connection ({@link MicrosoftSessions}); every client-supplied delta link or
  * resume cursor is validated against the configured Graph host and the route it
@@ -112,6 +147,9 @@ public final class MicrosoftGrpcService
      */
     public static final int DEFAULT_DOWNLOAD_CHUNK_BYTES = 1024 * 1024;
 
+    /** Time between progress checks of {@code CopyDriveItem} when the request names none. */
+    public static final Duration DEFAULT_COPY_POLL_INTERVAL = Duration.ofSeconds(1);
+
     /** Site ids returned by {@code ProbeConnection} when its limit is 0. */
     public static final int DEFAULT_PROBE_SITES = 5;
 
@@ -122,6 +160,8 @@ public final class MicrosoftGrpcService
     private final long attachmentMaxBytes;
     private final MicrosoftChangeSink downstream;
     private final int downloadChunkBytes;
+    private final WritePlans plans;
+    private volatile long mutateLingerMillis = MutateHandler.DEFAULT_LINGER_MILLIS;
 
     /**
      * Creates a service with no downstream {@link MicrosoftChangeSink}.
@@ -179,6 +219,16 @@ public final class MicrosoftGrpcService
         this.attachmentMaxBytes = attachmentMaxBytes;
         this.downstream = downstream;
         this.downloadChunkBytes = downloadChunkBytes;
+        this.plans = new WritePlans(mapper);
+    }
+
+    /**
+     * Sets how long a {@code Mutate} batch waits for more ops before it is sent.
+     *
+     * @param millis the wait in milliseconds
+     */
+    void mutateLingerMillis(long millis) {
+        this.mutateLingerMillis = millis;
     }
 
     // ------------------------------------------------------------ identity
@@ -758,6 +808,254 @@ public final class MicrosoftGrpcService
                 DriveItemExpander.Flags.of(present, include, defaultListColumns));
     }
 
+    // ------------------------------------------------------------ writes
+
+    @Override
+    public StreamObserver<UploadItemRequest> uploadItem(
+            StreamObserver<UploadItemResponse> observer) {
+        return new UploadHandler(sessions, mapper, plans, observer);
+    }
+
+    @Override
+    public void createFolder(CreateFolderRequest request,
+            StreamObserver<CreateFolderResponse> observer) {
+        unary(observer, () -> plans.createFolder(request)
+                .run(sessions.resolve(request.getConnectionId()).graph()));
+    }
+
+    @Override
+    public void updateDriveItem(UpdateDriveItemRequest request,
+            StreamObserver<UpdateDriveItemResponse> observer) {
+        unary(observer, () -> plans.updateDriveItem(request)
+                .run(sessions.resolve(request.getConnectionId()).graph()));
+    }
+
+    @Override
+    public void deleteDriveItem(DeleteDriveItemRequest request,
+            StreamObserver<DeleteDriveItemResponse> observer) {
+        unary(observer, () -> plans.deleteDriveItem(request)
+                .run(sessions.resolve(request.getConnectionId()).graph()));
+    }
+
+    @Override
+    public void restoreDriveItemVersion(RestoreDriveItemVersionRequest request,
+            StreamObserver<RestoreDriveItemVersionResponse> observer) {
+        unary(observer, () -> plans.restoreDriveItemVersion(request)
+                .run(sessions.resolve(request.getConnectionId()).graph()));
+    }
+
+    @Override
+    public void copyDriveItem(CopyDriveItemRequest request,
+            StreamObserver<CopyDriveItemResponse> observer) {
+        stream(observer, () -> {
+            MicrosoftSessions.Session session = sessions.resolve(request.getConnectionId());
+            String sourceDrive = request.getItem().getDriveId();
+            String targetDrive = request.getDestinationDriveId().isBlank() ? sourceDrive
+                    : request.getDestinationDriveId();
+            ObjectNode body = GraphClient.object();
+            if (!request.getDestinationDriveId().isBlank()
+                    || !request.getDestinationParentId().isBlank()) {
+                ObjectNode parent = body.putObject("parentReference").put("driveId", targetDrive);
+                if (!request.getDestinationParentId().isBlank()) {
+                    parent.put("id", request.getDestinationParentId());
+                }
+            }
+            if (!request.getName().isBlank()) {
+                body.put("name", request.getName());
+            }
+            String route = GraphPaths.item(sourceDrive, request.getItem().getItemId()) + "/copy";
+            String conflict = WritePlans.conflict(request.getConflictBehavior());
+            if (!conflict.isEmpty()) {
+                route += "?@microsoft.graph.conflictBehavior=" + conflict;
+            }
+            Duration interval = request.hasPollInterval()
+                    ? Duration.ofSeconds(request.getPollInterval().getSeconds(),
+                            request.getPollInterval().getNanos())
+                    : DEFAULT_COPY_POLL_INTERVAL;
+            if (interval.isNegative()) {
+                throw new IllegalArgumentException("poll_interval must not be negative");
+            }
+            String monitor = session.graph()
+                    .execute(new GraphClient.Call("POST", route, Map.of(), body)).location();
+            if (monitor.isBlank()) {
+                throw new IOException("Graph accepted the copy without a monitor URL");
+            }
+            JsonNode copied = awaitCopy(session, monitor, targetDrive, interval, observer);
+            observer.onNext(CopyDriveItemResponse.newBuilder()
+                    .setItem(valid(mapper.toDriveItem(copied, targetDrive))).build());
+        });
+    }
+
+    /** Polls a copy monitor URL, streaming progress, and returns the new item's JSON. */
+    private static JsonNode awaitCopy(MicrosoftSessions.Session session, String monitor,
+            String targetDrive, Duration interval, StreamObserver<CopyDriveItemResponse> observer)
+            throws IOException, InterruptedException {
+        while (true) {
+            GraphClient.Reply reply = session.graph().getUnauthenticated(monitor);
+            JsonNode operation = reply.body();
+            String status = operation.path("status").asText("");
+            if (status.equalsIgnoreCase("failed")) {
+                throw new GraphClient.GraphApiException(GraphClient.GraphApiException.NO_HTTP_STATUS,
+                        operation.path("error").path("code").asText("operationFailed"),
+                        operation.path("error").path("message").asText("the copy failed"),
+                        operation.toString());
+            }
+            String resourceId = operation.path("resourceId").asText("");
+            if (!resourceId.isBlank() && !status.equalsIgnoreCase("inProgress")
+                    && !status.equalsIgnoreCase("notStarted")) {
+                return session.graph().get(GraphPaths.item(targetDrive, resourceId), Map.of());
+            }
+            if (!operation.path("id").asText("").isBlank() && status.isEmpty()) {
+                return operation;
+            }
+            if (reply.status() == 303 && !reply.location().isBlank()) {
+                return session.graph().get(reply.location(), Map.of());
+            }
+            observer.onNext(CopyDriveItemResponse.newBuilder()
+                    .setProgress(CopyProgress.newBuilder().setPercentageComplete(
+                            operation.path("percentageComplete").asDouble(0)))
+                    .build());
+            Thread.sleep(interval);
+        }
+    }
+
+    @Override
+    public void createListItem(CreateListItemRequest request,
+            StreamObserver<CreateListItemResponse> observer) {
+        unary(observer, () -> {
+            MicrosoftSessions.Session session = sessions.resolve(request.getConnectionId());
+            return plans.createListItem(session, request).run(session.graph());
+        });
+    }
+
+    @Override
+    public void updateListItemFields(UpdateListItemFieldsRequest request,
+            StreamObserver<UpdateListItemFieldsResponse> observer) {
+        unary(observer, () -> {
+            MicrosoftSessions.Session session = sessions.resolve(request.getConnectionId());
+            return plans.updateListItemFields(session, request).run(session.graph());
+        });
+    }
+
+    @Override
+    public void deleteListItem(DeleteListItemRequest request,
+            StreamObserver<DeleteListItemResponse> observer) {
+        unary(observer, () -> plans.deleteListItem(request)
+                .run(sessions.resolve(request.getConnectionId()).graph()));
+    }
+
+    @Override
+    public void ensureColumns(EnsureColumnsRequest request,
+            StreamObserver<EnsureColumnsResponse> observer) {
+        unary(observer, () -> {
+            MicrosoftSessions.Session session = sessions.resolve(request.getConnectionId());
+            ColumnScope scope = request.getScope();
+            String siteId;
+            String listId;
+            String route;
+            switch (scope.getScopeCase()) {
+                case SITE_ID -> {
+                    siteId = scope.getSiteId();
+                    listId = "";
+                    route = "/sites/" + GraphPaths.site(siteId) + "/columns";
+                }
+                case LIST -> {
+                    siteId = scope.getList().getSiteId();
+                    listId = scope.getList().getListId();
+                    route = GraphPaths.list(siteId, listId) + "/columns";
+                }
+                default -> throw new IllegalArgumentException("scope is required");
+            }
+            Map<String, ObjectNode> bodies = new LinkedHashMap<>();
+            for (ColumnSpec spec : request.getColumnsList()) {
+                if (bodies.put(spec.getName(), ColumnSpecs.toGraph(spec, siteId)) != null) {
+                    throw new IllegalArgumentException(
+                            "column " + spec.getName() + " is named twice");
+                }
+            }
+            Map<String, JsonNode> existing = new LinkedHashMap<>();
+            session.pager().forEach(List.of(route), Map.of(), node -> {
+                existing.put(node.path("name").asText(""), node);
+                return true;
+            });
+            EnsureColumnsResponse.Builder response = EnsureColumnsResponse.newBuilder();
+            for (ColumnSpec spec : request.getColumnsList()) {
+                ColumnOutcome.Builder outcome = ColumnOutcome.newBuilder().setName(spec.getName());
+                JsonNode found = existing.get(spec.getName());
+                if (found != null) {
+                    ColumnDefinition actual = valid(mapper.toColumn(found, siteId, listId, ""));
+                    List<String> drift = ColumnSpecs.drift(spec, actual);
+                    outcome.setActual(actual).addAllDrift(drift).setState(drift.isEmpty()
+                            ? EnsureState.ENSURE_STATE_EXISTS : EnsureState.ENSURE_STATE_DRIFT);
+                } else if (request.getDryRun()) {
+                    outcome.setState(EnsureState.ENSURE_STATE_WOULD_CREATE);
+                } else {
+                    try {
+                        JsonNode created = session.graph().post(route, bodies.get(spec.getName()));
+                        outcome.setActual(valid(mapper.toColumn(created, siteId, listId, "")))
+                                .setState(EnsureState.ENSURE_STATE_CREATED);
+                    } catch (GraphClient.GraphApiException e) {
+                        outcome.setState(EnsureState.ENSURE_STATE_FAILED)
+                                .setError(GraphErrors.toWriteError(e));
+                    }
+                }
+                response.addColumns(outcome);
+            }
+            return response.build();
+        });
+    }
+
+    @Override
+    public void ensureList(EnsureListRequest request, StreamObserver<EnsureListResponse> observer) {
+        unary(observer, () -> {
+            MicrosoftSessions.Session session = sessions.resolve(request.getConnectionId());
+            String siteId = request.getSiteId();
+            String lists = "/sites/" + GraphPaths.site(siteId) + "/lists";
+            String template = request.getTemplate() == ListTemplate.LIST_TEMPLATE_DOCUMENT_LIBRARY
+                    ? "documentLibrary" : "genericList";
+            ObjectNode body = GraphClient.object();
+            body.put("displayName", request.getDisplayName());
+            if (!request.getDescription().isEmpty()) {
+                body.put("description", request.getDescription());
+            }
+            body.putObject("list").put("template", template);
+            if (request.getColumnsCount() > 0) {
+                ArrayNode columns = body.putArray("columns");
+                for (ColumnSpec spec : request.getColumnsList()) {
+                    columns.add(ColumnSpecs.toGraph(spec, siteId));
+                }
+            }
+            JsonNode found = null;
+            try {
+                found = session.graph().get(
+                        lists + "/" + GraphPaths.segment(request.getDisplayName(), "display_name"),
+                        Map.of());
+            } catch (GraphClient.GraphApiException e) {
+                if (e.status() != 404) {
+                    throw e;
+                }
+            }
+            EnsureListResponse.Builder response = EnsureListResponse.newBuilder();
+            if (found != null) {
+                SharePointList list = valid(mapper.toList(found, siteId));
+                boolean same = list.getList().getTemplate().isEmpty()
+                        || list.getList().getTemplate().equalsIgnoreCase(template);
+                return response.setList(list).setState(same ? EnsureState.ENSURE_STATE_EXISTS
+                        : EnsureState.ENSURE_STATE_DRIFT).build();
+            }
+            if (request.getDryRun()) {
+                return response.setState(EnsureState.ENSURE_STATE_WOULD_CREATE).build();
+            }
+            return response.setList(valid(mapper.toList(session.graph().post(lists, body), siteId)))
+                    .setState(EnsureState.ENSURE_STATE_CREATED).build();
+        });
+    }
+
+    @Override
+    public StreamObserver<MutateRequest> mutate(StreamObserver<MutateResponse> observer) {
+        return new MutateHandler(sessions, plans, observer, mutateLingerMillis);
+    }
+
     private ListItemReader reader(MicrosoftSessions.Session session, String siteId, String listId,
             ListItemInclude include) {
         GraphPaths.list(siteId, listId);
@@ -919,43 +1217,7 @@ public final class MicrosoftGrpcService
     }
 
     private static void fail(StreamObserver<?> observer, Throwable t) {
-        Throwable cause = t;
-        if (cause instanceof java.io.UncheckedIOException u && u.getCause() != null) {
-            cause = u.getCause();
-        }
-        if (cause instanceof StatusRuntimeException e) {
-            observer.onError(e);
-            return;
-        }
-        Status status;
-        if (cause instanceof GraphClient.GraphApiException e) {
-            status = (switch (e.status()) {
-                case 400 -> Status.INVALID_ARGUMENT;
-                case 401 -> Status.UNAUTHENTICATED;
-                case 403 -> Status.PERMISSION_DENIED;
-                case 404 -> Status.NOT_FOUND;
-                case 409, 412 -> Status.ABORTED;
-                case 410 -> Status.FAILED_PRECONDITION;
-                case 416 -> Status.OUT_OF_RANGE;
-                case 429 -> Status.RESOURCE_EXHAUSTED;
-                case 503, 504 -> Status.UNAVAILABLE;
-                default -> Status.INTERNAL;
-            }).withDescription(e.getMessage());
-        } else if (cause instanceof GraphPager.RepeatedLinkException e) {
-            status = Status.INTERNAL.withDescription(e.getMessage());
-        } else if (cause instanceof IllegalArgumentException e) {
-            status = Status.INVALID_ARGUMENT.withDescription(e.getMessage());
-        } else if (cause instanceof InterruptedException e) {
-            Thread.currentThread().interrupt();
-            status = Status.CANCELLED.withDescription("interrupted: " + e.getMessage());
-        } else if (cause instanceof IOException e) {
-            status = Status.UNAVAILABLE.withDescription("Graph unreachable: " + e.getMessage());
-        } else if (cause instanceof IllegalStateException e) {
-            status = Status.UNAVAILABLE.withDescription(e.getMessage());
-        } else {
-            status = Status.INTERNAL.withDescription(String.valueOf(cause.getMessage()));
-        }
-        observer.onError(status.asRuntimeException());
+        observer.onError(GraphErrors.toException(t));
     }
 
     /**

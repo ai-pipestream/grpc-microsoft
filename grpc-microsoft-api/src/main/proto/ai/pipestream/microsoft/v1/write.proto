@@ -1,0 +1,693 @@
+syntax = "proto3";
+
+package ai.pipestream.microsoft.v1;
+
+import "ai/pipestream/microsoft/v1/common.proto";
+import "ai/pipestream/microsoft/v1/drive.proto";
+import "ai/pipestream/microsoft/v1/list.proto";
+import "google/protobuf/duration.proto";
+import "google/protobuf/timestamp.proto";
+
+option java_multiple_files = true;
+option java_package = "ai.pipestream.microsoft.v1";
+
+// ============================================================================
+// Write messages of MicrosoftService: uploads, drive item and list item
+// changes, column and list provisioning, and the bulk Mutate stream.
+// ============================================================================
+
+// What Graph does when the target name is already taken.
+enum ConflictBehavior {
+  // Graph's default for the route.
+  CONFLICT_BEHAVIOR_UNSPECIFIED = 0;
+  // Fail the request.
+  CONFLICT_BEHAVIOR_FAIL = 1;
+  // Replace the existing item.
+  CONFLICT_BEHAVIOR_REPLACE = 2;
+  // Keep both; Graph picks a new name.
+  CONFLICT_BEHAVIOR_RENAME = 3;
+}
+
+// Why a write failed.
+enum WriteErrorCode {
+  // Zero value.
+  WRITE_ERROR_CODE_UNSPECIFIED = 0;
+  // The request was malformed (Graph 400).
+  WRITE_ERROR_CODE_INVALID_ARGUMENT = 1;
+  // The token was rejected (Graph 401).
+  WRITE_ERROR_CODE_UNAUTHENTICATED = 2;
+  // The token may not do this (Graph 403).
+  WRITE_ERROR_CODE_PERMISSION_DENIED = 3;
+  // The target does not exist (Graph 404).
+  WRITE_ERROR_CODE_NOT_FOUND = 4;
+  // The eTag did not match or the name is taken (Graph 409, 412).
+  WRITE_ERROR_CODE_ABORTED = 5;
+  // The target is not in a state that allows the write, or an op this one
+  // depends on failed (Graph 423, 424).
+  WRITE_ERROR_CODE_FAILED_PRECONDITION = 6;
+  // Graph throttled the request or the drive is full (Graph 429, 507).
+  WRITE_ERROR_CODE_RESOURCE_EXHAUSTED = 7;
+  // Graph was unavailable (Graph 503, 504).
+  WRITE_ERROR_CODE_UNAVAILABLE = 8;
+  // Any other failure.
+  WRITE_ERROR_CODE_INTERNAL = 9;
+}
+
+// A failed write.
+message WriteError {
+  // Why it failed.
+  WriteErrorCode code = 1;
+  // Graph's error code and message.
+  string message = 2;
+  // How long to wait before retrying, when Graph sent Retry-After.
+  google.protobuf.Duration retry_delay = 3;
+}
+
+// ============================================================================
+// List item values
+// ============================================================================
+
+// The list item a patch addresses.
+message ListItemTarget {
+  // The item, named one of two ways.
+  oneof target {
+    // By site, list and list item id.
+    ListItemRef list_item = 1;
+    // By the drive item of a document library file or folder.
+    DriveItemRef drive_item = 2;
+  }
+}
+
+// One managed-metadata term.
+message TermValue {
+  // Term GUID in the term store.
+  string term_id = 1;
+  // Term label.
+  string label = 2;
+  // Id of the term in the site's taxonomy hidden list; unset = SharePoint
+  // resolves it.
+  optional int32 wss_id = 3;
+}
+
+// Several managed-metadata terms.
+message MultiTermValue {
+  // The terms, in order.
+  repeated TermValue terms = 1;
+}
+
+// Several choice values.
+message MultiChoiceValue {
+  // The selected choices.
+  repeated string choices = 1;
+}
+
+// One person or group.
+message PersonValue {
+  // The principal, named one of two ways.
+  oneof principal {
+    // Id in the site's user information list.
+    int32 lookup_id = 1;
+    // Email address of a user already known to the site.
+    string email = 2;
+  }
+}
+
+// Several people or groups.
+message MultiPersonValue {
+  // The principals, in order.
+  repeated PersonValue people = 1;
+}
+
+// A hyperlink or picture value.
+message HyperlinkValue {
+  // The URL.
+  string url = 1;
+  // Display text; empty = the URL.
+  string description = 2;
+}
+
+// Several lookup ids.
+message MultiLookupValue {
+  // Item ids in the looked-up list.
+  repeated int32 lookup_ids = 1;
+}
+
+// Clears a column.
+message ClearValue {}
+
+// One column value to write.
+message FieldValue {
+  // Internal column name.
+  string name = 1;
+  // The value; the arm must match the column type.
+  oneof value {
+    // Single line of text.
+    string text = 2;
+    // Multiple lines of text.
+    string note = 3;
+    // Number or currency.
+    double number = 4;
+    // Yes/no.
+    bool boolean = 5;
+    // Date or date-time.
+    google.protobuf.Timestamp date_time = 6;
+    // Single choice.
+    string choice = 7;
+    // Multiple choice.
+    MultiChoiceValue multi_choice = 8;
+    // Single managed-metadata term.
+    TermValue term = 9;
+    // Multiple managed-metadata terms.
+    MultiTermValue multi_term = 10;
+    // Single person or group.
+    PersonValue person = 11;
+    // Several people or groups.
+    MultiPersonValue multi_person = 12;
+    // Hyperlink or picture.
+    HyperlinkValue hyperlink = 13;
+    // Single lookup: item id in the looked-up list.
+    int32 lookup = 14;
+    // Multiple lookups.
+    MultiLookupValue multi_lookup = 15;
+    // Clear the column.
+    ClearValue clear = 16;
+  }
+  // Term values: internal name of the term column's hidden note column;
+  // empty = the server looks it up.
+  string term_note_column = 20;
+}
+
+// Column values to set on one list item; other columns stay as they are.
+message ListItemPatch {
+  // The item to change.
+  ListItemTarget target = 1;
+  // The column values; each name at most once.
+  repeated FieldValue fields = 2;
+}
+
+// How one column of a patch ended.
+enum FieldWriteState {
+  // Zero value.
+  FIELD_WRITE_STATE_UNSPECIFIED = 0;
+  // Written.
+  FIELD_WRITE_STATE_WRITTEN = 1;
+  // Not written because the request was a dry run.
+  FIELD_WRITE_STATE_SKIPPED = 2;
+}
+
+// Outcome of one column write.
+message FieldOutcome {
+  // Internal column name from the patch.
+  string name = 1;
+  // How it ended.
+  FieldWriteState state = 2;
+  // The Graph field the value was written to.
+  string graph_field = 3;
+}
+
+// ============================================================================
+// Columns and lists
+// ============================================================================
+
+// Where columns are provisioned.
+message ColumnScope {
+  // The scope.
+  oneof scope {
+    // Site columns.
+    string site_id = 1;
+    // Columns of one list or library.
+    ListRef list = 2;
+  }
+}
+
+// How a date-time column shows its values.
+enum DateTimeColumnFormat {
+  // Graph's default.
+  DATE_TIME_COLUMN_FORMAT_UNSPECIFIED = 0;
+  // Date only.
+  DATE_TIME_COLUMN_FORMAT_DATE_ONLY = 1;
+  // Date and time.
+  DATE_TIME_COLUMN_FORMAT_DATE_TIME = 2;
+}
+
+// A column to create.
+message ColumnSpec {
+  // Internal name.
+  string name = 1;
+  // Display name; empty = name.
+  string display_name = 2;
+  // Description shown in forms.
+  string description = 3;
+  // Column type: TEXT, NOTE, CHOICE, MULTICHOICE, NUMBER, CURRENCY,
+  // DATE_TIME, LOOKUP, BOOLEAN, USER, URL, TERM or MULTITERM.
+  ColumnType type = 4;
+  // CHOICE and MULTICHOICE: the allowed values.
+  repeated string choices = 5;
+  // CHOICE and MULTICHOICE: allow values outside `choices`.
+  bool allow_text_entry = 6;
+  // TERM and MULTITERM: the term set the column draws from.
+  string term_set_id = 7;
+  // LOOKUP: the looked-up list.
+  string lookup_list_id = 8;
+  // LOOKUP: the column shown from the looked-up list; empty = Title.
+  string lookup_column_name = 9;
+  // LOOKUP and USER: allow several values.
+  bool multi_valued = 10;
+  // Index the column.
+  bool indexed = 11;
+  // Hide the column from forms and views.
+  bool hidden = 12;
+  // Site columns: the group the column is filed under.
+  string column_group = 13;
+  // TEXT: maximum characters; 0 = SharePoint's default.
+  int32 max_length = 14;
+  // Require a value.
+  bool required = 15;
+  // DATE_TIME: how values are shown.
+  DateTimeColumnFormat date_time_format = 16;
+}
+
+// How an ensure rpc left a column or list.
+enum EnsureState {
+  // Zero value.
+  ENSURE_STATE_UNSPECIFIED = 0;
+  // Created by this call.
+  ENSURE_STATE_CREATED = 1;
+  // Already present and matching.
+  ENSURE_STATE_EXISTS = 2;
+  // Already present but different; left unchanged.
+  ENSURE_STATE_DRIFT = 3;
+  // Dry run: would be created.
+  ENSURE_STATE_WOULD_CREATE = 4;
+  // Graph rejected the create.
+  ENSURE_STATE_FAILED = 5;
+}
+
+// Result for one column of EnsureColumns.
+message ColumnOutcome {
+  // Internal name from the spec.
+  string name = 1;
+  // How it ended.
+  EnsureState state = 2;
+  // The column as it exists now; unset when FAILED or WOULD_CREATE.
+  ColumnDefinition actual = 3;
+  // DRIFT: the ColumnSpec fields that differ.
+  repeated string drift = 4;
+  // FAILED: why.
+  WriteError error = 5;
+}
+
+// Kind of list to create.
+enum ListTemplate {
+  // Zero value; same as GENERIC_LIST.
+  LIST_TEMPLATE_UNSPECIFIED = 0;
+  // A generic list.
+  LIST_TEMPLATE_GENERIC_LIST = 1;
+  // A document library.
+  LIST_TEMPLATE_DOCUMENT_LIBRARY = 2;
+}
+
+// Request to make sure columns exist.
+message EnsureColumnsRequest {
+  // Site or list to provision.
+  ColumnScope scope = 1;
+  // The columns.
+  repeated ColumnSpec columns = 2;
+  // Report what would be created without creating it.
+  bool dry_run = 3;
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 4;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// Per-column results of EnsureColumns.
+message EnsureColumnsResponse {
+  // One outcome per requested column, in request order.
+  repeated ColumnOutcome columns = 1;
+}
+
+// Request to make sure a list or document library exists.
+message EnsureListRequest {
+  // Site that owns the list.
+  string site_id = 1;
+  // Display name of the list.
+  string display_name = 2;
+  // Description used when the list is created.
+  string description = 3;
+  // Kind of list.
+  ListTemplate template = 4;
+  // Columns created with the list.
+  repeated ColumnSpec columns = 5;
+  // Report what would be created without creating it.
+  bool dry_run = 6;
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 7;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// Result of EnsureList.
+message EnsureListResponse {
+  // How the list ended.
+  EnsureState state = 1;
+  // The list as it exists now; unset when WOULD_CREATE.
+  SharePointList list = 2;
+}
+
+// ============================================================================
+// Upload
+// ============================================================================
+
+// First frame of an upload: where the file goes.
+message UploadItemHeader {
+  // Destination drive.
+  string drive_id = 1;
+  // Destination folder; unset = the drive root.
+  oneof parent {
+    // Folder item id.
+    string parent_id = 2;
+    // Folder path from the drive root.
+    string parent_path = 3;
+  }
+  // File name.
+  string name = 4;
+  // Media type of the content; empty = application/octet-stream.
+  string media_type = 5;
+  // What to do when the name is taken.
+  ConflictBehavior conflict_behavior = 6;
+  // eTag the existing file must have; empty = unconditional.
+  string expected_etag = 7;
+  // Total size in bytes, when known up front.
+  optional int64 size = 8;
+  // Column values to set once the content is stored.
+  repeated FieldValue fields = 9;
+  // Token from an earlier UploadProgress, to continue that upload.
+  string resume_token = 10;
+  // Offset the chunks of a resumed upload start at.
+  int64 resume_offset = 11;
+  // Bytes sent to Graph per request for large files; 0 = server default.
+  int32 fragment_bytes = 12;
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 13;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// Last frame of an upload.
+message UploadItemEnd {
+  // SHA-256 hex digest of the whole content for the server to verify;
+  // empty = not verified.
+  string sha256 = 1;
+}
+
+// One frame of an upload: the header, then chunks, then the end.
+message UploadItemRequest {
+  // The frame.
+  oneof frame {
+    // Where the file goes; first frame only.
+    UploadItemHeader header = 1;
+    // The next bytes of the content, of any length.
+    bytes chunk = 2;
+    // End of content; last frame.
+    UploadItemEnd end = 3;
+  }
+}
+
+// How much of an upload Graph has stored.
+message UploadProgress {
+  // Bytes stored so far.
+  int64 committed_bytes = 1;
+  // Token that continues this upload in a later call.
+  string resume_token = 2;
+}
+
+// One event of an upload: progress, then the stored item.
+message UploadItemResponse {
+  // The event.
+  oneof event {
+    // Bytes stored so far.
+    UploadProgress progress = 1;
+    // The stored item; last message.
+    DriveItem item = 2;
+  }
+}
+
+// ============================================================================
+// Drive items
+// ============================================================================
+
+// Request to create a folder.
+message CreateFolderRequest {
+  // Drive to create the folder in.
+  string drive_id = 1;
+  // Parent folder; unset = the drive root.
+  oneof parent {
+    // Folder item id.
+    string parent_id = 2;
+    // Folder path from the drive root.
+    string parent_path = 3;
+  }
+  // Folder name.
+  string name = 4;
+  // What to do when the name is taken.
+  ConflictBehavior conflict_behavior = 5;
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 6;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// The created folder.
+message CreateFolderResponse {
+  // The folder.
+  DriveItem item = 1;
+}
+
+// Request to rename, move or describe a drive item. Unset fields stay as
+// they are.
+message UpdateDriveItemRequest {
+  // The item to change.
+  DriveItemRef item = 1;
+  // eTag the item must have; empty = unconditional.
+  string expected_etag = 2;
+  // New name.
+  optional string name = 3;
+  // Item id of the folder to move the item to; empty = stay.
+  string new_parent_id = 4;
+  // New description.
+  optional string description = 5;
+  // New client-side created and last-modified times.
+  FileSystemInfo file_system_info = 6;
+  // What to do when the new name is taken.
+  ConflictBehavior conflict_behavior = 7;
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 8;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// The changed drive item.
+message UpdateDriveItemResponse {
+  // The item after the change.
+  DriveItem item = 1;
+}
+
+// Request to delete a drive item.
+message DeleteDriveItemRequest {
+  // The item to delete.
+  DriveItemRef item = 1;
+  // eTag the item must have; empty = unconditional.
+  string expected_etag = 2;
+  // Skip the recycle bin.
+  bool permanent = 3;
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 4;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// The deleted drive item.
+message DeleteDriveItemResponse {
+  // The item that was deleted.
+  DriveItemRef item = 1;
+}
+
+// Request to make an earlier version the current one.
+message RestoreDriveItemVersionRequest {
+  // The item to restore.
+  DriveItemRef item = 1;
+  // The version to restore.
+  string version_id = 2;
+  // eTag the item must have; empty = unconditional.
+  string expected_etag = 3;
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 4;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// The restored drive item.
+message RestoreDriveItemVersionResponse {
+  // The item that was restored.
+  DriveItemRef item = 1;
+  // The version that was restored.
+  string version_id = 2;
+}
+
+// Request to copy a drive item.
+message CopyDriveItemRequest {
+  // The item to copy.
+  DriveItemRef item = 1;
+  // Destination drive; empty = the source drive.
+  string destination_drive_id = 2;
+  // Destination folder item id; empty = the source's folder.
+  string destination_parent_id = 3;
+  // Name of the copy; empty = the source name.
+  string name = 4;
+  // What to do when the name is taken.
+  ConflictBehavior conflict_behavior = 5;
+  // Time between progress checks; unset = server default.
+  google.protobuf.Duration poll_interval = 6;
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 7;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// How far a copy has got.
+message CopyProgress {
+  // Percentage done, 0 to 100.
+  double percentage_complete = 1;
+}
+
+// One event of a copy: progress, then the new item.
+message CopyDriveItemResponse {
+  // The event.
+  oneof event {
+    // How far the copy has got.
+    CopyProgress progress = 1;
+    // The new item; last message.
+    DriveItem item = 2;
+  }
+}
+
+// ============================================================================
+// List items
+// ============================================================================
+
+// Request to create a list item.
+message CreateListItemRequest {
+  // The list to add the item to.
+  ListRef list = 1;
+  // Column values of the new item; each name at most once.
+  repeated FieldValue fields = 2;
+  // Content type of the new item; empty = the list's default.
+  string content_type_id = 3;
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 4;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// The created list item.
+message CreateListItemResponse {
+  // The item.
+  ListItem item = 1;
+}
+
+// Request to set column values on one list item.
+message UpdateListItemFieldsRequest {
+  // The item and the values.
+  ListItemPatch patch = 1;
+  // eTag the list item must have; empty = unconditional.
+  string expected_etag = 2;
+  // Check the patch without writing it.
+  bool dry_run = 3;
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 4;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// Result of a list item patch.
+message UpdateListItemFieldsResponse {
+  // One outcome per patched column, in patch order.
+  repeated FieldOutcome outcomes = 1;
+  // The item's column values after the write; empty on a dry run.
+  repeated ListColumn fields = 2;
+  // eTag of the list item after the write, when Graph returned it.
+  string etag = 3;
+}
+
+// Request to delete a list item.
+message DeleteListItemRequest {
+  // The item to delete.
+  ListItemRef item = 1;
+  // eTag the item must have; empty = unconditional.
+  string expected_etag = 2;
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 3;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// The deleted list item.
+message DeleteListItemResponse {
+  // The item that was deleted.
+  ListItemRef item = 1;
+}
+
+// ============================================================================
+// Bulk
+// ============================================================================
+
+// One write of a Mutate stream.
+message MutateRequest {
+  // Caller's id for this op; echoed on its response.
+  string op_id = 1;
+  // Ops sent earlier on this stream that must succeed first.
+  repeated string depends_on = 2;
+  // The write.
+  oneof op {
+    // Create a folder.
+    CreateFolderRequest create_folder = 3;
+    // Rename, move or describe a drive item.
+    UpdateDriveItemRequest update_drive_item = 4;
+    // Delete a drive item.
+    DeleteDriveItemRequest delete_drive_item = 5;
+    // Restore a drive item version.
+    RestoreDriveItemVersionRequest restore_drive_item_version = 6;
+    // Create a list item.
+    CreateListItemRequest create_list_item = 7;
+    // Set column values on a list item.
+    UpdateListItemFieldsRequest update_list_item_fields = 8;
+    // Delete a list item.
+    DeleteListItemRequest delete_list_item = 9;
+  }
+}
+
+// The result of one write of a Mutate stream.
+message MutateResponse {
+  // The op this answers.
+  string op_id = 1;
+  // The op's response, or why it failed.
+  oneof result {
+    // The created folder.
+    CreateFolderResponse create_folder = 3;
+    // The changed drive item.
+    UpdateDriveItemResponse update_drive_item = 4;
+    // The deleted drive item.
+    DeleteDriveItemResponse delete_drive_item = 5;
+    // The restored drive item.
+    RestoreDriveItemVersionResponse restore_drive_item_version = 6;
+    // The created list item.
+    CreateListItemResponse create_list_item = 7;
+    // The patched list item.
+    UpdateListItemFieldsResponse update_list_item_fields = 8;
+    // The deleted list item.
+    DeleteListItemResponse delete_list_item = 9;
+    // The op failed.
+    WriteError error = 10;
+  }
+}

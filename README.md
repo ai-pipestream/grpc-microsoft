@@ -79,6 +79,15 @@ MICROSOFT_GRPC_PORT=9096
 RPCs: `GetMe`, `ListSites`, `ListDrives`, `ListChildren` (stream), `GetItem`,
 `DownloadItem`, `Sync` (stream). Handlers run on virtual threads.
 
+Write RPCs (need `Sites.ReadWrite.All` / `Files.ReadWrite.All` or a
+`Sites.Selected` write grant): `UploadItem` (bidi stream; upload sessions
+for large files, resumable), `CreateFolder`, `UpdateDriveItem`,
+`DeleteDriveItem`, `RestoreDriveItemVersion`, `CopyDriveItem` (stream),
+`CreateListItem`, `UpdateListItemFields`, `DeleteListItem`,
+`EnsureColumns`, `EnsureList`, and `Mutate` (bidi stream; packs writes
+into Graph `$batch` requests). Updates and deletes take `expected_etag`
+(sent as `If-Match`); a mismatch is `ABORTED`.
+
 Point the proxy at a running sync-table (from grpc-integration) to record
 crawl / update / delete rows:
 
@@ -210,6 +219,19 @@ login. `/me` does not exist on an app-only token, so the probe is
 `ListSites` and, when a site id is known, `ListDrives`. Create an app
 registration with application permissions `Sites.Read.All` and
 `Files.Read.All` (admin consent), then a client secret.
+
+The live write test is opt-in. It calls every write RPC inside one new
+folder (`pipestream-live-write-<timestamp>-<random>` at the drive root)
+and one new list of the same name, removes both at the end, writes
+`build/live-write.md`, and records the scrubbed Graph exchanges that the
+default tests replay (see
+`grpc-microsoft-service/src/test/resources/recordings/README.md`). It needs write permission on the site and skips
+unless `MICROSOFT_SITE_ID` and `MICROSOFT_LIVE_WRITE=1` are set next to
+the credentials:
+
+```
+MICROSOFT_LIVE_WRITE=1 ./gradlew :grpc-microsoft-service:liveWriteTest
+```
 
 ### GitHub Actions secrets
 

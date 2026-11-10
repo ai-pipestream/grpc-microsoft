@@ -8,12 +8,13 @@ import "ai/pipestream/microsoft/v1/events.proto";
 import "ai/pipestream/microsoft/v1/list.proto";
 import "ai/pipestream/microsoft/v1/permission.proto";
 import "ai/pipestream/microsoft/v1/site.proto";
+import "ai/pipestream/microsoft/v1/write.proto";
 
 option java_multiple_files = true;
 option java_package = "ai.pipestream.microsoft.v1";
 
 // ============================================================================
-// MICROSOFT SERVICE - the gRPC read proxy over Microsoft Graph v1.0.
+// MICROSOFT SERVICE - reads and writes Microsoft Graph v1.0 over gRPC.
 //
 // Every rpc maps to one Graph route (named in its comment). REST pagination
 // is transport and stays hidden: list rpcs stream one entity per message and
@@ -29,8 +30,9 @@ option java_package = "ai.pipestream.microsoft.v1";
 // /sites/getAllSites and /sites/delta on a delegated token).
 // ============================================================================
 
-// The Microsoft Graph read proxy. Server reflection and the gRPC health
-// service are always registered alongside it.
+// Reads and writes SharePoint Online and OneDrive through Microsoft Graph.
+// Server reflection and the gRPC health service are always registered
+// alongside it.
 service MicrosoftService {
   // --- Identity and connection ------------------------------------------
 
@@ -155,6 +157,61 @@ service MicrosoftService {
   // cursor. Deliberately bounded; a continuously tailing rpc is a possible
   // additive later.
   rpc Sync(SyncRequest) returns (stream SyncResponse);
+
+  // --- Writes ------------------------------------------------------------
+  //
+  // Every update and delete sends `expected_etag` as If-Match; a mismatch
+  // (Graph 412) is ABORTED. Graph 429 and 503 are RESOURCE_EXHAUSTED and
+  // UNAVAILABLE, with RetryInfo when Graph sent Retry-After.
+
+  // PUT /drives/{drive-id}/items/{parent-id}:/{name}:/content, or
+  // POST .../createUploadSession and ranged PUTs for larger files. Stores a
+  // file from a header, content chunks and an end frame; answers progress,
+  // then the stored item.
+  rpc UploadItem(stream UploadItemRequest) returns (stream UploadItemResponse);
+
+  // POST /drives/{drive-id}/items/{parent-id}/children. Creates a folder.
+  rpc CreateFolder(CreateFolderRequest) returns (CreateFolderResponse);
+
+  // PATCH /drives/{drive-id}/items/{item-id}. Renames, moves or describes a
+  // drive item.
+  rpc UpdateDriveItem(UpdateDriveItemRequest) returns (UpdateDriveItemResponse);
+
+  // DELETE /drives/{drive-id}/items/{item-id}, or POST .../permanentDelete.
+  // Moves a drive item to the recycle bin, or deletes it for good.
+  rpc DeleteDriveItem(DeleteDriveItemRequest) returns (DeleteDriveItemResponse);
+
+  // POST /drives/{drive-id}/items/{item-id}/versions/{version-id}/restoreVersion.
+  // Makes an earlier version the current one.
+  rpc RestoreDriveItemVersion(RestoreDriveItemVersionRequest) returns (RestoreDriveItemVersionResponse);
+
+  // POST /drives/{drive-id}/items/{item-id}/copy. Copies a drive item;
+  // answers progress, then the new item.
+  rpc CopyDriveItem(CopyDriveItemRequest) returns (stream CopyDriveItemResponse);
+
+  // POST /sites/{site-id}/lists/{list-id}/items. Creates a list item.
+  rpc CreateListItem(CreateListItemRequest) returns (CreateListItemResponse);
+
+  // PATCH /sites/{site-id}/lists/{list-id}/items/{item-id}/fields or
+  // /drives/{drive-id}/items/{item-id}/listItem/fields. Sets column values
+  // on a list item.
+  rpc UpdateListItemFields(UpdateListItemFieldsRequest) returns (UpdateListItemFieldsResponse);
+
+  // DELETE /sites/{site-id}/lists/{list-id}/items/{item-id}. Deletes a list
+  // item.
+  rpc DeleteListItem(DeleteListItemRequest) returns (DeleteListItemResponse);
+
+  // POST /sites/{site-id}/columns or /sites/{site-id}/lists/{list-id}/columns.
+  // Creates the columns that are missing.
+  rpc EnsureColumns(EnsureColumnsRequest) returns (EnsureColumnsResponse);
+
+  // POST /sites/{site-id}/lists. Creates a list or document library when it
+  // is missing.
+  rpc EnsureList(EnsureListRequest) returns (EnsureListResponse);
+
+  // POST /$batch. Runs a stream of writes in batches and answers each op
+  // once, with its response or its error.
+  rpc Mutate(stream MutateRequest) returns (stream MutateResponse);
 }
 
 // ============================================================================

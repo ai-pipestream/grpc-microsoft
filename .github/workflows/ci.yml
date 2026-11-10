@@ -10,6 +10,10 @@ on:
         description: Fail unless the read-only Microsoft live smoke actually passes
         type: boolean
         default: false
+      run_live_write:
+        description: Run the live write test against the test site (writes, then cleans up)
+        type: boolean
+        default: false
 
 # The shared core (ai-pipestream/grpc-integration) is checked out next to
 # this repo and included as a Gradle composite build (-PintegrationDir), so
@@ -148,3 +152,53 @@ jobs:
           with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as summary:
               summary.write(f"Microsoft live smoke: PASSED ({len(cases)} executed tests, none skipped).\n")
           PYTHON
+
+  # Manual only: writes to the test site, then deletes what it created.
+  live-microsoft-write:
+    if: github.event_name == 'workflow_dispatch' && inputs.run_live_write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          path: grpc-microsoft
+      - uses: actions/checkout@v5
+        with:
+          repository: ai-pipestream/grpc-integration
+          ref: ${{ env.INTEGRATION_REF }}
+          path: grpc-integration
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "25"
+      - name: Live Microsoft Graph write test
+        working-directory: grpc-microsoft
+        env:
+          MICROSOFT_TENANT_ID: ${{ secrets.MICROSOFT_TENANT_ID }}
+          MICROSOFT_CLIENT_ID: ${{ secrets.MICROSOFT_CLIENT_ID }}
+          MICROSOFT_CLIENT_SECRET: ${{ secrets.MICROSOFT_CLIENT_SECRET }}
+          MICROSOFT_SITE_ID: ${{ secrets.MICROSOFT_SITE_ID }}
+          MICROSOFT_DRIVE_IDS: ${{ secrets.MICROSOFT_DRIVE_IDS }}
+          MICROSOFT_LIVE_WRITE: "1"
+        run: |
+          ./gradlew --no-daemon -PintegrationDir=../grpc-integration :grpc-microsoft-service:liveWriteTest --rerun-tasks
+      - name: Publish the report
+        if: always()
+        working-directory: grpc-microsoft
+        run: |
+          if [ -f grpc-microsoft-service/build/live-write.md ]; then
+            cat grpc-microsoft-service/build/live-write.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: live-write
+          path: |
+            grpc-microsoft/grpc-microsoft-service/build/live-write.md
+            grpc-microsoft/grpc-microsoft-service/build/test-results/liveWriteTest/
+          if-no-files-found: ignore
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: recordings
+          path: grpc-microsoft/grpc-microsoft-service/src/test/resources/recordings/microsoft/
+          if-no-files-found: ignore

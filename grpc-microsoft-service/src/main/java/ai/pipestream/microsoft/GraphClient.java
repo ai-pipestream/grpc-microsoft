@@ -3,15 +3,18 @@ package ai.pipestream.microsoft;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import ai.pipestream.microsoft.v1.AuthMode;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.http.HttpClient;
+import java.net.http.HttpHeaders;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -42,6 +45,8 @@ public final class GraphClient {
         private final String body;
         /** {@code Location} header of the failing response, or empty. */
         private final String location;
+        /** {@code Retry-After} seconds of the failing response, or -1. */
+        private final long retryAfterSeconds;
 
         GraphApiException(int status, String code, String message) {
             this(status, code, message, "");
@@ -53,12 +58,27 @@ public final class GraphClient {
 
         GraphApiException(int status, String code, String message, String body,
                 String location) {
+            this(status, code, message, body, location, -1L);
+        }
+
+        GraphApiException(int status, String code, String message, String body,
+                String location, long retryAfterSeconds) {
             super("Graph " + (status == NO_HTTP_STATUS ? "operation" : Integer.toString(status))
                     + (code.isEmpty() ? "" : " (" + code + ")") + ": " + message);
             this.status = status;
             this.code = code;
             this.body = body;
             this.location = location == null ? "" : location;
+            this.retryAfterSeconds = retryAfterSeconds;
+        }
+
+        /**
+         * The {@code Retry-After} header of the failing response, in seconds.
+         *
+         * @return the delay; -1 when absent
+         */
+        public long retryAfterSeconds() {
+            return retryAfterSeconds;
         }
 
         /**
@@ -110,7 +130,7 @@ public final class GraphClient {
 
     private final String baseUrl;
     private final Supplier<String> bearer;
-    private final HttpClient http;
+    private final GraphTransport http;
     private final AuthMode authMode;
 
     /**
@@ -143,9 +163,23 @@ public final class GraphClient {
      *        {@link #authMode()} inspect the token's claims instead
      */
     public GraphClient(String baseUrl, Supplier<String> bearer, AuthMode authMode) {
+        this(baseUrl, bearer, authMode,
+                HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(20)).build()::send);
+    }
+
+    /**
+     * Builds a client that sends its requests through {@code transport}.
+     *
+     * @param baseUrl Graph root URL
+     * @param bearer supplies a current access token for each request
+     * @param authMode how the tokens are issued
+     * @param transport sends the HTTP requests
+     */
+    GraphClient(String baseUrl, Supplier<String> bearer, AuthMode authMode,
+            GraphTransport transport) {
         this.baseUrl = GraphLinks.stripTrailingSlashes(Objects.requireNonNull(baseUrl, "baseUrl"));
         this.bearer = Objects.requireNonNull(bearer, "bearer");
-        this.http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(20)).build();
+        this.http = Objects.requireNonNull(transport, "transport");
         this.authMode = authMode == null ? AuthMode.AUTH_MODE_UNSPECIFIED : authMode;
     }
 
@@ -260,7 +294,7 @@ public final class GraphClient {
             try (InputStream in = response.body()) {
                 body = new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
             }
-            throw error(response.statusCode(), body);
+            throw error(response, body);
         }
         return new Content(response.statusCode(),
                 response.headers().firstValue("content-type").orElse(""),
@@ -343,7 +377,7 @@ public final class GraphClient {
                         .POST(HttpRequest.BodyPublishers.ofString(body.toString())).build(),
                 HttpResponse.BodyHandlers.ofString());
         if (response.statusCode() >= 400) {
-            throw error(response.statusCode(), response.body());
+            throw error(response, response.body());
         }
         return response.headers().firstValue("Location");
     }
@@ -393,10 +427,29 @@ public final class GraphClient {
      */
     public JsonNode putBytes(String path, byte[] content, String contentType)
             throws IOException, InterruptedException {
-        return json(send(request(path)
-                        .header("content-type", contentType)
-                        .PUT(HttpRequest.BodyPublishers.ofByteArray(content)).build(),
-                HttpResponse.BodyHandlers.ofString()));
+        return putBytes(path, content, content.length, contentType, Map.of());
+    }
+
+    /**
+     * PUT the first {@code length} bytes of {@code content} at {@code path}.
+     *
+     * @param path Graph path or absolute URL
+     * @param content body bytes
+     * @param length how many bytes of {@code content} to send
+     * @param contentType {@code Content-Type} header value
+     * @param headers extra request headers; empty for none
+     * @return the JSON response body
+     * @throws IOException if Graph returns an error
+     * @throws InterruptedException if the HTTP call is interrupted
+     */
+    public JsonNode putBytes(String path, byte[] content, int length, String contentType,
+            Map<String, String> headers) throws IOException, InterruptedException {
+        HttpRequest.Builder builder = request(path)
+                .timeout(Duration.ofMinutes(10))
+                .header("content-type", contentType)
+                .PUT(HttpRequest.BodyPublishers.ofByteArray(content, 0, length));
+        headers.forEach(builder::header);
+        return json(send(builder.build(), HttpResponse.BodyHandlers.ofString()));
     }
 
     /**
@@ -417,17 +470,36 @@ public final class GraphClient {
      */
     public JsonNode putRangeUnauthenticated(String url, byte[] content, String contentType,
             String contentRange) throws IOException, InterruptedException {
+        return putRangeUnauthenticated(url, content, content.length, contentType, contentRange);
+    }
+
+    /**
+     * PUT the first {@code length} bytes of {@code content} at an absolute URL with no
+     * {@code Authorization} header.
+     *
+     * @param url absolute upload URL from {@code createUploadSession}
+     * @param content chunk bytes
+     * @param length how many bytes of {@code content} to send
+     * @param contentType {@code Content-Type}; {@code null} becomes
+     *        {@code application/octet-stream}
+     * @param contentRange {@code Content-Range} value
+     * @return the JSON body, or an empty object when Graph returns no body
+     * @throws IOException if Graph returns an error
+     * @throws InterruptedException if the HTTP call is interrupted
+     */
+    public JsonNode putRangeUnauthenticated(String url, byte[] content, int length,
+            String contentType, String contentRange) throws IOException, InterruptedException {
         HttpRequest.Builder builder = HttpRequest.newBuilder(URI.create(url))
                 .timeout(Duration.ofMinutes(10))
                 .header("content-type",
                         contentType == null ? "application/octet-stream" : contentType)
-                .PUT(HttpRequest.BodyPublishers.ofByteArray(content));
+                .PUT(HttpRequest.BodyPublishers.ofByteArray(content, 0, length));
         if (contentRange != null && !contentRange.isBlank()) {
             builder.header("content-range", contentRange);
         }
         HttpResponse<String> response = send(builder.build(), HttpResponse.BodyHandlers.ofString());
         if (response.statusCode() >= 400) {
-            throw error(response.statusCode(), response.body());
+            throw error(response, response.body());
         }
         String body = response.body();
         if (body == null || body.isBlank()) {
@@ -447,8 +519,189 @@ public final class GraphClient {
         HttpResponse<String> response = send(request(path).DELETE().build(),
                 HttpResponse.BodyHandlers.ofString());
         if (response.statusCode() >= 400) {
-            throw error(response.statusCode(), response.body());
+            throw error(response, response.body());
         }
+    }
+
+    /**
+     * One Graph request.
+     *
+     * @param method HTTP method
+     * @param path Graph path relative to the base URL
+     * @param headers extra request headers
+     * @param body JSON body; {@code null} for none
+     */
+    public record Call(String method, String path, Map<String, String> headers, JsonNode body) {
+    }
+
+    /**
+     * A successful Graph response.
+     *
+     * @param status HTTP status
+     * @param location {@code Location} header; empty when absent
+     * @param body JSON body; an empty object when there was none
+     */
+    public record Reply(int status, String location, JsonNode body) {
+    }
+
+    /**
+     * One request of a {@code $batch}.
+     *
+     * @param call the request
+     * @param dependsOn indexes of earlier requests of the batch that must succeed first
+     */
+    public record BatchCall(Call call, List<Integer> dependsOn) {
+    }
+
+    /**
+     * The answer to one request of a {@code $batch}; exactly one component is set.
+     *
+     * @param reply the response when the request succeeded
+     * @param error the error when it failed
+     */
+    public record BatchReply(Reply reply, GraphApiException error) {
+    }
+
+    /** Most requests Graph accepts in one {@code $batch}. */
+    public static final int MAX_BATCH_SIZE = 20;
+
+    /**
+     * Sends one request.
+     *
+     * @param call the request
+     * @return the response
+     * @throws IOException if Graph returns an error
+     * @throws InterruptedException if the HTTP call is interrupted
+     */
+    public Reply execute(Call call) throws IOException, InterruptedException {
+        HttpRequest.Builder builder = request(call.path());
+        if (call.body() == null) {
+            builder.method(call.method(), HttpRequest.BodyPublishers.noBody());
+        } else {
+            builder.header("content-type", "application/json")
+                    .method(call.method(), HttpRequest.BodyPublishers.ofString(call.body().toString()));
+        }
+        call.headers().forEach(builder::header);
+        return reply(send(builder.build(), HttpResponse.BodyHandlers.ofString()));
+    }
+
+    /**
+     * Sends up to {@link #MAX_BATCH_SIZE} requests as one {@code POST /$batch}.
+     *
+     * @param calls the requests
+     * @return one answer per request, in request order
+     * @throws IOException if the batch request itself fails
+     * @throws InterruptedException if the HTTP call is interrupted
+     */
+    public List<BatchReply> batch(List<BatchCall> calls) throws IOException, InterruptedException {
+        if (calls.size() > MAX_BATCH_SIZE) {
+            throw new IllegalArgumentException("a batch holds at most " + MAX_BATCH_SIZE + " requests");
+        }
+        ObjectNode envelope = JSON.createObjectNode();
+        ArrayNode requests = envelope.putArray("requests");
+        for (int i = 0; i < calls.size(); i++) {
+            BatchCall batched = calls.get(i);
+            Call call = batched.call();
+            ObjectNode request = requests.addObject()
+                    .put("id", Integer.toString(i))
+                    .put("method", call.method())
+                    .put("url", call.path());
+            ObjectNode headers = JSON.createObjectNode();
+            call.headers().forEach(headers::put);
+            if (call.body() != null) {
+                headers.put("Content-Type", "application/json");
+                request.set("body", call.body());
+            }
+            if (!headers.isEmpty()) {
+                request.set("headers", headers);
+            }
+            if (!batched.dependsOn().isEmpty()) {
+                ArrayNode dependsOn = request.putArray("dependsOn");
+                batched.dependsOn().forEach(index -> dependsOn.add(Integer.toString(index)));
+            }
+        }
+        JsonNode answer = post("/$batch", envelope);
+        BatchReply[] replies = new BatchReply[calls.size()];
+        for (JsonNode response : answer.path("responses")) {
+            int index;
+            try {
+                index = Integer.parseInt(response.path("id").asText(""));
+            } catch (NumberFormatException e) {
+                continue;
+            }
+            if (index < 0 || index >= replies.length) {
+                continue;
+            }
+            int status = response.path("status").asInt(0);
+            JsonNode headers = response.path("headers");
+            JsonNode body = response.path("body");
+            if (status >= 400) {
+                replies[index] = new BatchReply(null, error(status,
+                        body.isMissingNode() ? "" : body.toString(), header(headers, "Location"),
+                        retryAfter(header(headers, "Retry-After"))));
+            } else {
+                replies[index] = new BatchReply(new Reply(status, header(headers, "Location"),
+                        body.isObject() ? body : JSON.createObjectNode()), null);
+            }
+        }
+        for (int i = 0; i < replies.length; i++) {
+            if (replies[i] == null) {
+                replies[i] = new BatchReply(null, new GraphApiException(
+                        GraphApiException.NO_HTTP_STATUS, "noBatchResponse",
+                        "the batch response has no entry for this request"));
+            }
+        }
+        return List.of(replies);
+    }
+
+    private static String header(JsonNode headers, String name) {
+        for (Map.Entry<String, JsonNode> entry : headers.properties()) {
+            if (entry.getKey().equalsIgnoreCase(name)) {
+                return entry.getValue().asText("");
+            }
+        }
+        return "";
+    }
+
+    /**
+     * GET an absolute URL with no {@code Authorization} header (upload-session and
+     * operation-monitor URLs).
+     *
+     * @param url absolute pre-authenticated URL
+     * @return the response; redirects are returned, not followed
+     * @throws IOException if the server returns an error
+     * @throws InterruptedException if the HTTP call is interrupted
+     */
+    public Reply getUnauthenticated(String url) throws IOException, InterruptedException {
+        return reply(send(HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofSeconds(60))
+                .GET().build(), HttpResponse.BodyHandlers.ofString()));
+    }
+
+    /**
+     * DELETE an absolute URL with no {@code Authorization} header (cancels an upload
+     * session).
+     *
+     * @param url absolute pre-authenticated URL
+     * @throws IOException if the server returns an error
+     * @throws InterruptedException if the HTTP call is interrupted
+     */
+    public void deleteUnauthenticated(String url) throws IOException, InterruptedException {
+        reply(send(HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofSeconds(60))
+                .DELETE().build(), HttpResponse.BodyHandlers.ofString()));
+    }
+
+    private static Reply reply(HttpResponse<String> response) throws IOException {
+        if (response.statusCode() >= 400) {
+            throw error(response, response.body());
+        }
+        JsonNode body;
+        try {
+            body = parse(response.body());
+        } catch (IOException e) {
+            body = JSON.createObjectNode();
+        }
+        return new Reply(response.statusCode(),
+                response.headers().firstValue("Location").orElse(""), body);
     }
 
     /**
@@ -496,8 +749,8 @@ public final class GraphClient {
         int retries = 0;
         while ((response.statusCode() == 429 || response.statusCode() == 503)
                 && retries < MAX_THROTTLE_RETRIES) {
-            long waitSeconds = response.headers().firstValueAsLong("Retry-After").orElse(2L);
-            Thread.sleep(Duration.ofSeconds(Math.min(waitSeconds, 60)));
+            long waitSeconds = retryAfter(response.headers());
+            Thread.sleep(Duration.ofSeconds(Math.min(waitSeconds < 0 ? 2L : waitSeconds, 60)));
             response = http.send(req, handler);
             retries++;
         }
@@ -507,20 +760,43 @@ public final class GraphClient {
     private static JsonNode json(HttpResponse<String> response) throws IOException {
         String body = response.body();
         if (response.statusCode() >= 400) {
-            throw error(response.statusCode(), body,
-                    response.headers().firstValue("Location").orElse(""));
+            throw error(response, body);
         }
+        return parse(body);
+    }
+
+    private static JsonNode parse(String body) throws IOException {
         if (body == null || body.isBlank()) {
             return JSON.createObjectNode();
         }
         return JSON.readTree(body);
     }
 
-    private static GraphApiException error(int status, String body) {
-        return error(status, body, "");
+    /** {@code Retry-After} in seconds; -1 when absent or not a number. */
+    private static long retryAfter(HttpHeaders headers) {
+        return retryAfter(headers.firstValue("Retry-After").orElse(""));
     }
 
-    private static GraphApiException error(int status, String body, String location) {
+    private static long retryAfter(String header) {
+        String value = header.trim();
+        if (value.isEmpty()) {
+            return -1L;
+        }
+        try {
+            return Math.max(0L, Long.parseLong(value));
+        } catch (NumberFormatException e) {
+            return -1L;
+        }
+    }
+
+    private static GraphApiException error(HttpResponse<?> response, String body) {
+        return error(response.statusCode(), body,
+                response.headers().firstValue("Location").orElse(""),
+                retryAfter(response.headers()));
+    }
+
+    static GraphApiException error(int status, String body, String location,
+            long retryAfterSeconds) {
         String code = "";
         String message = body == null ? "" : body;
         try {
@@ -530,7 +806,8 @@ public final class GraphClient {
         } catch (Exception ignored) {
             // not JSON; keep the raw body as the message
         }
-        return new GraphApiException(status, code, message, body == null ? "" : body, location);
+        return new GraphApiException(status, code, message, body == null ? "" : body, location,
+                retryAfterSeconds);
     }
 
     static ObjectNode object() {
