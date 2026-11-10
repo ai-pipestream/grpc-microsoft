@@ -41,7 +41,9 @@ GCA `Contracts/` tree is a frozen copy and is not in the Buf workspace.
   design; the servers run them on virtual threads. Do not introduce a
   platform-thread pool for I/O.
 - **Live tests are read-only.** No full `Sync` crawl in CI. The smoke is
-  client-credentials `ListSites` / `ListDrives` — not `/me`.
+  client-credentials `ListSites` / `ListDrives` — not `/me`. The one
+  exception is `liveWriteTest`, which runs only with
+  `MICROSOFT_LIVE_WRITE=1` and stays inside its own test folder and list.
 
 ## Layout
 

@@ -220,6 +220,17 @@ login. `/me` does not exist on an app-only token, so the probe is
 registration with application permissions `Sites.Read.All` and
 `Files.Read.All` (admin consent), then a client secret.
 
+The live write test is opt-in. It calls every write RPC inside one new
+folder (`pipestream-live-write-<timestamp>-<random>` at the drive root)
+and one new list of the same name, removes both at the end, and writes
+`build/live-write.md`. It needs write permission on the site and skips
+unless `MICROSOFT_SITE_ID` and `MICROSOFT_LIVE_WRITE=1` are set next to
+the credentials:
+
+```
+MICROSOFT_LIVE_WRITE=1 ./gradlew :grpc-microsoft-service:liveWriteTest
+```
+
 ### GitHub Actions secrets
 
 After they are set, `live-microsoft` runs on same-repo PRs and pushes
