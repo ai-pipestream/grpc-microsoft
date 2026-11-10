@@ -196,3 +196,9 @@ jobs:
             grpc-microsoft/grpc-microsoft-service/build/live-write.md
             grpc-microsoft/grpc-microsoft-service/build/test-results/liveWriteTest/
           if-no-files-found: ignore
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: recordings
+          path: grpc-microsoft/grpc-microsoft-service/src/test/resources/recordings/microsoft/
+          if-no-files-found: ignore

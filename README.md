@@ -222,8 +222,10 @@ registration with application permissions `Sites.Read.All` and
 
 The live write test is opt-in. It calls every write RPC inside one new
 folder (`pipestream-live-write-<timestamp>-<random>` at the drive root)
-and one new list of the same name, removes both at the end, and writes
-`build/live-write.md`. It needs write permission on the site and skips
+and one new list of the same name, removes both at the end, writes
+`build/live-write.md`, and records the scrubbed Graph exchanges that the
+default tests replay (see
+`grpc-microsoft-service/src/test/resources/recordings/README.md`). It needs write permission on the site and skips
 unless `MICROSOFT_SITE_ID` and `MICROSOFT_LIVE_WRITE=1` are set next to
 the credentials:
 
