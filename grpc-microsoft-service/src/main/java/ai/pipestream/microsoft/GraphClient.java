@@ -130,7 +130,7 @@ public final class GraphClient {
 
     private final String baseUrl;
     private final Supplier<String> bearer;
-    private final HttpClient http;
+    private final GraphTransport http;
     private final AuthMode authMode;
 
     /**
@@ -163,9 +163,23 @@ public final class GraphClient {
      *        {@link #authMode()} inspect the token's claims instead
      */
     public GraphClient(String baseUrl, Supplier<String> bearer, AuthMode authMode) {
+        this(baseUrl, bearer, authMode,
+                HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(20)).build()::send);
+    }
+
+    /**
+     * Builds a client that sends its requests through {@code transport}.
+     *
+     * @param baseUrl Graph root URL
+     * @param bearer supplies a current access token for each request
+     * @param authMode how the tokens are issued
+     * @param transport sends the HTTP requests
+     */
+    GraphClient(String baseUrl, Supplier<String> bearer, AuthMode authMode,
+            GraphTransport transport) {
         this.baseUrl = GraphLinks.stripTrailingSlashes(Objects.requireNonNull(baseUrl, "baseUrl"));
         this.bearer = Objects.requireNonNull(bearer, "bearer");
-        this.http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(20)).build();
+        this.http = Objects.requireNonNull(transport, "transport");
         this.authMode = authMode == null ? AuthMode.AUTH_MODE_UNSPECIFIED : authMode;
     }
 

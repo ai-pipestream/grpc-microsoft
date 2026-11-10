@@ -26,8 +26,8 @@ import java.util.function.BiConsumer;
  */
 final class MutateHandler implements StreamObserver<MutateRequest> {
 
-    /** How long a batch waits for more ops before it is sent. */
-    private static final long LINGER_MILLIS = 20;
+    /** How long a batch waits for more ops before it is sent, by default. */
+    static final long DEFAULT_LINGER_MILLIS = 20;
 
     /**
      * One op with its Graph request.
@@ -54,10 +54,12 @@ final class MutateHandler implements StreamObserver<MutateRequest> {
     private final BlockingQueue<Optional<MutateRequest>> queue =
             new ArrayBlockingQueue<>(2 * GraphClient.MAX_BATCH_SIZE);
     private final Set<String> failed = new HashSet<>();
+    private final long lingerMillis;
     private final Thread worker;
 
     MutateHandler(MicrosoftSessions sessions, WritePlans plans,
-            StreamObserver<MutateResponse> responses) {
+            StreamObserver<MutateResponse> responses, long lingerMillis) {
+        this.lingerMillis = lingerMillis;
         this.sessions = sessions;
         this.plans = plans;
         this.responses = responses;
@@ -98,7 +100,7 @@ final class MutateHandler implements StreamObserver<MutateRequest> {
                         && batch.size() < GraphClient.MAX_BATCH_SIZE) {
                     batch.add(next.get());
                     next = batch.size() < GraphClient.MAX_BATCH_SIZE
-                            ? queue.poll(LINGER_MILLIS, TimeUnit.MILLISECONDS) : null;
+                            ? queue.poll(lingerMillis, TimeUnit.MILLISECONDS) : null;
                 }
                 open = next == null || next.isPresent();
                 send(batch);

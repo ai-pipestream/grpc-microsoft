@@ -161,6 +161,7 @@ public final class MicrosoftGrpcService
     private final MicrosoftChangeSink downstream;
     private final int downloadChunkBytes;
     private final WritePlans plans;
+    private volatile long mutateLingerMillis = MutateHandler.DEFAULT_LINGER_MILLIS;
 
     /**
      * Creates a service with no downstream {@link MicrosoftChangeSink}.
@@ -219,6 +220,15 @@ public final class MicrosoftGrpcService
         this.downstream = downstream;
         this.downloadChunkBytes = downloadChunkBytes;
         this.plans = new WritePlans(mapper);
+    }
+
+    /**
+     * Sets how long a {@code Mutate} batch waits for more ops before it is sent.
+     *
+     * @param millis the wait in milliseconds
+     */
+    void mutateLingerMillis(long millis) {
+        this.mutateLingerMillis = millis;
     }
 
     // ------------------------------------------------------------ identity
@@ -1043,7 +1053,7 @@ public final class MicrosoftGrpcService
 
     @Override
     public StreamObserver<MutateRequest> mutate(StreamObserver<MutateResponse> observer) {
-        return new MutateHandler(sessions, plans, observer);
+        return new MutateHandler(sessions, plans, observer, mutateLingerMillis);
     }
 
     private ListItemReader reader(MicrosoftSessions.Session session, String siteId, String listId,
