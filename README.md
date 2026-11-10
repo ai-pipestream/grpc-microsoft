@@ -79,6 +79,15 @@ MICROSOFT_GRPC_PORT=9096
 RPCs: `GetMe`, `ListSites`, `ListDrives`, `ListChildren` (stream), `GetItem`,
 `DownloadItem`, `Sync` (stream). Handlers run on virtual threads.
 
+Write RPCs (need `Sites.ReadWrite.All` / `Files.ReadWrite.All` or a
+`Sites.Selected` write grant): `UploadItem` (bidi stream; upload sessions
+for large files, resumable), `CreateFolder`, `UpdateDriveItem`,
+`DeleteDriveItem`, `RestoreDriveItemVersion`, `CopyDriveItem` (stream),
+`CreateListItem`, `UpdateListItemFields`, `DeleteListItem`,
+`EnsureColumns`, `EnsureList`, and `Mutate` (bidi stream; packs writes
+into Graph `$batch` requests). Updates and deletes take `expected_etag`
+(sent as `If-Match`); a mismatch is `ABORTED`.
+
 Point the proxy at a running sync-table (from grpc-integration) to record
 crawl / update / delete rows:
 
