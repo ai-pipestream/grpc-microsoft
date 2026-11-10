@@ -1,0 +1,56 @@
+name: Container smoke
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  container-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - mode: microsoft
+            dockerfile: Dockerfile.microsoft
+          - mode: connector
+            dockerfile: Dockerfile.connector
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          path: service
+      - name: Select shared core revision
+        id: core
+        env:
+          BRANCH: ${{ github.head_ref || github.ref_name }}
+        run: |
+          ref=main
+          if git ls-remote --exit-code --heads https://github.com/ai-pipestream/grpc-integration "$BRANCH" >/dev/null; then
+            ref="$BRANCH"
+          fi
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v5
+        with:
+          repository: ai-pipestream/grpc-integration
+          ref: ${{ steps.core.outputs.ref }}
+          path: grpc-integration
+      - uses: docker/setup-buildx-action@v3
+      - name: Build full release image including tests
+        working-directory: service
+        env:
+          DOCKERFILE: ${{ matrix.dockerfile }}
+        run: >-
+          docker buildx build --load --progress plain
+          --build-context integration=../grpc-integration
+          -f "$DOCKERFILE" -t local/split-smoke:ci .
+      - name: Boot image and verify protocol readiness
+        working-directory: service
+        env:
+          MODE: ${{ matrix.mode }}
+        run: ./scripts/container-smoke.sh "$MODE" local/split-smoke:ci

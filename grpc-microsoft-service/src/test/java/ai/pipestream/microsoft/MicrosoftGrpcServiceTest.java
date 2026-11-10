@@ -1,0 +1,187 @@
+package ai.pipestream.microsoft;
+
+import ai.pipestream.microsoft.v1.DownloadItemRequest;
+import ai.pipestream.microsoft.v1.DriveItem;
+import ai.pipestream.microsoft.v1.GetItemRequest;
+import ai.pipestream.microsoft.v1.GetMeRequest;
+import ai.pipestream.microsoft.v1.ListChildrenRequest;
+import ai.pipestream.microsoft.v1.ListChildrenResponse;
+import ai.pipestream.microsoft.v1.ListDrivesRequest;
+import ai.pipestream.microsoft.v1.ListSitesRequest;
+import ai.pipestream.microsoft.v1.MicrosoftServiceGrpc;
+import ai.pipestream.microsoft.v1.SyncRequest;
+import ai.pipestream.microsoft.v1.SyncResponse;
+import io.grpc.ManagedChannel;
+import io.grpc.Server;
+import io.grpc.inprocess.InProcessChannelBuilder;
+import io.grpc.inprocess.InProcessServerBuilder;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+class MicrosoftGrpcServiceTest {
+
+    private FakeGraphServer fake;
+    private Server server;
+    private ManagedChannel channel;
+    private MicrosoftServiceGrpc.MicrosoftServiceBlockingStub stub;
+
+    @BeforeEach
+    void startStack() throws Exception {
+        fake = FakeGraphServer.start();
+        MicrosoftConnectorConfig config = MicrosoftConnectorConfig.builder()
+                .tenantId("t")
+                .clientId("c")
+                .clientSecret("s")
+                .graphBaseUrl(fake.baseUrl())
+                .build();
+        GraphFiles files = new GraphFiles(new GraphClient(fake.baseUrl(), () -> "token"));
+        String name = InProcessServerBuilder.generateName();
+        server = InProcessServerBuilder.forName(name)
+                // The service blocks on outbound flow control, as in production:
+                // a direct executor would run it on the client thread and stall.
+                .executor(java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor())
+                .addService(new MicrosoftGrpcService(config, files,
+                        MicrosoftGrpcService.DEFAULT_ATTACHMENT_MAX_BYTES))
+                .build()
+                .start();
+        channel = InProcessChannelBuilder.forName(name).directExecutor().build();
+        stub = MicrosoftServiceGrpc.newBlockingStub(channel);
+    }
+
+    @AfterEach
+    void stopStack() {
+        if (channel != null) {
+            channel.shutdownNow();
+        }
+        if (server != null) {
+            server.shutdownNow();
+        }
+        if (fake != null) {
+            fake.close();
+        }
+    }
+
+    @Test
+    void getMeAndListChildrenAndSync() {
+        fake.stub("/me", MicrosoftFixtures.meJson());
+        fake.stub("/me/drive", MicrosoftFixtures.driveJson("drive-1", "Docs"));
+        fake.stub("/drives/drive-1/root/children", MicrosoftFixtures.childrenJson(
+                MicrosoftFixtures.fileJson("file-1", "notes.txt", "drive-1")));
+        fake.stub("/drives/drive-1/root/delta", MicrosoftFixtures.deltaJson(
+                fake.baseUrl() + "/drives/drive-1/root/delta?token=t1",
+                MicrosoftFixtures.fileJson("file-1", "notes.txt", "drive-1")));
+
+        assertThat(stub.getMe(GetMeRequest.getDefaultInstance()).getUser().getId())
+                .isEqualTo("user-1");
+
+        List<ListChildrenResponse> children = new ArrayList<>();
+        stub.listChildren(ListChildrenRequest.newBuilder().setDriveId("drive-1").build())
+                .forEachRemaining(children::add);
+        assertThat(children).extracting(r -> r.getItem().getId()).containsExactly("file-1");
+        assertThat(children.get(0).getItem().getListColumnsList()).isEmpty();
+
+        List<SyncResponse> events = new ArrayList<>();
+        stub.sync(SyncRequest.getDefaultInstance()).forEachRemaining(events::add);
+        assertThat(events).anyMatch(SyncResponse::hasChange);
+        assertThat(events).anyMatch(SyncResponse::hasSnapshot);
+        assertThat(events.get(events.size() - 1).getResumeCursor()).isNotBlank();
+        assertThat(fake.requests()).allMatch(r -> r.authorization().equals("Bearer token"));
+    }
+
+    @Test
+    void listSitesDrivesAndGetItem() {
+        fake.stub("/sites", MicrosoftFixtures.sitesJson(
+                MicrosoftFixtures.siteJson("site-1", "Docs")));
+        fake.stub("/me/drives", MicrosoftFixtures.drivesJson(
+                MicrosoftFixtures.driveJson("drive-1", "Docs")));
+        fake.stub("/sites/site-1/drives", MicrosoftFixtures.drivesJson(
+                MicrosoftFixtures.driveJson("drive-2", "Library")));
+        fake.stub("/drives/drive-1/items/file-1",
+                MicrosoftFixtures.fileJson("file-1", "notes.txt", "drive-1"));
+
+        assertThat(stub.listSites(ListSitesRequest.newBuilder().setLimit(1).build())
+                .getSitesList()).extracting(s -> s.getId()).containsExactly("site-1");
+        assertThat(stub.listDrives(ListDrivesRequest.getDefaultInstance())
+                .getDrivesList()).extracting(d -> d.getId()).containsExactly("drive-1");
+        assertThat(stub.listDrives(ListDrivesRequest.newBuilder().setSiteId("site-1").build())
+                .getDrivesList()).extracting(d -> d.getId()).containsExactly("drive-2");
+        assertThat(stub.getItem(GetItemRequest.newBuilder()
+                .setDriveId("drive-1")
+                .setItemId("file-1")
+                .build()).getItem().getName()).isEqualTo("notes.txt");
+    }
+
+    // Covers the deprecated DownloadItem rpc, which the service still serves.
+    @SuppressWarnings("deprecation")
+    @Test
+    void getItemAndDownloadItemAttachListColumns() {
+        fake.stub("/drives/drive-1/items/file-1",
+                MicrosoftFixtures.fileJsonWithHashes("file-1", "notes.txt", "drive-1"));
+        fake.stub("/drives/drive-1/items/file-1/listItem?$expand=fields",
+                MicrosoftFixtures.listItemFieldsJson());
+        fake.stub("/drives/drive-1/items/file-1/content",
+                FakeGraphServer.Stub.bytes("hello".getBytes(), "text/plain"));
+
+        DriveItem item = stub.getItem(GetItemRequest.newBuilder()
+                .setDriveId("drive-1")
+                .setItemId("file-1")
+                .build()).getItem();
+        assertThat(item.getName()).isEqualTo("notes.txt");
+        assertThat(item.getEtag()).isEqualTo("etag-1");
+        assertThat(item.getHashes().getSha256()).isEqualTo("bbb");
+        assertThat(item.getListColumnsList()).extracting(c -> c.getName())
+                .containsExactly("Title", "Count", "Flag", "When");
+        assertThat(item.getListColumns(0).getStringValue()).isEqualTo("Notes");
+        assertThat(item.getListColumns(1).getIntValue()).isEqualTo(3);
+        assertThat(item.hasContent()).isFalse();
+
+        DriveItem downloaded = stub.downloadItem(DownloadItemRequest.newBuilder()
+                .setDriveId("drive-1")
+                .setItemId("file-1")
+                .setIncludeContent(true)
+                .build()).getItem();
+        assertThat(downloaded.getContent().toStringUtf8()).isEqualTo("hello");
+        assertThat(downloaded.getListColumnsList()).extracting(c -> c.getName())
+                .contains("Title", "Count");
+    }
+
+    // Covers the deprecated DownloadItem rpc, which the service still serves.
+    @SuppressWarnings("deprecation")
+    @Test
+    void downloadItemHasNoInlineCapByDefault() {
+        long thirtyMiB = 30L * 1024 * 1024;
+        fake.stub("/drives/drive-1/items/file-1",
+                MicrosoftFixtures.fileJson("file-1", "notes.txt", "drive-1")
+                        .replace("\"size\": 12", "\"size\": " + thirtyMiB));
+        fake.stub("/drives/drive-1/items/file-1/content",
+                FakeGraphServer.Stub.bytes("hello".getBytes(), "text/plain"));
+
+        DriveItem downloaded = stub.downloadItem(DownloadItemRequest.newBuilder()
+                .setDriveId("drive-1")
+                .setItemId("file-1")
+                .setIncludeContent(true)
+                .build()).getItem();
+
+        assertThat(MicrosoftGrpcService.DEFAULT_ATTACHMENT_MAX_BYTES).isZero();
+        assertThat(downloaded.getSize()).isEqualTo(thirtyMiB);
+        assertThat(downloaded.getContent().toStringUtf8()).isEqualTo("hello");
+    }
+
+    @Test
+    void getItemWithMissingListItemHasEmptyColumns() {
+        fake.stub("/drives/drive-1/items/file-1",
+                MicrosoftFixtures.fileJson("file-1", "notes.txt", "drive-1"));
+        DriveItem item = stub.getItem(GetItemRequest.newBuilder()
+                .setDriveId("drive-1")
+                .setItemId("file-1")
+                .build()).getItem();
+        assertThat(item.getName()).isEqualTo("notes.txt");
+        assertThat(item.getListColumnsList()).isEmpty();
+    }
+}
