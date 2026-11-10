@@ -179,6 +179,51 @@ public final class GraphPaths {
     }
 
     /**
+     * The address of a named child of a folder:
+     * {@code /drives/{drive-id}/items/{parent-id}:/{name}:} or
+     * {@code /drives/{drive-id}/root:/{path}/{name}:}.
+     *
+     * @param driveId the drive id
+     * @param parentId the folder item id; blank to use {@code parentPath}
+     * @param parentPath the folder path from the drive root; blank for the root
+     * @param name the child name
+     * @return the route
+     * @throws IllegalArgumentException when {@code name} is blank or holds a slash
+     */
+    public static String childByName(String driveId, String parentId, String parentPath,
+            String name) {
+        if (name == null || name.isBlank()) {
+            throw new IllegalArgumentException("name is required");
+        }
+        if (name.indexOf('/') >= 0 || name.indexOf('\\') >= 0 || name.equals(".")) {
+            throw new IllegalArgumentException("name must not contain a slash");
+        }
+        String encoded = encodePath(name);
+        if (parentId != null && !parentId.isBlank()) {
+            return item(driveId, parentId) + ":" + encoded + ":";
+        }
+        return drive(driveId) + "/root:" + encodePath(parentPath) + encoded + ":";
+    }
+
+    /**
+     * The children collection of a folder: {@code .../items/{parent-id}/children},
+     * {@code .../root:/{path}:/children}, or {@code .../root/children}.
+     *
+     * @param driveId the drive id
+     * @param parentId the folder item id; blank to use {@code parentPath}
+     * @param parentPath the folder path from the drive root; blank for the root
+     * @return the route
+     */
+    public static String children(String driveId, String parentId, String parentPath) {
+        if (parentId != null && !parentId.isBlank()) {
+            return item(driveId, parentId) + "/children";
+        }
+        String encoded = encodePath(parentPath);
+        return encoded.isEmpty() ? drive(driveId) + "/root/children"
+                : drive(driveId) + "/root:" + encoded + ":/children";
+    }
+
+    /**
      * {@code /sites/{site-id}/lists/{list-id}}.
      *
      * @param siteId the site id
