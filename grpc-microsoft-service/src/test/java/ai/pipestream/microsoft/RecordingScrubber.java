@@ -115,6 +115,16 @@ final class RecordingScrubber {
                     continue;
                 }
             }
+            if (boundary && guidless.startsWith("b%21", i)) {
+                // The same drive id inside a URL, with its '!' percent-encoded.
+                int end = run(guidless, i + 4, RecordingScrubber::idChar);
+                if (end - i >= 24) {
+                    out.append(placeholder("drive", "b!" + guidless.substring(i + 4, end),
+                            "b!drive-%04d").replace("b!", "b%21"));
+                    i = end;
+                    continue;
+                }
+            }
             if (boundary && wordChar(c)) {
                 int end = run(guidless, i, ch -> wordChar(ch) || ch == '@');
                 out.append(word(guidless.substring(i, end)));

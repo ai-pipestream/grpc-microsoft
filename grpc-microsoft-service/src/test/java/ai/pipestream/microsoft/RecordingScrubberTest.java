@@ -85,6 +85,16 @@ class RecordingScrubberTest {
     }
 
     @Test
+    void aPercentEncodedDriveIdBecomesTheSamePlaceholder() {
+        RecordingScrubber scrubber = new RecordingScrubber("https://graph.microsoft.com/v1.0");
+        String id = "b!8FWe-5b5AUuTqSDN0boiUaukpeBeel5Co";
+        assertThat(scrubber.text(id)).isEqualTo("b!drive-0001");
+        assertThat(scrubber.text("https://graph.microsoft.com/v1.0/$metadata#drives('"
+                + id.replace("b!", "b%21") + "')/root"))
+                .isEqualTo("https://graph.microsoft.com/v1.0/$metadata#drives('b%21drive-0001')/root");
+    }
+
+    @Test
     void permissionIdsAreReplaced() throws Exception {
         RecordingScrubber scrubber = new RecordingScrubber("https://graph.microsoft.com/v1.0");
         JsonNode scrubbed = scrubber.json(Recordings.JSON.readTree("""
