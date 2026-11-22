@@ -99,7 +99,11 @@ class MicrosoftLiveCoverageIT {
     /** Calls that need more than Sites.Read.All + Files.Read.All upstream. */
     private static final Map<String, String> LABEL_NOTES = Map.of(
             "ListPermissions [site]", "needs Sites.FullControl.All",
-            "ListPermissions [list item]", "may need Sites.FullControl.All");
+            "ListPermissions [list item]", "may need Sites.FullControl.All",
+            "ListUsers", "needs User.Read.All",
+            "ListGroups", "needs GroupMember.Read.All",
+            "ListGroupTransitiveMembers", "needs GroupMember.Read.All",
+            "ListUserTransitiveMemberOf", "needs User.Read.All and GroupMember.Read.All");
 
     /** Office Open XML / legacy Office extensions: SharePoint rewrites their properties on download. */
     private static final Set<String> OFFICE_EXTENSIONS = Set.of(
@@ -130,6 +134,10 @@ class MicrosoftLiveCoverageIT {
             Map.entry("DeltaListItems", "GET /sites/{site-id}/lists/{list-id}/items/delta"),
             Map.entry("ListColumns", "GET /sites/{site-id}[/lists/{id}|/contentTypes/{id}]/columns"),
             Map.entry("ListPermissions", "GET .../permissions"),
+            Map.entry("ListUsers", "GET /users"),
+            Map.entry("ListGroups", "GET /groups"),
+            Map.entry("ListGroupTransitiveMembers", "GET /groups/{group-id}/transitiveMembers"),
+            Map.entry("ListUserTransitiveMemberOf", "GET /users/{user-id}/transitiveMemberOf"),
             Map.entry("Sync", "delta crawl of one drive"));
 
     private record Row(String rpc, String label, String outcome, String detail, boolean failure) {
@@ -393,6 +401,32 @@ class MicrosoftLiveCoverageIT {
                 s -> s.listPermissions(ListPermissionsRequest.newBuilder()
                         .setTarget(PermissionTarget.newBuilder().setSiteId(chosenSite)).build()),
                 l -> join(l, r -> r.getPermission().getId()));
+
+        // --------------------------------------------------- directory --
+        List<ListUsersResponse> users = stream("ListUsers", "ListUsers", LIST_CAP,
+                s -> s.listUsers(ListUsersRequest.getDefaultInstance()),
+                l -> l.size() + " user(s)");
+        List<ListGroupsResponse> groups = stream("ListGroups", "ListGroups", LIST_CAP,
+                s -> s.listGroups(ListGroupsRequest.getDefaultInstance()),
+                l -> l.size() + " group(s)");
+        if (groups.isEmpty()) {
+            skip("ListGroupTransitiveMembers", "no group was listed");
+        } else {
+            String groupId = groups.get(0).getGroup().getId();
+            stream("ListGroupTransitiveMembers", "ListGroupTransitiveMembers", LIST_CAP,
+                    s -> s.listGroupTransitiveMembers(ListGroupTransitiveMembersRequest.newBuilder()
+                            .setGroupId(groupId).build()),
+                    l -> l.size() + " member(s)");
+        }
+        if (users.isEmpty()) {
+            skip("ListUserTransitiveMemberOf", "no user was listed");
+        } else {
+            String userId = users.get(0).getUser().getId();
+            stream("ListUserTransitiveMemberOf", "ListUserTransitiveMemberOf", LIST_CAP,
+                    s -> s.listUserTransitiveMemberOf(ListUserTransitiveMemberOfRequest.newBuilder()
+                            .setUserId(userId).build()),
+                    l -> l.size() + " membership(s)");
+        }
 
         // -------------------------------------------------------- sync --
         if (syncDrive != null) {

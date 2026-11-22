@@ -8,6 +8,8 @@ import ai.pipestream.microsoft.v1.Permission;
 import ai.pipestream.microsoft.v1.SharePointList;
 import ai.pipestream.microsoft.v1.Drive;
 import ai.pipestream.microsoft.v1.DriveItem;
+import ai.pipestream.microsoft.v1.DirectoryObject;
+import ai.pipestream.microsoft.v1.GraphGroup;
 import ai.pipestream.microsoft.v1.GraphUser;
 import ai.pipestream.microsoft.v1.MicrosoftChange;
 import ai.pipestream.microsoft.v1.MicrosoftEntity;
@@ -113,6 +115,8 @@ public final class MicrosoftValidator {
             case Drive drive -> required(prefix, "id", drive.getId(), out);
             case DriveItem item -> visitDriveItem(prefix, item, out);
             case GraphUser user -> visitUser(prefix, user, out);
+            case GraphGroup group -> required(prefix, "id", group.getId(), out);
+            case DirectoryObject object -> required(prefix, "id", object.getId(), out);
             case SharePointList list -> required(prefix, "id", list.getId(), out);
             case ListItem item -> required(prefix, "id", item.getId(), out);
             case Permission permission -> required(prefix, "id", permission.getId(), out);

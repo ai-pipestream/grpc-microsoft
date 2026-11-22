@@ -45,6 +45,9 @@ public final class GraphPaths {
     public static final String USER_SELECT = "id,displayName,userPrincipalName,mail,givenName,"
             + "surname,jobTitle,department,officeLocation,userType,accountEnabled,"
             + "preferredLanguage";
+    /** Every {@code group} property the contract maps. */
+    public static final String GROUP_SELECT = "id,displayName,description,mail,mailNickname,"
+            + "mailEnabled,securityEnabled,groupTypes,visibility,securityIdentifier";
     /** Graph preference required for $filter on non-indexed list columns. */
     public static final String HONOR_NON_INDEXED = "HonorNonIndexedQueriesWarningMayFailRandomly";
 

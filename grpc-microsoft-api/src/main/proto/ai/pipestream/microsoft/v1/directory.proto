@@ -1,0 +1,67 @@
+syntax = "proto3";
+
+package ai.pipestream.microsoft.v1;
+
+import "ai/pipestream/microsoft/v1/common.proto";
+
+option java_multiple_files = true;
+option java_package = "ai.pipestream.microsoft.v1";
+option java_outer_classname = "DirectoryProto";
+
+// ============================================================================
+// DIRECTORY - Entra users and groups as Microsoft Graph reports them. An ACL
+// entry names a user or a group; these messages say who is in the group.
+// ============================================================================
+
+// An Entra group (the Graph `group` resource).
+message GraphGroup {
+  // Graph object id.
+  string id = 1;
+  // Display name.
+  string display_name = 2;
+  // Description, empty when omitted.
+  string description = 3;
+  // Mail address, empty when the group has none.
+  string mail = 4;
+  // Mail alias, empty when omitted.
+  string mail_nickname = 5;
+  // True for a mail-enabled group; unset when Graph omits it.
+  optional bool mail_enabled = 6;
+  // True for a security group; unset when Graph omits it.
+  optional bool security_enabled = 7;
+  // Group types: `Unified` for a Microsoft 365 group, `DynamicMembership`
+  // for a rule-based one. Open string collection, kept verbatim.
+  repeated string group_types = 8;
+  // Visibility: `Public`, `Private`, `HiddenMembership`; empty when omitted.
+  string visibility = 9;
+  // Security identifier (SID), empty when omitted.
+  string security_identifier = 10;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// A directory object that is neither a user nor a group: a device, a service
+// principal or an organizational contact.
+message DirectoryObject {
+  // Graph object id.
+  string id = 1;
+  // Graph type of the object, as `@odata.type` reports it without the
+  // `#microsoft.graph.` prefix: `device`, `servicePrincipal`, `orgContact`.
+  // Open string: Graph adds values over time.
+  string type = 2;
+  // Display name, empty when omitted.
+  string display_name = 3;
+}
+
+// One member of a group, or one group a user belongs to.
+message DirectoryMember {
+  // Exactly one arm says what the member is.
+  oneof member {
+    // A user.
+    GraphUser user = 1;
+    // A group.
+    GraphGroup group = 2;
+    // Any other directory object.
+    DirectoryObject other = 3;
+  }
+}

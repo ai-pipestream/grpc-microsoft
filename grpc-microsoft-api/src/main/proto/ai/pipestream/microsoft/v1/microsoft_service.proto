@@ -3,6 +3,7 @@ syntax = "proto3";
 package ai.pipestream.microsoft.v1;
 
 import "ai/pipestream/microsoft/v1/common.proto";
+import "ai/pipestream/microsoft/v1/directory.proto";
 import "ai/pipestream/microsoft/v1/drive.proto";
 import "ai/pipestream/microsoft/v1/events.proto";
 import "ai/pipestream/microsoft/v1/list.proto";
@@ -147,6 +148,24 @@ service MicrosoftService {
   // /sites/{site-id}/lists/{list-id}/permissions, or
   // /sites/{site-id}/permissions. The ACL of one resource as a stream.
   rpc ListPermissions(ListPermissionsRequest) returns (stream ListPermissionsResponse);
+
+  // --- Directory ------------------------------------------------------------
+
+  // GET /users. Every user of the tenant as a stream. Application permission
+  // User.Read.All.
+  rpc ListUsers(ListUsersRequest) returns (stream ListUsersResponse);
+
+  // GET /groups. Every group of the tenant as a stream. Application
+  // permission GroupMember.Read.All.
+  rpc ListGroups(ListGroupsRequest) returns (stream ListGroupsResponse);
+
+  // GET /groups/{group-id}/transitiveMembers. The members of a group, the
+  // members of its nested groups included, as a stream.
+  rpc ListGroupTransitiveMembers(ListGroupTransitiveMembersRequest) returns (stream ListGroupTransitiveMembersResponse);
+
+  // GET /users/{user-id}/transitiveMemberOf. The groups a user belongs to,
+  // directly or through nested groups, as a stream.
+  rpc ListUserTransitiveMemberOf(ListUserTransitiveMemberOfRequest) returns (stream ListUserTransitiveMemberOfResponse);
 
   // --- Sync ----------------------------------------------------------------
 
@@ -854,6 +873,70 @@ message ListPermissionsRequest {
 message ListPermissionsResponse {
   // The streamed permission, with `target` set.
   Permission permission = 1;
+}
+
+// ============================================================================
+// Directory
+// ============================================================================
+
+// Request to list the users of the tenant.
+message ListUsersRequest {
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 1;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// One streamed user.
+message ListUsersResponse {
+  // The streamed user.
+  GraphUser user = 1;
+}
+
+// Request to list the groups of the tenant.
+message ListGroupsRequest {
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 1;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// One streamed group.
+message ListGroupsResponse {
+  // The streamed group.
+  GraphGroup group = 1;
+}
+
+// Request to list the members of a group, nested groups expanded.
+message ListGroupTransitiveMembersRequest {
+  // Graph object id of the group.
+  string group_id = 1;
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 2;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// One streamed member.
+message ListGroupTransitiveMembersResponse {
+  // The streamed member.
+  DirectoryMember member = 1;
+}
+
+// Request to list the groups a user belongs to, nested groups expanded.
+message ListUserTransitiveMemberOfRequest {
+  // Graph object id or user principal name of the user.
+  string user_id = 1;
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 2;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// One streamed membership.
+message ListUserTransitiveMemberOfResponse {
+  // The group or other directory object the user belongs to.
+  DirectoryMember member = 1;
 }
 
 // ============================================================================

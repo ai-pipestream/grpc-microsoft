@@ -27,6 +27,13 @@ import ai.pipestream.microsoft.v1.GetListRequest;
 import ai.pipestream.microsoft.v1.GetMeRequest;
 import ai.pipestream.microsoft.v1.GetSiteRequest;
 import ai.pipestream.microsoft.v1.GraphUser;
+import ai.pipestream.microsoft.v1.MicrosoftChange;
+import ai.pipestream.microsoft.v1.ListUsersRequest;
+import ai.pipestream.microsoft.v1.ListUserTransitiveMemberOfRequest;
+import ai.pipestream.microsoft.v1.ListGroupsRequest;
+import ai.pipestream.microsoft.v1.ListGroupTransitiveMembersRequest;
+import ai.pipestream.microsoft.v1.GraphGroup;
+import ai.pipestream.microsoft.v1.DirectoryMember;
 import ai.pipestream.microsoft.v1.ListAllSitesRequest;
 import ai.pipestream.microsoft.v1.ListChildrenRequest;
 import ai.pipestream.microsoft.v1.ListColumn;
@@ -244,6 +251,62 @@ class MicrosoftRpcSurfaceTest {
         assertThat(site.getSiteCollection().getArchivalState()).isEqualTo("recentlyArchived");
         assertThat(site.getEtag()).isEqualTo("e1");
         assertThat(site.hasCreatedAt()).isTrue();
+    }
+
+    @Test
+    void usersAndGroupsAreListedWithEveryModelledProperty() {
+        fake.stub("/users", """
+                {"value":[{"id":"u1","displayName":"Ada","userPrincipalName":"ada@contoso.com",
+                  "userType":"Member","accountEnabled":true}]}""");
+        fake.stub("/groups", """
+                {"value":[{"id":"g1","displayName":"Engineers","description":"all of them",
+                  "mail":"eng@contoso.com","mailNickname":"eng","mailEnabled":true,
+                  "securityEnabled":false,"groupTypes":["Unified"],"visibility":"Private",
+                  "securityIdentifier":"S-1-12-1-1"}]}""");
+
+        assertThat(drain(appStub.listUsers(ListUsersRequest
+                .getDefaultInstance()))).extracting(r -> r.getUser().getUserPrincipalName())
+                .containsExactly("ada@contoso.com");
+        assertThat(fake.only("/users").query()).isEqualTo("$select=" + GraphPaths.USER_SELECT);
+
+        GraphGroup group = drain(appStub.listGroups(
+                ListGroupsRequest.getDefaultInstance())).get(0).getGroup();
+        assertThat(fake.only("/groups").query()).isEqualTo("$select=" + GraphPaths.GROUP_SELECT);
+        assertThat(group.getDisplayName()).isEqualTo("Engineers");
+        assertThat(group.getMailEnabled()).isTrue();
+        assertThat(group.hasSecurityEnabled()).isTrue();
+        assertThat(group.getSecurityEnabled()).isFalse();
+        assertThat(group.getGroupTypesList()).containsExactly("Unified");
+        assertThat(group.getVisibility()).isEqualTo("Private");
+        assertThat(group.getSecurityIdentifier()).isEqualTo("S-1-12-1-1");
+    }
+
+    @Test
+    void transitiveMembershipKeepsEachMembersKind() {
+        fake.stub("/groups/g1/transitiveMembers", """
+                {"value":[{"@odata.type":"#microsoft.graph.user","id":"u1","displayName":"Ada"},
+                  {"@odata.type":"#microsoft.graph.group","id":"g2","displayName":"Nested"},
+                  {"@odata.type":"#microsoft.graph.device","id":"d1","displayName":"Laptop"}]}""");
+        fake.stub("/users/u1/transitiveMemberOf", """
+                {"value":[{"@odata.type":"#microsoft.graph.group","id":"g1","displayName":"Engineers"},
+                  {"@odata.type":"#microsoft.graph.directoryRole","id":"r1","displayName":"Reader"}]}""");
+
+        List<DirectoryMember> members = drain(
+                appStub.listGroupTransitiveMembers(ListGroupTransitiveMembersRequest.newBuilder().setGroupId("g1").build()))
+                .stream().map(r -> r.getMember()).toList();
+        assertThat(members).hasSize(3);
+        assertThat(members.get(0).getUser().getId()).isEqualTo("u1");
+        assertThat(members.get(1).getGroup().getDisplayName()).isEqualTo("Nested");
+        assertThat(members.get(2).getOther().getType()).isEqualTo("device");
+
+        List<DirectoryMember> groups = drain(
+                appStub.listUserTransitiveMemberOf(ListUserTransitiveMemberOfRequest.newBuilder().setUserId("u1").build()))
+                .stream().map(r -> r.getMember()).toList();
+        assertThat(groups.get(0).getGroup().getId()).isEqualTo("g1");
+        assertThat(groups.get(1).getOther().getType()).isEqualTo("directoryRole");
+
+        assertThat(code(() -> drain(appStub.listGroupTransitiveMembers(ListGroupTransitiveMembersRequest.getDefaultInstance()))))
+                .isEqualTo(Status.Code.INVALID_ARGUMENT);
     }
 
     @Test
@@ -822,7 +885,7 @@ class MicrosoftRpcSurfaceTest {
                 "{\"id\":\"1\",\"deleted\":{\"state\":\"deleted\"}}"));
         List<SyncResponse> second = drain(stub.sync(SyncRequest.newBuilder().addSiteIds(SITE)
                 .setIncludeLists(true).setSinceCursor(resume).build()));
-        List<ai.pipestream.microsoft.v1.MicrosoftChange> deletes = second.stream()
+        List<MicrosoftChange> deletes = second.stream()
                 .filter(SyncResponse::hasChange).map(SyncResponse::getChange)
                 .filter(c -> c.getOperation() == ChangeOperation.CHANGE_OPERATION_DELETE).toList();
         assertThat(deletes).extracting(c -> c.getEntity().getEntityId()).containsExactly("x1", "L1/1");

@@ -47,7 +47,15 @@ import ai.pipestream.microsoft.v1.ListPermissionsRequest;
 import ai.pipestream.microsoft.v1.ListPermissionsResponse;
 import ai.pipestream.microsoft.v1.ListSitesRequest;
 import ai.pipestream.microsoft.v1.ListSitesResponse;
+import ai.pipestream.microsoft.v1.ListGroupTransitiveMembersRequest;
+import ai.pipestream.microsoft.v1.ListGroupTransitiveMembersResponse;
+import ai.pipestream.microsoft.v1.ListGroupsRequest;
+import ai.pipestream.microsoft.v1.ListGroupsResponse;
 import ai.pipestream.microsoft.v1.ListSubsitesRequest;
+import ai.pipestream.microsoft.v1.ListUserTransitiveMemberOfRequest;
+import ai.pipestream.microsoft.v1.ListUserTransitiveMemberOfResponse;
+import ai.pipestream.microsoft.v1.ListUsersRequest;
+import ai.pipestream.microsoft.v1.ListUsersResponse;
 import ai.pipestream.microsoft.v1.ListSubsitesResponse;
 import ai.pipestream.microsoft.v1.MicrosoftChange;
 import ai.pipestream.microsoft.v1.MicrosoftServiceGrpc;
@@ -284,6 +292,64 @@ public final class MicrosoftGrpcService
                 }
             }
             return response.build();
+        });
+    }
+
+    // ------------------------------------------------------------ directory
+
+    @Override
+    public void listUsers(ListUsersRequest request, StreamObserver<ListUsersResponse> observer) {
+        stream(observer, () -> {
+            MicrosoftSessions.Session session = sessions.resolve(request.getConnectionId());
+            session.pager().forEach(List.of("/users?$select=" + GraphPaths.USER_SELECT, "/users"),
+                    Map.of(), node -> {
+                        observer.onNext(ListUsersResponse.newBuilder()
+                                .setUser(valid(mapper.toUser(node))).build());
+                        return true;
+                    });
+        });
+    }
+
+    @Override
+    public void listGroups(ListGroupsRequest request, StreamObserver<ListGroupsResponse> observer) {
+        stream(observer, () -> {
+            MicrosoftSessions.Session session = sessions.resolve(request.getConnectionId());
+            session.pager().forEach(List.of("/groups?$select=" + GraphPaths.GROUP_SELECT, "/groups"),
+                    Map.of(), node -> {
+                        observer.onNext(ListGroupsResponse.newBuilder()
+                                .setGroup(valid(mapper.toGroup(node))).build());
+                        return true;
+                    });
+        });
+    }
+
+    @Override
+    public void listGroupTransitiveMembers(ListGroupTransitiveMembersRequest request,
+            StreamObserver<ListGroupTransitiveMembersResponse> observer) {
+        stream(observer, () -> {
+            MicrosoftSessions.Session session = sessions.resolve(request.getConnectionId());
+            String route = "/groups/" + GraphPaths.segment(request.getGroupId(), "group_id")
+                    + "/transitiveMembers";
+            session.pager().forEach(List.of(route), Map.of(), node -> {
+                observer.onNext(ListGroupTransitiveMembersResponse.newBuilder()
+                        .setMember(valid(mapper.toMember(node))).build());
+                return true;
+            });
+        });
+    }
+
+    @Override
+    public void listUserTransitiveMemberOf(ListUserTransitiveMemberOfRequest request,
+            StreamObserver<ListUserTransitiveMemberOfResponse> observer) {
+        stream(observer, () -> {
+            MicrosoftSessions.Session session = sessions.resolve(request.getConnectionId());
+            String route = "/users/" + GraphPaths.segment(request.getUserId(), "user_id")
+                    + "/transitiveMemberOf";
+            session.pager().forEach(List.of(route), Map.of(), node -> {
+                observer.onNext(ListUserTransitiveMemberOfResponse.newBuilder()
+                        .setMember(valid(mapper.toMember(node))).build());
+                return true;
+            });
         });
     }
 
