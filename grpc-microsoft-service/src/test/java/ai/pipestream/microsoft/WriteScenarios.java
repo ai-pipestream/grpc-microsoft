@@ -33,12 +33,16 @@ import ai.pipestream.microsoft.v1.ListItemRef;
 import ai.pipestream.microsoft.v1.ListItemTarget;
 import ai.pipestream.microsoft.v1.ListItemVersionsRequest;
 import ai.pipestream.microsoft.v1.ListListItemsRequest;
+import ai.pipestream.microsoft.v1.ListPermissionsRequest;
 import ai.pipestream.microsoft.v1.ListRef;
 import ai.pipestream.microsoft.v1.ListTemplate;
 import ai.pipestream.microsoft.v1.MicrosoftServiceGrpc;
 import ai.pipestream.microsoft.v1.MutateRequest;
 import ai.pipestream.microsoft.v1.MutateResponse;
+import ai.pipestream.microsoft.v1.Permission;
+import ai.pipestream.microsoft.v1.PermissionTarget;
 import ai.pipestream.microsoft.v1.RestoreDriveItemVersionRequest;
+import ai.pipestream.microsoft.v1.SharePointIdentitySet;
 import ai.pipestream.microsoft.v1.UpdateDriveItemRequest;
 import ai.pipestream.microsoft.v1.UpdateListItemFieldsRequest;
 import ai.pipestream.microsoft.v1.UploadItemEnd;
@@ -64,6 +68,9 @@ import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -267,6 +274,10 @@ final class WriteScenarios {
                         this::uploadResumed),
                 new Scenario("list-children", "ListChildren", "ListChildren [test folder]",
                         this::listChildren),
+                new Scenario("list-permissions-drive-item", "ListPermissions",
+                        "ListPermissions [uploaded file]", this::permissionsOfTheFile),
+                new Scenario("list-permissions-folder", "ListPermissions",
+                        "ListPermissions [test folder]", this::permissionsOfTheFolder),
                 new Scenario("update-drive-item", "UpdateDriveItem",
                         "UpdateDriveItem [rename]", this::updateDriveItem),
                 new Scenario("update-drive-item-description", "UpdateDriveItem",
@@ -290,6 +301,10 @@ final class WriteScenarios {
                         this::createListItem),
                 new Scenario("list-list-items", "ListListItems", "ListListItems [test list]",
                         this::listListItems),
+                new Scenario("list-permissions-list", "ListPermissions",
+                        "ListPermissions [test list]", this::permissionsOfTheList),
+                new Scenario("list-permissions-list-item", "ListPermissions",
+                        "ListPermissions [list item]", this::permissionsOfTheListItem),
                 new Scenario("update-list-item-fields", "UpdateListItemFields",
                         "UpdateListItemFields [every column type]", this::updateListItemFields),
                 new Scenario("update-list-item-fields-drive-item", "UpdateListItemFields",
@@ -848,6 +863,70 @@ final class WriteScenarios {
                 .build()).forEachRemaining(response -> ids.add(response.getItem().getId()));
         check(ids.contains(itemId), "the list holds items " + ids);
         return ids.size() + " item(s), the created one among them";
+    }
+
+    private String permissionsOfTheFile() {
+        need(small, "the small upload");
+        return permissions(PermissionTarget.newBuilder().setDriveItem(ref(small.getId())).build());
+    }
+
+    private String permissionsOfTheFolder() {
+        need(folderId, "the test folder");
+        return permissions(PermissionTarget.newBuilder().setDriveItem(ref(folderId)).build());
+    }
+
+    private String permissionsOfTheList() {
+        need(listId, "the test list");
+        return permissions(PermissionTarget.newBuilder()
+                .setList(ListRef.newBuilder().setSiteId(siteId).setListId(listId)).build());
+    }
+
+    private String permissionsOfTheListItem() {
+        need(itemId, "the list item");
+        return permissions(PermissionTarget.newBuilder().setListItem(listItemRef(itemId)).build());
+    }
+
+    /** Lists the ACL of a target and answers how many entries, their grantee kinds and roles. */
+    private String permissions(PermissionTarget target) {
+        List<Permission> permissions = new ArrayList<>();
+        stub().listPermissions(ListPermissionsRequest.newBuilder().setTarget(target).build())
+                .forEachRemaining(response -> permissions.add(response.getPermission()));
+        check(!permissions.isEmpty(), "the ACL is empty");
+        Map<String, Integer> kinds = new TreeMap<>();
+        Set<String> roles = new TreeSet<>();
+        for (Permission permission : permissions) {
+            check(!permission.getId().isEmpty(), "a permission has no id");
+            check(permission.getRolesCount() > 0, "a permission has no role");
+            check(permission.getTarget().equals(target), "a permission names another target");
+            roles.addAll(permission.getRolesList());
+            List<SharePointIdentitySet> grantees = new ArrayList<>(
+                    permission.getGrantedToIdentitiesList());
+            if (permission.hasGrantedTo()) {
+                grantees.add(permission.getGrantedTo());
+            }
+            check(!grantees.isEmpty() || permission.hasLink(), "a permission names no grantee");
+            if (permission.hasLink()) {
+                kinds.merge("link", 1, Integer::sum);
+            }
+            grantees.forEach(grantee -> kinds.merge(kind(grantee), 1, Integer::sum));
+        }
+        return permissions.size() + " permission(s), grantees " + kinds + ", roles " + roles;
+    }
+
+    private static String kind(SharePointIdentitySet grantee) {
+        if (grantee.hasSharePointGroup() || grantee.hasSiteGroup()) {
+            return "site group";
+        }
+        if (grantee.hasGroup()) {
+            return "group";
+        }
+        if (grantee.hasUser() || grantee.hasSiteUser()) {
+            return "user";
+        }
+        if (grantee.hasApplication()) {
+            return "application";
+        }
+        return grantee.hasDevice() ? "device" : "unknown";
     }
 
     // ------------------------------------------------------------ cleanup

@@ -85,6 +85,16 @@ class RecordingScrubberTest {
     }
 
     @Test
+    void permissionIdsAreReplaced() throws Exception {
+        RecordingScrubber scrubber = new RecordingScrubber("https://graph.microsoft.com/v1.0");
+        JsonNode scrubbed = scrubber.json(Recordings.JSON.readTree("""
+                {"value":[{"id":"aTowIy5mfG1lbWJlcnNoaXB8c29tZW9uZQ","roles":["write"]},
+                          {"id":"7","name":"kept"}]}"""));
+        assertThat(scrubbed.path("value").path(0).path("id").asText()).isEqualTo("permission-0001");
+        assertThat(scrubbed.path("value").path(1).path("id").asText()).isEqualTo("7");
+    }
+
+    @Test
     void violationsNameWhatStillLooksLikeTenantData() {
         assertThat(RecordingScrubber.violations("{\"fields@odata.context\":\"x\",\"id\":\""
                 + RecordingScrubber.GUID_PREFIX + "000000000007\",\"@odata.etag\":\"1\"}"))

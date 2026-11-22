@@ -56,6 +56,11 @@ final class RecordingScrubber {
                 if (entry.getKey().equals("displayName") && value.isTextual()
                         && IDENTITIES.contains(parentKey)) {
                     out.put(entry.getKey(), placeholder("name", value.asText(), "Identity %d"));
+                } else if (entry.getKey().equals("id") && value.isTextual()
+                        && node.path("roles").isArray()) {
+                    // A permission id can be the grantee's sign-in name, base64-encoded.
+                    out.put(entry.getKey(), placeholder("permission", value.asText(),
+                            "permission-%04d"));
                 } else {
                     out.set(entry.getKey(), json(value, entry.getKey()));
                 }
