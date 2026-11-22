@@ -348,6 +348,10 @@ final class WriteScenarios {
                         "ListSiteRoleAssignments [site]", this::roleAssignmentsOfTheSite),
                 new Scenario("list-site-role-assignments-list", "ListSiteRoleAssignments",
                         "ListSiteRoleAssignments [test list]", this::roleAssignmentsOfTheList),
+                new Scenario("get-site-role-inheritance-list-item", "GetSiteRoleInheritance",
+                        "GetSiteRoleInheritance [list item]", this::inheritanceOfTheListItem),
+                new Scenario("list-site-role-assignments-list-item", "ListSiteRoleAssignments",
+                        "ListSiteRoleAssignments [list item]", this::roleAssignmentsOfTheListItem),
                 new Scenario("update-list-item-fields", "UpdateListItemFields",
                         "UpdateListItemFields [every column type]", this::updateListItemFields),
                 new Scenario("update-list-item-fields-drive-item", "UpdateListItemFields",
@@ -1067,6 +1071,20 @@ final class WriteScenarios {
     private String roleAssignmentsOfTheList() {
         need(listId, "the test list");
         return roleAssignments(listSecurable());
+    }
+
+    private String inheritanceOfTheListItem() {
+        need(itemId, "the list item");
+        boolean unique = stub().getSiteRoleInheritance(GetSiteRoleInheritanceRequest.newBuilder()
+                .setSecurable(SiteSecurable.newBuilder().setListItem(listItemRef(itemId))).build())
+                .getHasUniqueRoleAssignments();
+        check(!unique, "a new list item does not inherit the list's role assignments");
+        return "the new list item inherits from the list";
+    }
+
+    private String roleAssignmentsOfTheListItem() {
+        need(itemId, "the list item");
+        return roleAssignments(SiteSecurable.newBuilder().setListItem(listItemRef(itemId)).build());
     }
 
     private SiteSecurable listSecurable() {

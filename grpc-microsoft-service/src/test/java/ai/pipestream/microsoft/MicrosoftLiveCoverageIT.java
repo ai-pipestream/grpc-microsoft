@@ -161,6 +161,7 @@ class MicrosoftLiveCoverageIT {
     private final List<Row> rows = new ArrayList<>();
     private final Map<String, String> discovered = new LinkedHashMap<>();
     private final List<String> deltaLines = new ArrayList<>();
+    private String directoryLine = "";
     private final List<String> syncLines = new ArrayList<>();
     /** Credential values to scrub: the client secret and every access / refresh token issued. */
     private final Set<String> secrets = ConcurrentHashMap.newKeySet();
@@ -278,6 +279,13 @@ class MicrosoftLiveCoverageIT {
                         .setClientId(config.clientId()).setClientSecret(config.clientSecret())
                         .setLimit(1).build()),
                 MicrosoftLiveCoverageIT::probeDetail);
+        if (notBlank(config.clientCertificatePem())) {
+            unary("ProbeConnection", "ProbeConnection [inline certificate, no secret]",
+                    s -> s.probeConnection(ProbeConnectionRequest.newBuilder().setTenantId(config.tenantId())
+                            .setClientId(config.clientId())
+                            .setClientCertificatePem(config.clientCertificatePem()).setLimit(1).build()),
+                    MicrosoftLiveCoverageIT::probeDetail);
+        }
         unary("GetMe", "GetMe [app-only token]",
                 s -> s.getMe(GetMeRequest.getDefaultInstance()),
                 r -> "user " + r.getUser().getId());
@@ -413,6 +421,34 @@ class MicrosoftLiveCoverageIT {
         List<ListUsersResponse> users = stream("ListUsers", "ListUsers", LIST_CAP,
                 s -> s.listUsers(ListUsersRequest.getDefaultInstance()),
                 l -> l.size() + " user(s)");
+        if (users != null) {
+            directoryLine = "- Directory: " + users.size() + " user(s), "
+                    + users.stream().filter(r -> !r.getUser().getMail().isEmpty()).count()
+                    + " with mail; mail domains " + domainKinds(users, r -> r.getUser().getMail())
+                    + "; sign-in name domains " + domainKinds(users, r -> r.getUser().getUserPrincipalName());
+            String join = System.getenv("JOIN_PROOF_EMAIL");
+            if (notBlank(join)) {
+                // Says only whether the address is there, never the address.
+                String wanted = join.trim();
+                String domain = wanted.substring(wanted.indexOf('@') + 1);
+                long mail = users.stream().filter(r -> r.getUser().getMail().equalsIgnoreCase(wanted)).count();
+                long signIn = users.stream()
+                        .filter(r -> r.getUser().getUserPrincipalName().equalsIgnoreCase(wanted)).count();
+                long sameDomain = users.stream().filter(r -> endsWithDomain(r.getUser().getMail(), domain)
+                        || endsWithDomain(r.getUser().getUserPrincipalName(), domain)).count();
+                long alias = users.stream().filter(r -> r.getUser().getProxyAddressesList().stream()
+                        .anyMatch(address -> address.substring(address.indexOf(':') + 1)
+                                .equalsIgnoreCase(wanted))).count();
+                long other = users.stream().filter(r -> r.getUser().getOtherMailsList().stream()
+                        .anyMatch(address -> address.equalsIgnoreCase(wanted))).count();
+                long aliases = users.stream().mapToLong(r -> r.getUser().getProxyAddressesCount()).sum();
+                long others = users.stream().mapToLong(r -> r.getUser().getOtherMailsCount()).sum();
+                directoryLine += "\n- Entra join: " + (mail + signIn + alias + other > 0 ? "match" : "no match")
+                        + " (mail " + mail + ", sign-in name " + signIn + ", proxy address " + alias
+                        + " of " + aliases + ", other mail " + other + " of " + others
+                        + ", users on the same domain " + sameDomain + ")";
+            }
+        }
         List<ListGroupsResponse> groups = stream("ListGroups", "ListGroups", LIST_CAP,
                 s -> s.listGroups(ListGroupsRequest.getDefaultInstance()),
                 l -> l.size() + " group(s)");
@@ -470,6 +506,38 @@ class MicrosoftLiveCoverageIT {
         if (syncDrive != null) {
             sync(syncDrive);
         }
+    }
+
+    /** Consumer mail providers; any other domain is counted without being named. */
+    private static final Set<String> PUBLIC_MAIL = Set.of("gmail.com", "googlemail.com", "outlook.com",
+            "hotmail.com", "live.com", "yahoo.com", "icloud.com");
+
+    /** How many addresses sit on each kind of domain; no tenant domain is named. */
+    private static boolean endsWithDomain(String address, String domain) {
+        return address.toLowerCase(java.util.Locale.ROOT).endsWith("@" + domain.toLowerCase(java.util.Locale.ROOT));
+    }
+
+    private static Map<String, Integer> domainKinds(List<ListUsersResponse> users,
+            Function<ListUsersResponse, String> address) {
+        Map<String, Integer> kinds = new TreeMap<>();
+        Set<String> own = new java.util.TreeSet<>();
+        for (ListUsersResponse user : users) {
+            String value = address.apply(user);
+            int at = value.lastIndexOf('@');
+            if (at < 0) {
+                continue;
+            }
+            String domain = value.substring(at + 1).toLowerCase(java.util.Locale.ROOT);
+            String kind = PUBLIC_MAIL.contains(domain) ? domain
+                    : domain.endsWith(".onmicrosoft.com") ? "the tenant's onmicrosoft.com domain"
+                    : "a custom domain";
+            if (!PUBLIC_MAIL.contains(domain)) {
+                own.add(domain);
+            }
+            kinds.merge(kind, 1, Integer::sum);
+        }
+        kinds.put("distinct non-public domains", own.size());
+        return kinds;
     }
 
     private static String probeDetail(ProbeConnectionResponse r) {
@@ -1224,6 +1292,9 @@ class MicrosoftLiveCoverageIT {
         long failures = rows.stream().filter(Row::failure).count();
         Map<String, Integer> outcomes = new TreeMap<>();
         rows.forEach(row -> outcomes.merge(row.outcome(), 1, Integer::sum));
+        if (!directoryLine.isEmpty()) {
+            md.append(directoryLine).append('\n');
+        }
         md.append("- Calls: ").append(rows.size()).append(", outcomes ").append(outcomes)
                 .append(", failures ").append(failures).append("\n\n");
 

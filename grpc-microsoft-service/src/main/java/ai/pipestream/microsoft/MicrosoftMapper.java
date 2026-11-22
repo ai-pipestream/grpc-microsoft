@@ -121,6 +121,8 @@ public final class MicrosoftMapper {
         if (node.path("accountEnabled").isBoolean()) {
             b.setAccountEnabled(node.path("accountEnabled").booleanValue());
         }
+        node.path("proxyAddresses").forEach(address -> b.addProxyAddresses(address.asText()));
+        node.path("otherMails").forEach(address -> b.addOtherMails(address.asText()));
         return b.build();
     }
 

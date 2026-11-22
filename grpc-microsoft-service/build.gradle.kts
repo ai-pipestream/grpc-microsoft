@@ -1,5 +1,6 @@
 plugins {
     application
+    `java-test-fixtures`
 }
 
 dependencies {
@@ -16,6 +17,8 @@ dependencies {
     implementation(libs.kafka.clients)
     runtimeOnly(libs.log4j.core)
 
+    testFixturesImplementation(libs.jackson.databind)
+
     testImplementation(libs.integration.sync.service)
     testImplementation(libs.integration.output.filesystem)
     testImplementation(libs.integration.output.s3)
@@ -28,6 +31,11 @@ dependencies {
 application {
     mainClass = "ai.pipestream.microsoft.MicrosoftServer"
 }
+
+// The recording and replay helpers are shared with the admin module's tests, not published.
+val javaComponent = components["java"] as AdhocComponentWithVariants
+javaComponent.withVariantsFromConfiguration(configurations["testFixturesApiElements"]) { skip() }
+javaComponent.withVariantsFromConfiguration(configurations["testFixturesRuntimeElements"]) { skip() }
 
 // The live smoke and coverage tests hit the real tenant, so they never run
 // in the default test task (and are assumption-gated on credentials as a second guard).

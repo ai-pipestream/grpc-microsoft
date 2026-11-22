@@ -16,6 +16,7 @@
         "value" : [ {
           "id" : "permission-0001",
           "roles" : [ "owner" ],
+          "shareId" : "permission-0001",
           "grantedToV2" : {
             "siteGroup" : {
               "displayName" : "Identity 3",
@@ -37,6 +38,7 @@
         }, {
           "id" : "permission-0002",
           "roles" : [ "read" ],
+          "shareId" : "permission-0002",
           "grantedToV2" : {
             "siteGroup" : {
               "displayName" : "Identity 4",
@@ -58,6 +60,7 @@
         }, {
           "id" : "permission-0003",
           "roles" : [ "write" ],
+          "shareId" : "permission-0003",
           "grantedToV2" : {
             "siteGroup" : {
               "displayName" : "Identity 5",
@@ -79,6 +82,7 @@
         }, {
           "id" : "permission-0004",
           "roles" : [ "owner" ],
+          "shareId" : "permission-0004",
           "grantedToV2" : {
             "user" : {
               "@odata.type" : "#microsoft.graph.sharePointIdentity",

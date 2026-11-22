@@ -126,11 +126,11 @@ All are application permissions with admin consent.
 |---|---|---|
 | Everything scoped to a site: `GetSite`, drives, items, downloads, lists, list items, columns, item / list / list-item `ListPermissions`, the delta rpcs, `Sync`, and every write rpc | Graph `Sites.Selected` plus a grant on the site | site grant `manage` |
 | `ListSites`, `ListAllSites`, `DeltaSites` | Graph `Sites.Read.All` (tenant-wide) | refused with `Sites.Selected` alone |
-| `ListUsers`, `ListGroups`, `ListGroupTransitiveMembers`, `ListUserTransitiveMemberOf` | Graph `User.Read.All` and `GroupMember.Read.All` | those two |
+| `ListUsers`, `ListGroups`, `DeltaGroups`, `ListGroupTransitiveMembers`, `ListUserTransitiveMemberOf` | Graph `User.Read.All` and `GroupMember.Read.All` | those two |
 | `ListSiteGroups`, `GetSiteRoleInheritance` | SharePoint `Sites.Selected` plus a grant on the site, certificate credential | site grant `manage` |
-| `ListSiteGroupMembers`, `ListSiteRoleAssignments` | More than site grant `manage` (refused with it) | SharePoint `Sites.FullControl.All`; site grant `fullcontrol` not tried yet |
+| `ListSiteGroupMembers`, `ListSiteRoleAssignments` | SharePoint `Sites.Selected` plus site grant `fullcontrol`, certificate credential (refused with `manage`) | site grant `fullcontrol`; also SharePoint `Sites.FullControl.All` |
 | `ListPermissions` on a site | Graph `Sites.FullControl.All` | that |
-| `MicrosoftAdminService` | Graph `Sites.FullControl.All` | that (read and dry run) |
+| `MicrosoftAdminService` | Graph `Sites.FullControl.All` | that (grant created, changed and revoked) |
 
 ## Site grants (admin service)
 
@@ -156,6 +156,14 @@ those grants and is the only process that signs in with an identity holding
 ```
 ./gradlew :grpc-microsoft-admin:run
 ```
+
+`./gradlew :grpc-microsoft-admin:liveAdminTest` runs the admin scenarios
+against a real tenant (also needs `MICROSOFT_SITE_ID` and `MICROSOFT_CLIENT_ID`)
+and records the scrubbed Graph exchanges under
+`grpc-microsoft-admin/src/test/resources/recordings/admin`. The default `test`
+task replays them with no network. Reading grants and the dry runs change
+nothing; the create, change and revoke scenario runs only with
+`MICROSOFT_ADMIN_LIVE_CHANGE=1`.
 
 ## Copilot connector (GCA)
 
@@ -287,6 +295,10 @@ After they are set, `live-microsoft` runs on same-repo PRs and pushes
 | `MICROSOFT_CLIENT_CERT_PEM` | no (private key and certificate PEM; used instead of the secret when set) |
 | `MICROSOFT_SITE_ID` | no (first `ListSites` hit is used for drives) |
 | `MICROSOFT_DRIVE_IDS` | no |
+
+A catalog connection (`connection_id`) and an inline `ProbeConnection` carry
+the same choice: `client_secret`, or `client_certificate_pem` to sign in with
+a certificate. SharePoint site security reads need the certificate.
 
 Do not paste tokens into issues, PR text, or agent chat.
 
