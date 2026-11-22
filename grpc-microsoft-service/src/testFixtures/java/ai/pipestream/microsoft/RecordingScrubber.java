@@ -67,6 +67,16 @@ final class RecordingScrubber {
         this.graphOrigin = origin(graphBaseUrl);
     }
 
+    /** Placeholder of the address named with {@link #joinProof}. */
+    static final String JOIN_PROOF = "join-proof@" + EMAIL_DOMAIN;
+
+    /** Names the one address that always gets {@link #JOIN_PROOF}, in any case. */
+    synchronized void joinProof(String email) {
+        if (email != null && !email.isBlank()) {
+            placeholders.put("email\n" + email.strip().toLowerCase(Locale.ROOT), JOIN_PROOF);
+        }
+    }
+
     /** Scrubs every string value of a JSON tree; keys stay. */
     synchronized JsonNode json(JsonNode node) {
         return json(node, "");

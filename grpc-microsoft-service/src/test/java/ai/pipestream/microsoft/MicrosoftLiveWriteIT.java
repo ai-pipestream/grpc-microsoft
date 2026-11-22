@@ -133,6 +133,7 @@ class MicrosoftLiveWriteIT {
 
         Map<String, byte[]> blobs = new ConcurrentHashMap<>();
         RecordingScrubber scrubber = new RecordingScrubber(graphBaseUrl);
+        scrubber.joinProof(System.getenv("JOIN_PROOF_EMAIL"));
         RecordingTransport recorder = RecordingTransport.overHttp(scrubber, blobs, graphBaseUrl);
         GraphClient client = new GraphClient(graphBaseUrl, bearer, AuthMode.AUTH_MODE_APPLICATION,
                 recorder);

@@ -225,4 +225,15 @@ class RecordingScrubberTest {
         assertThat(scrubber.text("https://example.com/page, A page"))
                 .isEqualTo("https://example.com/page, A page");
     }
+
+    @Test
+    void theJoinProofAddressKeepsOnePlaceholderInAnyCase() {
+        RecordingScrubber scrubber = new RecordingScrubber(GRAPH);
+        scrubber.joinProof("Proof.Person@Contoso.com");
+        assertThat(scrubber.text("smtp:proof.person@contoso.com"))
+                .isEqualTo("smtp:" + RecordingScrubber.JOIN_PROOF);
+        assertThat(scrubber.text("PROOF.PERSON@CONTOSO.COM")).isEqualTo(RecordingScrubber.JOIN_PROOF);
+        assertThat(scrubber.text("someone.else@contoso.com")).isEqualTo("email-1@example.invalid");
+        assertThat(RecordingScrubber.violations(RecordingScrubber.JOIN_PROOF)).isEmpty();
+    }
 }
