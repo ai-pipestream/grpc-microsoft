@@ -157,6 +157,14 @@ those grants and is the only process that signs in with an identity holding
 ./gradlew :grpc-microsoft-admin:run
 ```
 
+`./gradlew :grpc-microsoft-admin:liveAdminTest` runs the admin scenarios
+against a real tenant (also needs `MICROSOFT_SITE_ID` and `MICROSOFT_CLIENT_ID`)
+and records the scrubbed Graph exchanges under
+`grpc-microsoft-admin/src/test/resources/recordings/admin`. The default `test`
+task replays them with no network. Reading grants and the dry runs change
+nothing; the create, change and revoke scenario runs only with
+`MICROSOFT_ADMIN_LIVE_CHANGE=1`.
+
 ## Copilot connector (GCA)
 
 A separate process that implements Microsoft's four connector services

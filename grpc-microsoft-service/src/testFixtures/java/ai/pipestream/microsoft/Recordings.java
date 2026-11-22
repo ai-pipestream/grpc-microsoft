@@ -284,7 +284,8 @@ final class Recordings {
         for (String segment : path.split("/")) {
             String lower = segment.toLowerCase(Locale.ROOT);
             boolean id = lower.contains("drive-") || lower.contains("item-")
-                    || lower.contains("tenant-") || lower.contains(RecordingScrubber.GUID_PREFIX)
+                    || lower.contains("tenant-") || lower.startsWith("permission-")
+                    || lower.contains(RecordingScrubber.GUID_PREFIX)
                     || (!lower.isEmpty() && lower.chars().allMatch(Character::isDigit));
             if (!segment.isEmpty() && !id) {
                 kept.add(lower);

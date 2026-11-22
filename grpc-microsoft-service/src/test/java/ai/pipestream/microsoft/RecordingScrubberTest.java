@@ -169,4 +169,21 @@ class RecordingScrubberTest {
                 .endsWith("$deltatoken=latest");
         assertThat(scrubber.text(link)).isEqualTo(link);
     }
+
+    @Test
+    void aSitePermissionIdIsReplacedInTheListingAndInLaterUrls() throws Exception {
+        RecordingScrubber scrubber = new RecordingScrubber("https://graph.microsoft.com/v1.0");
+        String id = RecordingScrubber.ENCODED_GRANTEE + "w5NzFlMDNhMi1hYmNk";
+        JsonNode listed = scrubber.json(Recordings.JSON.readTree("""
+                {"value":[{"id":"%s","grantedToIdentitiesV2":[{"application":
+                  {"id":"0f8fad5b-d9cb-469f-a165-70867728950e","displayName":"Contoso Connector"}}]}]}"""
+                .formatted(id)));
+
+        assertThat(listed.path("value").path(0).path("id").asText()).isEqualTo("permission-0001");
+        assertThat(scrubber.text("https://graph.microsoft.com/v1.0/sites/s/permissions/" + id))
+                .isEqualTo("https://graph.microsoft.com/v1.0/sites/s/permissions/permission-0001");
+        assertThat(RecordingScrubber.violations("\"id\" : \"" + id + "\""))
+                .containsExactly("encoded grantee of a site permission");
+        assertThat(RecordingScrubber.violations(listed.toString())).isEmpty();
+    }
 }

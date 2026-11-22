@@ -25,6 +25,11 @@ final class RecordingScrubber {
     /** Start of every placeholder URL. */
     static final String URL_PREFIX = "https://redacted.example/url/";
 
+    /** Start of a site permission id that encodes the application and tenant it was granted to. */
+    static final String ENCODED_GRANTEE = "aTowaS50fG1zLnNwLmV4dH";
+    /** Shortest permission id that is replaced wherever it appears, not only as an {@code id}. */
+    private static final int ENCODED_ID_LENGTH = 16;
+
     /** JSON objects whose {@code displayName} names a person, group or app. */
     private static final Set<String> IDENTITIES = Set.of("user", "application", "device", "group",
             "siteUser", "siteGroup", "sharePointGroup");
@@ -46,6 +51,8 @@ final class RecordingScrubber {
     private final String graphOrigin;
     private final Map<String, String> placeholders = new HashMap<>();
     private final Map<String, Integer> counters = new HashMap<>();
+    /** Real permission ids long enough to be an encoded grantee, to their placeholders. */
+    private final Map<String, String> permissionIds = new HashMap<>();
 
     /**
      * Creates a scrubber.
@@ -80,11 +87,13 @@ final class RecordingScrubber {
                 } else if (entry.getKey().equals("displayName") && value.isTextual()
                         && IDENTITIES.contains(parentKey)) {
                     out.put(entry.getKey(), placeholder("name", value.asText(), "Identity %d"));
-                } else if (entry.getKey().equals("id") && value.isTextual()
-                        && node.path("roles").isArray()) {
+                } else if (entry.getKey().equals("id") && value.isTextual() && permission(node)) {
                     // A permission id can be the grantee's sign-in name, base64-encoded.
-                    out.put(entry.getKey(), placeholder("permission", value.asText(),
-                            "permission-%04d"));
+                    String id = placeholder("permission", value.asText(), "permission-%04d");
+                    if (value.asText().length() >= ENCODED_ID_LENGTH) {
+                        permissionIds.put(value.asText(), id);
+                    }
+                    out.put(entry.getKey(), id);
                 } else {
                     out.set(entry.getKey(), json(value, entry.getKey()));
                 }
@@ -97,6 +106,12 @@ final class RecordingScrubber {
             return out;
         }
         return node.isTextual() ? JsonNodeFactory.instance.textNode(text(node.asText())) : node;
+    }
+
+    /** Whether a JSON object is a permission; a listing of site permissions leaves the roles out. */
+    private static boolean permission(JsonNode node) {
+        return node.path("roles").isArray() || node.has("grantedToIdentitiesV2")
+                || node.has("grantedToIdentities") || node.has("grantedToV2");
     }
 
     /** Whether a JSON object is an Entra user, group or other directory object. */
@@ -127,7 +142,12 @@ final class RecordingScrubber {
         if (input == null || input.isEmpty()) {
             return input;
         }
-        String guidless = guids(input);
+        String known = input;
+        for (Map.Entry<String, String> id : permissionIds.entrySet()) {
+            // A permission id seen in an answer, now in the URL of a later request.
+            known = known.replace(id.getKey(), id.getValue());
+        }
+        String guidless = guids(known);
         StringBuilder out = new StringBuilder(guidless.length());
         int i = 0;
         while (i < guidless.length()) {
@@ -352,6 +372,9 @@ final class RecordingScrubber {
             if (lower.contains(suffix.substring(1))) {
                 found.add("tenant host (" + suffix.substring(1) + ")");
             }
+        }
+        if (text.contains(ENCODED_GRANTEE)) {
+            found.add("encoded grantee of a site permission");
         }
         for (int i = 0; i < text.length(); i++) {
             if (guidAt(text, i)) {

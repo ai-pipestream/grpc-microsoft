@@ -12,6 +12,7 @@ dependencies {
     implementation(libs.jackson.databind)
     runtimeOnly(libs.log4j.core)
 
+    testImplementation(testFixtures(project(":grpc-microsoft-service")))
     testImplementation(libs.grpc.inprocess)
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.assertj)
@@ -33,7 +34,7 @@ tasks.register<Test>("liveAdminTest") {
     testClassesDirs = sourceSets.test.get().output.classesDirs
     classpath = sourceSets.test.get().runtimeClasspath
     filter {
-        includeTestsMatching("ai.pipestream.microsoft.admin.MicrosoftAdminLiveIT")
+        includeTestsMatching("ai.pipestream.microsoft.MicrosoftAdminLiveIT")
     }
     // A live run is never up to date, and the report goes to stdout.
     outputs.upToDateWhen { false }
