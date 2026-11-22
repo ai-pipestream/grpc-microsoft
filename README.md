@@ -128,9 +128,9 @@ All are application permissions with admin consent.
 | `ListSites`, `ListAllSites`, `DeltaSites` | Graph `Sites.Read.All` (tenant-wide) | refused with `Sites.Selected` alone |
 | `ListUsers`, `ListGroups`, `DeltaGroups`, `ListGroupTransitiveMembers`, `ListUserTransitiveMemberOf` | Graph `User.Read.All` and `GroupMember.Read.All` | those two |
 | `ListSiteGroups`, `GetSiteRoleInheritance` | SharePoint `Sites.Selected` plus a grant on the site, certificate credential | site grant `manage` |
-| `ListSiteGroupMembers`, `ListSiteRoleAssignments` | More than site grant `manage` (refused with it) | SharePoint `Sites.FullControl.All`; site grant `fullcontrol` not tried yet |
+| `ListSiteGroupMembers`, `ListSiteRoleAssignments` | SharePoint `Sites.Selected` plus site grant `fullcontrol`, certificate credential (refused with `manage`) | site grant `fullcontrol`; also SharePoint `Sites.FullControl.All` |
 | `ListPermissions` on a site | Graph `Sites.FullControl.All` | that |
-| `MicrosoftAdminService` | Graph `Sites.FullControl.All` | that (read and dry run) |
+| `MicrosoftAdminService` | Graph `Sites.FullControl.All` | that (grant created, changed and revoked) |
 
 ## Site grants (admin service)
 
