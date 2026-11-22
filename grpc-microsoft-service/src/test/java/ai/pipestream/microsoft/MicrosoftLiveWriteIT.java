@@ -38,13 +38,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
- * Runs {@link WriteScenarios} against the real tenant, records every Graph
- * exchange (scrubbed) under the recordings directory, and writes
+ * Runs {@link WriteScenarios} against the real tenant, records every Graph and
+ * SharePoint REST exchange (scrubbed) under the recordings directory, and writes
  * {@code build/live-write.md}.
  *
  * <p>Runs only when {@code MICROSOFT_TENANT_ID}, {@code MICROSOFT_CLIENT_ID},
  * {@code MICROSOFT_CLIENT_SECRET} and {@code MICROSOFT_SITE_ID} are set and
- * {@code MICROSOFT_LIVE_WRITE=1}. Everything it writes sits in one new folder
+ * {@code MICROSOFT_LIVE_WRITE=1}; the site security reads also need
+ * {@code MICROSOFT_CLIENT_CERT_PEM}. Everything it writes sits in one new folder
  * at the drive root and one new list, both removed at the end. Run with
  * {@code ./gradlew :grpc-microsoft-service:liveWriteTest}.</p>
  */

@@ -94,6 +94,7 @@ class MicrosoftWriteReplayTest {
         MicrosoftGrpcService service = new MicrosoftGrpcService(config, new GraphFiles(client),
                 MicrosoftGrpcService.DEFAULT_ATTACHMENT_MAX_BYTES);
         service.mutateLingerMillis(WriteScenarios.MUTATE_LINGER_MILLIS);
+        service.sharePointTokens((session, resource) -> () -> "replay-token");
         executor = Executors.newVirtualThreadPerTaskExecutor();
         String name = InProcessServerBuilder.generateName();
         server = InProcessServerBuilder.forName(name).executor(executor).addService(service).build()
