@@ -1,6 +1,15 @@
 package ai.pipestream.microsoft;
 
 import ai.pipestream.microsoft.v1.AuthMode;
+import ai.pipestream.microsoft.v1.GetSiteRoleInheritanceRequest;
+import ai.pipestream.microsoft.v1.GetSiteRoleInheritanceResponse;
+import ai.pipestream.microsoft.v1.ListSiteGroupMembersRequest;
+import ai.pipestream.microsoft.v1.ListSiteGroupMembersResponse;
+import ai.pipestream.microsoft.v1.ListSiteGroupsRequest;
+import ai.pipestream.microsoft.v1.ListSiteGroupsResponse;
+import ai.pipestream.microsoft.v1.ListSiteRoleAssignmentsRequest;
+import ai.pipestream.microsoft.v1.ListSiteRoleAssignmentsResponse;
+import ai.pipestream.microsoft.v1.SiteSecurable;
 import ai.pipestream.microsoft.v1.ColumnDefinition;
 import ai.pipestream.microsoft.v1.DeltaDriveItemsRequest;
 import ai.pipestream.microsoft.v1.DeltaDriveItemsResponse;
@@ -170,6 +179,7 @@ public final class MicrosoftGrpcService
     private final int downloadChunkBytes;
     private final WritePlans plans;
     private volatile long mutateLingerMillis = MutateHandler.DEFAULT_LINGER_MILLIS;
+    private volatile SharePointRest sharePoint = new SharePointRest(SharePointRest::certificateTokens);
 
     /**
      * Creates a service with no downstream {@link MicrosoftChangeSink}.
@@ -821,6 +831,73 @@ public final class MicrosoftGrpcService
     /** The connection resolver this service uses. */
     MicrosoftSessions sessions() {
         return sessions;
+    }
+
+    // ------------------------------------------------------------ site security
+
+    /** Replaces where SharePoint REST tokens come from. */
+    void sharePointTokens(SharePointRest.Tokens tokens) {
+        this.sharePoint = new SharePointRest(tokens);
+    }
+
+    @Override
+    public void listSiteGroups(ListSiteGroupsRequest request,
+            StreamObserver<ListSiteGroupsResponse> observer) {
+        stream(observer, () -> {
+            MicrosoftSessions.Session session = sessions.resolve(request.getConnectionId());
+            sharePoint.web(session, request.getSiteId()).forEach("/web/sitegroups", node -> {
+                observer.onNext(ListSiteGroupsResponse.newBuilder()
+                        .setGroup(SiteSecurityMapper.toGroup(node)).build());
+                return true;
+            });
+        });
+    }
+
+    @Override
+    public void listSiteGroupMembers(ListSiteGroupMembersRequest request,
+            StreamObserver<ListSiteGroupMembersResponse> observer) {
+        stream(observer, () -> {
+            MicrosoftSessions.Session session = sessions.resolve(request.getConnectionId());
+            if (request.getGroupId() <= 0) {
+                throw new IllegalArgumentException("group_id is required");
+            }
+            sharePoint.web(session, request.getSiteId()).forEach(
+                    "/web/sitegroups/getbyid(" + request.getGroupId() + ")/users", node -> {
+                        observer.onNext(ListSiteGroupMembersResponse.newBuilder()
+                                .setMember(SiteSecurityMapper.toPrincipal(node)).build());
+                        return true;
+                    });
+        });
+    }
+
+    @Override
+    public void listSiteRoleAssignments(ListSiteRoleAssignmentsRequest request,
+            StreamObserver<ListSiteRoleAssignmentsResponse> observer) {
+        stream(observer, () -> {
+            MicrosoftSessions.Session session = sessions.resolve(request.getConnectionId());
+            SiteSecurable securable = request.getSecurable();
+            sharePoint.web(session, SharePointRest.siteId(securable)).forEach(
+                    SharePointRest.path(securable) + "/roleassignments?$expand=Member,RoleDefinitionBindings",
+                    node -> {
+                        observer.onNext(ListSiteRoleAssignmentsResponse.newBuilder()
+                                .setAssignment(SiteSecurityMapper.toRoleAssignment(node)).build());
+                        return true;
+                    });
+        });
+    }
+
+    @Override
+    public void getSiteRoleInheritance(GetSiteRoleInheritanceRequest request,
+            StreamObserver<GetSiteRoleInheritanceResponse> observer) {
+        unary(observer, () -> {
+            MicrosoftSessions.Session session = sessions.resolve(request.getConnectionId());
+            SiteSecurable securable = request.getSecurable();
+            JsonNode node = sharePoint.web(session, SharePointRest.siteId(securable))
+                    .get(SharePointRest.path(securable) + "?$select=HasUniqueRoleAssignments");
+            return GetSiteRoleInheritanceResponse.newBuilder()
+                    .setHasUniqueRoleAssignments(node.path("HasUniqueRoleAssignments").asBoolean(false))
+                    .build();
+        });
     }
 
     // ------------------------------------------------------------ sync

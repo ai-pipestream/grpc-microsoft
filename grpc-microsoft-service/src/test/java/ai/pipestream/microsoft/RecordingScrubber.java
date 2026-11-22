@@ -20,12 +20,23 @@ final class RecordingScrubber {
 
     /** Start of every placeholder GUID. */
     static final String GUID_PREFIX = "00000000-0000-4000-8000-";
+    /** Domain of every placeholder email address. */
+    static final String EMAIL_DOMAIN = "example.invalid";
     /** Start of every placeholder URL. */
     static final String URL_PREFIX = "https://redacted.example/url/";
 
     /** JSON objects whose {@code displayName} names a person, group or app. */
     private static final Set<String> IDENTITIES = Set.of("user", "application", "device", "group",
             "siteUser", "siteGroup", "sharePointGroup");
+    /** {@code @odata.type} values of directory objects. */
+    private static final Set<String> DIRECTORY_TYPES = Set.of("#microsoft.graph.user",
+            "#microsoft.graph.group", "#microsoft.graph.device", "#microsoft.graph.servicePrincipal",
+            "#microsoft.graph.orgContact");
+    /** Properties of a directory object that say nothing about who it is. */
+    private static final Set<String> DIRECTORY_KEPT = Set.of("id", "@odata.type", "userType",
+            "visibility", "groupTypes", "preferredLanguage");
+    /** Properties of a SharePoint principal that hold its name. */
+    private static final Set<String> PRINCIPAL_NAMES = Set.of("Title", "Description", "OwnerTitle");
     /** Host suffixes that name the tenant. */
     private static final List<String> TENANT_HOSTS = List.of(".sharepoint.com",
             ".onmicrosoft.com", ".sharepoint.us", ".sharepoint.de", ".sharepoint.cn");
@@ -51,9 +62,20 @@ final class RecordingScrubber {
     private JsonNode json(JsonNode node, String parentKey) {
         if (node.isObject()) {
             ObjectNode out = JsonNodeFactory.instance.objectNode();
+            boolean directory = directoryObject(node);
+            boolean principal = node.has("LoginName");
             for (Map.Entry<String, JsonNode> entry : node.properties()) {
                 JsonNode value = entry.getValue();
-                if (entry.getKey().equals("displayName") && value.isTextual()
+                if (directory && !DIRECTORY_KEPT.contains(entry.getKey())
+                        && !entry.getKey().endsWith("DateTime") && (value.isTextual()
+                        || (value.isArray() && !value.isEmpty() && value.get(0).isTextual()))) {
+                    out.set(entry.getKey(), directoryValue(value));
+                } else if (principal && value.isTextual() && (PRINCIPAL_NAMES.contains(entry.getKey())
+                        || (entry.getKey().equals("LoginName") && value.asText().indexOf('|') < 0))) {
+                    out.put(entry.getKey(), name("principal", value.asText(), "Principal %d"));
+                } else if (entry.getKey().equals("NameId") && value.isTextual()) {
+                    out.put(entry.getKey(), name("nameid", value.asText(), "nameid-%04d"));
+                } else if (entry.getKey().equals("displayName") && value.isTextual()
                         && IDENTITIES.contains(parentKey)) {
                     out.put(entry.getKey(), placeholder("name", value.asText(), "Identity %d"));
                 } else if (entry.getKey().equals("id") && value.isTextual()
@@ -75,6 +97,29 @@ final class RecordingScrubber {
         return node.isTextual() ? JsonNodeFactory.instance.textNode(text(node.asText())) : node;
     }
 
+    /** Whether a JSON object is an Entra user, group or other directory object. */
+    private static boolean directoryObject(JsonNode node) {
+        return node.has("userPrincipalName") || node.has("mailNickname") || node.has("securityEnabled")
+                || DIRECTORY_TYPES.contains(node.path("@odata.type").asText());
+    }
+
+    /** A directory property: addresses become placeholder addresses, anything else a numbered value. */
+    private JsonNode directoryValue(JsonNode value) {
+        if (value.isArray()) {
+            ArrayNode out = JsonNodeFactory.instance.arrayNode();
+            value.forEach(element -> out.add(element.isTextual() ? directoryValue(element) : element));
+            return out;
+        }
+        String text = value.asText();
+        String scrubbed = text(text);
+        return JsonNodeFactory.instance.textNode(scrubbed.equals(text)
+                ? name("directory", text, "Directory value %d") : scrubbed);
+    }
+
+    private String name(String kind, String real, String format) {
+        return real.isEmpty() ? real : placeholder(kind, real, format);
+    }
+
     /** Scrubs free text: URLs, tokens, GUIDs, drive and item ids, hosts and emails. */
     synchronized String text(String input) {
         if (input == null || input.isEmpty()) {
@@ -88,9 +133,14 @@ final class RecordingScrubber {
             if (url > i) {
                 String value = guidless.substring(i, url);
                 String origin = origin(value);
+                int api = apiStart(value);
                 if (origin.equalsIgnoreCase(graphOrigin)) {
                     out.append(graphOrigin);
                     i += origin.length();
+                } else if (api > 0) {
+                    // A site's REST API: the site's address is replaced, the API path stays.
+                    out.append(placeholder("url", value.substring(0, api), URL_PREFIX + "%d"));
+                    i += api;
                 } else {
                     out.append(placeholder("url", value, URL_PREFIX + "%d"));
                     i = url;
@@ -139,7 +189,7 @@ final class RecordingScrubber {
 
     private String word(String word) {
         if (emailLike(word)) {
-            return placeholder("email", word.toLowerCase(Locale.ROOT), "email-%d.example.invalid");
+            return placeholder("email", word.toLowerCase(Locale.ROOT), "email-%d@" + EMAIL_DOMAIN);
         }
         String lower = word.toLowerCase(Locale.ROOT);
         for (String suffix : TENANT_HOSTS) {
@@ -215,6 +265,13 @@ final class RecordingScrubber {
         return run(text, at, c -> !Character.isWhitespace(c) && c != '"' && c != '<' && c != '>');
     }
 
+    /** Where {@code /_api/web} starts in the URL of a site's REST API; -1 in any other URL. */
+    static int apiStart(String url) {
+        int at = url.indexOf("/_api/web");
+        int end = at + 9;
+        return at > 0 && (end == url.length() || "/?".indexOf(url.charAt(end)) >= 0) ? at : -1;
+    }
+
     /** {@code scheme://host[:port]} of a URL. */
     static String origin(String url) {
         int start = url.indexOf("://");
@@ -264,7 +321,7 @@ final class RecordingScrubber {
 
     /**
      * What in {@code text} still looks like tenant data: a token, a tenant host,
-     * an email address, or a GUID that is not a placeholder.
+     * an email address or a GUID that is not a placeholder.
      */
     static List<String> violations(String text) {
         List<String> found = new ArrayList<>();
@@ -291,7 +348,8 @@ final class RecordingScrubber {
                     start--;
                 }
                 int end = run(text, i + 1, RecordingScrubber::wordChar);
-                if (emailLike(text.substring(start, end))) {
+                if (emailLike(text.substring(start, end))
+                        && !text.substring(i + 1, end).equalsIgnoreCase(EMAIL_DOMAIN)) {
                     found.add("email address at offset " + start);
                 }
             }

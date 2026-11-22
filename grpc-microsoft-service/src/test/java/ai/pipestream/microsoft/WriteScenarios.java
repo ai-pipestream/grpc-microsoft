@@ -50,6 +50,22 @@ import ai.pipestream.microsoft.v1.UploadItemHeader;
 import ai.pipestream.microsoft.v1.UploadItemRequest;
 import ai.pipestream.microsoft.v1.UploadItemResponse;
 import ai.pipestream.microsoft.v1.WriteErrorCode;
+import ai.pipestream.microsoft.v1.DirectoryMember;
+import ai.pipestream.microsoft.v1.GetSiteRoleInheritanceRequest;
+import ai.pipestream.microsoft.v1.GraphGroup;
+import ai.pipestream.microsoft.v1.GraphUser;
+import ai.pipestream.microsoft.v1.ListGroupTransitiveMembersRequest;
+import ai.pipestream.microsoft.v1.ListGroupsRequest;
+import ai.pipestream.microsoft.v1.ListSiteGroupMembersRequest;
+import ai.pipestream.microsoft.v1.ListSiteGroupsRequest;
+import ai.pipestream.microsoft.v1.ListSiteRoleAssignmentsRequest;
+import ai.pipestream.microsoft.v1.ListUserTransitiveMemberOfRequest;
+import ai.pipestream.microsoft.v1.ListUsersRequest;
+import ai.pipestream.microsoft.v1.SiteGroup;
+import ai.pipestream.microsoft.v1.SitePrincipal;
+import ai.pipestream.microsoft.v1.SitePrincipalType;
+import ai.pipestream.microsoft.v1.SiteRoleAssignment;
+import ai.pipestream.microsoft.v1.SiteSecurable;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.Timestamp;
 import io.grpc.StatusRuntimeException;
@@ -231,6 +247,9 @@ final class WriteScenarios {
     private DriveItem copy;
     private String itemId;
     private boolean columnsReady;
+    private String userId;
+    private String groupId;
+    private Integer siteGroupId;
 
     /**
      * Creates the scenarios of one run.
@@ -305,6 +324,24 @@ final class WriteScenarios {
                         "ListPermissions [test list]", this::permissionsOfTheList),
                 new Scenario("list-permissions-list-item", "ListPermissions",
                         "ListPermissions [list item]", this::permissionsOfTheListItem),
+                new Scenario("list-users", "ListUsers", "ListUsers", this::users),
+                new Scenario("list-groups", "ListGroups", "ListGroups", this::groups),
+                new Scenario("list-group-transitive-members", "ListGroupTransitiveMembers",
+                        "ListGroupTransitiveMembers", this::membersOfAGroup),
+                new Scenario("list-user-transitive-member-of", "ListUserTransitiveMemberOf",
+                        "ListUserTransitiveMemberOf", this::groupsOfAUser),
+                new Scenario("list-site-groups", "ListSiteGroups", "ListSiteGroups",
+                        this::siteGroups),
+                new Scenario("list-site-group-members", "ListSiteGroupMembers",
+                        "ListSiteGroupMembers", this::siteGroupMembers),
+                new Scenario("get-site-role-inheritance-site", "GetSiteRoleInheritance",
+                        "GetSiteRoleInheritance [site]", this::inheritanceOfTheSite),
+                new Scenario("get-site-role-inheritance-list", "GetSiteRoleInheritance",
+                        "GetSiteRoleInheritance [test list]", this::inheritanceOfTheList),
+                new Scenario("list-site-role-assignments-site", "ListSiteRoleAssignments",
+                        "ListSiteRoleAssignments [site]", this::roleAssignmentsOfTheSite),
+                new Scenario("list-site-role-assignments-list", "ListSiteRoleAssignments",
+                        "ListSiteRoleAssignments [test list]", this::roleAssignmentsOfTheList),
                 new Scenario("update-list-item-fields", "UpdateListItemFields",
                         "UpdateListItemFields [every column type]", this::updateListItemFields),
                 new Scenario("update-list-item-fields-drive-item", "UpdateListItemFields",
@@ -863,6 +900,179 @@ final class WriteScenarios {
                 .build()).forEachRemaining(response -> ids.add(response.getItem().getId()));
         check(ids.contains(itemId), "the list holds items " + ids);
         return ids.size() + " item(s), the created one among them";
+    }
+
+    // ------------------------------------------------------------ directory
+
+    private String users() {
+        List<GraphUser> users = new ArrayList<>();
+        stub().listUsers(ListUsersRequest.getDefaultInstance())
+                .forEachRemaining(response -> users.add(response.getUser()));
+        check(!users.isEmpty(), "the directory has no user");
+        check(users.stream().noneMatch(user -> user.getId().isEmpty()), "a user has no id");
+        check(users.stream().map(GraphUser::getId).distinct().count() == users.size(),
+                "a user was listed twice");
+        check(users.stream().anyMatch(user -> !user.getUserPrincipalName().isEmpty()),
+                "no user has a sign-in name");
+        userId = users.get(0).getId();
+        return users.size() + " user(s)";
+    }
+
+    private String groups() {
+        List<GraphGroup> groups = new ArrayList<>();
+        stub().listGroups(ListGroupsRequest.getDefaultInstance())
+                .forEachRemaining(response -> groups.add(response.getGroup()));
+        check(groups.stream().noneMatch(group -> group.getId().isEmpty()), "a group has no id");
+        check(groups.stream().map(GraphGroup::getId).distinct().count() == groups.size(),
+                "a group was listed twice");
+        if (!groups.isEmpty()) {
+            groupId = groups.get(0).getId();
+        }
+        return groups.size() + " group(s)";
+    }
+
+    private String membersOfAGroup() {
+        need(groupId, "a group");
+        List<DirectoryMember> members = new ArrayList<>();
+        stub().listGroupTransitiveMembers(ListGroupTransitiveMembersRequest.newBuilder()
+                .setGroupId(groupId).build())
+                .forEachRemaining(response -> members.add(response.getMember()));
+        return members.size() + " member(s), kinds " + memberKinds(members);
+    }
+
+    private String groupsOfAUser() {
+        need(userId, "a user");
+        List<DirectoryMember> memberships = new ArrayList<>();
+        stub().listUserTransitiveMemberOf(ListUserTransitiveMemberOfRequest.newBuilder()
+                .setUserId(userId).build())
+                .forEachRemaining(response -> memberships.add(response.getMember()));
+        check(memberships.stream().noneMatch(DirectoryMember::hasUser), "a user is a member of a user");
+        return memberships.size() + " membership(s), kinds " + memberKinds(memberships);
+    }
+
+    /** How many members there are of each kind; fails when one has no id. */
+    private static Map<String, Integer> memberKinds(List<DirectoryMember> members) {
+        Map<String, Integer> kinds = new TreeMap<>();
+        for (DirectoryMember member : members) {
+            String id = switch (member.getMemberCase()) {
+                case USER -> member.getUser().getId();
+                case GROUP -> member.getGroup().getId();
+                case OTHER -> member.getOther().getId();
+                case MEMBER_NOT_SET -> "";
+            };
+            check(!id.isEmpty(), "a member has no id");
+            kinds.merge(member.getMemberCase() == DirectoryMember.MemberCase.OTHER
+                    ? member.getOther().getType() : member.getMemberCase().name().toLowerCase(
+                            java.util.Locale.ROOT), 1, Integer::sum);
+        }
+        return kinds;
+    }
+
+    // ------------------------------------------------------------ site security
+
+    private String siteGroups() {
+        List<SiteGroup> groups = new ArrayList<>();
+        stub().listSiteGroups(ListSiteGroupsRequest.newBuilder().setSiteId(siteId).build())
+                .forEachRemaining(response -> groups.add(response.getGroup()));
+        check(!groups.isEmpty(), "the site has no group");
+        for (SiteGroup group : groups) {
+            check(group.getId() > 0, "a site group has no id");
+            check(!group.getTitle().isEmpty(), "a site group has no title");
+        }
+        check(groups.stream().map(SiteGroup::getId).distinct().count() == groups.size(),
+                "a site group was listed twice");
+        siteGroupId = groups.get(0).getId();
+        return groups.size() + " group(s)";
+    }
+
+    private String siteGroupMembers() {
+        need(siteGroupId, "a site group");
+        List<SitePrincipal> members = new ArrayList<>();
+        try {
+            stub().listSiteGroupMembers(ListSiteGroupMembersRequest.newBuilder().setSiteId(siteId)
+                    .setGroupId(siteGroupId).build())
+                    .forEachRemaining(response -> members.add(response.getMember()));
+        } catch (StatusRuntimeException e) {
+            throw notGranted(e);
+        }
+        Map<String, Integer> kinds = new TreeMap<>();
+        for (SitePrincipal member : members) {
+            checkPrincipal(member);
+            kinds.merge(member.getPrincipalType().name(), 1, Integer::sum);
+        }
+        return members.size() + " member(s), kinds " + kinds;
+    }
+
+    private String inheritanceOfTheSite() {
+        boolean unique = stub().getSiteRoleInheritance(GetSiteRoleInheritanceRequest.newBuilder()
+                .setSecurable(SiteSecurable.newBuilder().setSiteId(siteId)).build())
+                .getHasUniqueRoleAssignments();
+        check(unique, "the site's root web has no role assignments of its own");
+        return "the site has its own role assignments";
+    }
+
+    private String inheritanceOfTheList() {
+        need(listId, "the test list");
+        boolean unique = stub().getSiteRoleInheritance(GetSiteRoleInheritanceRequest.newBuilder()
+                .setSecurable(listSecurable()).build()).getHasUniqueRoleAssignments();
+        check(!unique, "a new list does not inherit the site's role assignments");
+        return "the new list inherits from the site";
+    }
+
+    private String roleAssignmentsOfTheSite() {
+        return roleAssignments(SiteSecurable.newBuilder().setSiteId(siteId).build());
+    }
+
+    private String roleAssignmentsOfTheList() {
+        need(listId, "the test list");
+        return roleAssignments(listSecurable());
+    }
+
+    private SiteSecurable listSecurable() {
+        return SiteSecurable.newBuilder()
+                .setList(ListRef.newBuilder().setSiteId(siteId).setListId(listId)).build();
+    }
+
+    /** Lists the role assignments of a securable and answers how many and their permission levels. */
+    private String roleAssignments(SiteSecurable securable) {
+        List<SiteRoleAssignment> assignments = new ArrayList<>();
+        try {
+            stub().listSiteRoleAssignments(ListSiteRoleAssignmentsRequest.newBuilder()
+                    .setSecurable(securable).build())
+                    .forEachRemaining(response -> assignments.add(response.getAssignment()));
+        } catch (StatusRuntimeException e) {
+            throw notGranted(e);
+        }
+        check(!assignments.isEmpty(), "nothing is assigned");
+        Set<String> levels = new TreeSet<>();
+        for (SiteRoleAssignment assignment : assignments) {
+            check(assignment.hasMember(), "an assignment names no member");
+            check(assignment.getPrincipalId() == assignment.getMember().getId(),
+                    "an assignment's member is not its principal");
+            checkPrincipal(assignment.getMember());
+            check(assignment.getRolesCount() > 0, "an assignment has no permission level");
+            assignment.getRolesList().forEach(role -> {
+                check(role.getId() > 0 && !role.getName().isEmpty(), "a permission level has no id or name");
+                levels.add(role.getName());
+            });
+        }
+        return assignments.size() + " assignment(s), levels " + levels;
+    }
+
+    private static void checkPrincipal(SitePrincipal principal) {
+        check(principal.getId() > 0, "a principal has no id");
+        check(principal.getPrincipalType() != SitePrincipalType.SITE_PRINCIPAL_TYPE_UNSPECIFIED,
+                "a principal has no type");
+        check(!principal.getLoginName().isEmpty(), "a principal has no login name");
+    }
+
+    /** A skip when SharePoint refused the read for lack of permission; any other error as it is. */
+    private static RuntimeException notGranted(StatusRuntimeException e) {
+        if (e.getStatus().getCode() != io.grpc.Status.Code.PERMISSION_DENIED) {
+            return e;
+        }
+        return new Skip("the app's grant on the site does not allow this read: "
+                + e.getStatus().getDescription());
     }
 
     private String permissionsOfTheFile() {

@@ -22,6 +22,10 @@ on:
         description: Call every read rpc against the test site and print each call's outcome (read-only)
         type: boolean
         default: false
+      live_coverage_admin:
+        description: Run the read-only coverage with the admin app's certificate instead of the test app
+        type: boolean
+        default: false
       import_recordings_run_id:
         description: Commit the recordings artifact of this run id to the branch as replay data
         type: string
@@ -197,9 +201,9 @@ jobs:
         working-directory: grpc-microsoft
         env:
           MICROSOFT_TENANT_ID: ${{ secrets.MICROSOFT_TENANT_ID }}
-          MICROSOFT_CLIENT_ID: ${{ secrets.MICROSOFT_CLIENT_ID }}
-          MICROSOFT_CLIENT_SECRET: ${{ secrets.MICROSOFT_CLIENT_SECRET }}
-          MICROSOFT_CLIENT_CERT_PEM: ${{ secrets.MICROSOFT_CLIENT_CERT_PEM }}
+          MICROSOFT_CLIENT_ID: ${{ inputs.live_coverage_admin && secrets.MICROSOFT_ADMIN_CLIENT_ID || secrets.MICROSOFT_CLIENT_ID }}
+          MICROSOFT_CLIENT_SECRET: ${{ inputs.live_coverage_admin && secrets.MICROSOFT_ADMIN_CLIENT_SECRET || secrets.MICROSOFT_CLIENT_SECRET }}
+          MICROSOFT_CLIENT_CERT_PEM: ${{ inputs.live_coverage_admin && secrets.MICROSOFT_ADMIN_CLIENT_CERT_PEM || secrets.MICROSOFT_CLIENT_CERT_PEM }}
           MICROSOFT_SITE_ID: ${{ inputs.live_write_site_id || env.LIVE_SITE_ID }}
           MICROSOFT_DRIVE_IDS: ${{ secrets.MICROSOFT_DRIVE_IDS }}
         run: |
@@ -238,6 +242,7 @@ jobs:
           MICROSOFT_TENANT_ID: ${{ secrets.MICROSOFT_TENANT_ID }}
           MICROSOFT_CLIENT_ID: ${{ secrets.MICROSOFT_CLIENT_ID }}
           MICROSOFT_CLIENT_SECRET: ${{ secrets.MICROSOFT_CLIENT_SECRET }}
+          MICROSOFT_CLIENT_CERT_PEM: ${{ secrets.MICROSOFT_CLIENT_CERT_PEM }}
           MICROSOFT_SITE_ID: ${{ inputs.live_write_site_id || env.LIVE_SITE_ID }}
           MICROSOFT_DRIVE_IDS: ${{ secrets.MICROSOFT_DRIVE_IDS }}
           MICROSOFT_LIVE_WRITE: "1"

@@ -134,6 +134,10 @@ class MicrosoftLiveCoverageIT {
             Map.entry("DeltaListItems", "GET /sites/{site-id}/lists/{list-id}/items/delta"),
             Map.entry("ListColumns", "GET /sites/{site-id}[/lists/{id}|/contentTypes/{id}]/columns"),
             Map.entry("ListPermissions", "GET .../permissions"),
+            Map.entry("ListSiteGroups", "GET {web}/_api/web/sitegroups"),
+            Map.entry("ListSiteGroupMembers", "GET {web}/_api/web/sitegroups/getbyid({id})/users"),
+            Map.entry("ListSiteRoleAssignments", "GET {web}/_api/{securable}/roleassignments"),
+            Map.entry("GetSiteRoleInheritance", "GET {web}/_api/{securable}?$select=HasUniqueRoleAssignments"),
             Map.entry("ListUsers", "GET /users"),
             Map.entry("ListGroups", "GET /groups"),
             Map.entry("ListGroupTransitiveMembers", "GET /groups/{group-id}/transitiveMembers"),
@@ -429,6 +433,32 @@ class MicrosoftLiveCoverageIT {
                             .setUserId(userId).build()),
                     l -> l.size() + " membership(s)");
         }
+
+        // ------------------------------------------------ site security --
+        List<ListSiteGroupsResponse> siteGroups = stream("ListSiteGroups", "ListSiteGroups", LIST_CAP,
+                s -> s.listSiteGroups(ListSiteGroupsRequest.newBuilder().setSiteId(chosenSite).build()),
+                l -> l.size() + " group(s)");
+        if (siteGroups == null || siteGroups.isEmpty()) {
+            skip("ListSiteGroupMembers", "no site group was listed");
+        } else {
+            int groupId = siteGroups.get(0).getGroup().getId();
+            stream("ListSiteGroupMembers", "ListSiteGroupMembers", LIST_CAP,
+                    s -> s.listSiteGroupMembers(ListSiteGroupMembersRequest.newBuilder()
+                            .setSiteId(chosenSite).setGroupId(groupId).build()),
+                    l -> l.size() + " member(s), kinds " + l.stream()
+                            .map(r -> r.getMember().getPrincipalType().name()).distinct().sorted().toList());
+        }
+        SiteSecurable siteSecurable = SiteSecurable.newBuilder().setSiteId(chosenSite).build();
+        stream("ListSiteRoleAssignments", "ListSiteRoleAssignments [site]", LIST_CAP,
+                s -> s.listSiteRoleAssignments(ListSiteRoleAssignmentsRequest.newBuilder()
+                        .setSecurable(siteSecurable).build()),
+                l -> l.size() + " assignment(s), levels " + l.stream()
+                        .flatMap(r -> r.getAssignment().getRolesList().stream())
+                        .map(role -> role.getName()).distinct().sorted().toList());
+        unary("GetSiteRoleInheritance", "GetSiteRoleInheritance [site]",
+                s -> s.getSiteRoleInheritance(GetSiteRoleInheritanceRequest.newBuilder()
+                        .setSecurable(siteSecurable).build()),
+                r -> "unique " + r.getHasUniqueRoleAssignments());
 
         // -------------------------------------------------------- sync --
         if (syncDrive != null) {
@@ -766,6 +796,16 @@ class MicrosoftLiveCoverageIT {
                 s -> s.listPermissions(ListPermissionsRequest.newBuilder().setTarget(PermissionTarget.newBuilder()
                         .setList(ListRef.newBuilder().setSiteId(siteId).setListId(listId))).build()),
                 l -> join(l, r -> r.getPermission().getId()));
+        SiteSecurable listSecurable = SiteSecurable.newBuilder()
+                .setList(ListRef.newBuilder().setSiteId(siteId).setListId(listId)).build();
+        stream("ListSiteRoleAssignments", "ListSiteRoleAssignments [list]", LIST_CAP,
+                s -> s.listSiteRoleAssignments(ListSiteRoleAssignmentsRequest.newBuilder()
+                        .setSecurable(listSecurable).build()),
+                l -> l.size() + " assignment(s)");
+        unary("GetSiteRoleInheritance", "GetSiteRoleInheritance [list]",
+                s -> s.getSiteRoleInheritance(GetSiteRoleInheritanceRequest.newBuilder()
+                        .setSecurable(listSecurable).build()),
+                r -> "unique " + r.getHasUniqueRoleAssignments());
         if (item == null) {
             skip("GetListItem", "no item in the first " + Math.min(ordered.size(), LIST_ITEM_PROBES) + " list(s)");
             skip("ListPermissions", "ListPermissions [list item]", "no list item found");

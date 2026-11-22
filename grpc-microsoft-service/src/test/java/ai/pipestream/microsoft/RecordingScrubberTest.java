@@ -43,9 +43,9 @@ class RecordingScrubberTest {
         assertThat(scrubber.text("Bearer eyJ0eXAiOiJKV1QifQ.eyJhdWQiOiJ4In0.c2lnbmF0dXJl"))
                 .isEqualTo("Bearer token-redacted");
         assertThat(scrubber.text("i:0#.f|membership|Ada.Lovelace@contoso.onmicrosoft.com"))
-                .isEqualTo("i:0#.f|membership|email-1.example.invalid");
+                .isEqualTo("i:0#.f|membership|email-1@example.invalid");
         assertThat(scrubber.text("ada.lovelace@contoso.onmicrosoft.com"))
-                .isEqualTo("email-1.example.invalid");
+                .isEqualTo("email-1@example.invalid");
         assertThat(scrubber.text("host contoso.sharepoint.com")).isEqualTo("host tenant-1.example");
         assertThat(scrubber.text("pipestream-live-write-20260102-030405-1a2b3c4d"))
                 .isEqualTo("pipestream-live-write-20260102-030405-1a2b3c4d");
@@ -74,7 +74,7 @@ class RecordingScrubberTest {
         assertThat(scrubbed.path("webUrl").asText()).startsWith(RecordingScrubber.URL_PREFIX);
         JsonNode user = scrubbed.path("createdBy").path("user");
         assertThat(user.path("displayName").asText()).isEqualTo("Identity 1");
-        assertThat(user.path("email").asText()).isEqualTo("email-1.example.invalid");
+        assertThat(user.path("email").asText()).isEqualTo("email-1@example.invalid");
         assertThat(user.path("id").asText()).startsWith(RecordingScrubber.GUID_PREFIX);
         assertThat(scrubbed.path("createdBy").path("application").path("displayName").asText())
                 .isEqualTo("Identity 2");
@@ -114,5 +114,47 @@ class RecordingScrubberTest {
         assertThat(RecordingScrubber.violations("x CONTOSO.SharePoint.com y")).hasSize(1);
         assertThat(RecordingScrubber.violations("eyJ0eXAiOiJKV1QifQ.eyJhdWQiOiJ4In0.c2ln"))
                 .hasSize(1);
+    }
+
+    @Test
+    void aSiteRestUrlKeepsItsApiPathAndSharesThePlaceholderOfTheSite() {
+        RecordingScrubber scrubber = new RecordingScrubber("https://graph.microsoft.com/v1.0");
+        String site = scrubber.text("https://contoso.sharepoint.com/sites/Team");
+        assertThat(site).isEqualTo(RecordingScrubber.URL_PREFIX + "1");
+        assertThat(scrubber.text("https://contoso.sharepoint.com/sites/Team/_api/web/lists(guid'"
+                + GUID_A + "')/roleassignments?$expand=Member"))
+                .isEqualTo(site + "/_api/web/lists(guid'" + RecordingScrubber.GUID_PREFIX
+                        + "000000000001')/roleassignments?$expand=Member");
+    }
+
+    @Test
+    void directoryObjectsAndSharePointPrincipalsLoseTheirNames() throws Exception {
+        RecordingScrubber scrubber = new RecordingScrubber("https://graph.microsoft.com/v1.0");
+        JsonNode user = scrubber.json(Recordings.JSON.readTree("""
+                {"id":"u1","displayName":"Ada Lovelace","userPrincipalName":"ada@contoso.com",
+                 "jobTitle":"Engineer","businessPhones":["+1 555 0100"],"userType":"Member",
+                 "createdDateTime":"2024-01-02T03:04:05Z","mail":null}"""));
+        assertThat(user.path("displayName").asText()).isEqualTo("Directory value 1");
+        assertThat(user.path("userPrincipalName").asText()).isEqualTo("email-1@example.invalid");
+        assertThat(user.path("jobTitle").asText()).isEqualTo("Directory value 2");
+        assertThat(user.path("businessPhones").path(0).asText()).isEqualTo("Directory value 3");
+        assertThat(user.path("userType").asText()).isEqualTo("Member");
+        assertThat(user.path("createdDateTime").asText()).isEqualTo("2024-01-02T03:04:05Z");
+        assertThat(user.path("mail").isNull()).isTrue();
+
+        JsonNode group = scrubber.json(Recordings.JSON.readTree("""
+                {"Id":5,"LoginName":"Team Owners","Title":"Team Owners","OwnerTitle":"Team Owners",
+                 "Description":"Owners of Team","PrincipalType":8}"""));
+        assertThat(group.path("Title").asText()).isEqualTo("Principal 1");
+        assertThat(group.path("LoginName").asText()).isEqualTo("Principal 1");
+        assertThat(group.path("OwnerTitle").asText()).isEqualTo("Principal 1");
+        assertThat(group.path("Description").asText()).isEqualTo("Principal 2");
+        JsonNode member = scrubber.json(Recordings.JSON.readTree("""
+                {"Id":9,"LoginName":"i:0#.f|membership|ada@contoso.com","Title":"Ada Lovelace",
+                 "UserId":{"NameId":"100320012345abcd","NameIdIssuer":"urn:federation:microsoftonline"}}"""));
+        assertThat(member.path("LoginName").asText())
+                .isEqualTo("i:0#.f|membership|email-1@example.invalid");
+        assertThat(member.path("Title").asText()).isEqualTo("Principal 3");
+        assertThat(member.path("UserId").path("NameId").asText()).isEqualTo("nameid-0001");
     }
 }

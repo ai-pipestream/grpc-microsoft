@@ -184,6 +184,17 @@ public final class GraphClient {
     }
 
     /**
+     * A client for another API root that sends through the same transport.
+     *
+     * @param baseUrl the other API's root URL
+     * @param bearer supplies a current access token for that API
+     * @return the client
+     */
+    GraphClient sibling(String baseUrl, Supplier<String> bearer) {
+        return new GraphClient(baseUrl, bearer, authMode, http);
+    }
+
+    /**
      * The Graph root URL every relative path is resolved against.
      *
      * @return the base URL without a trailing slash
@@ -801,8 +812,14 @@ public final class GraphClient {
         String message = body == null ? "" : body;
         try {
             JsonNode node = JSON.readTree(body);
-            code = node.path("error").path("code").asText("");
-            message = node.path("error").path("message").asText(message);
+            JsonNode sharePoint = node.path("odata.error");
+            if (sharePoint.isObject()) {
+                code = sharePoint.path("code").asText("");
+                message = sharePoint.path("message").path("value").asText(message);
+            } else {
+                code = node.path("error").path("code").asText("");
+                message = node.path("error").path("message").asText(message);
+            }
         } catch (Exception ignored) {
             // not JSON; keep the raw body as the message
         }

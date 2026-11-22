@@ -175,13 +175,24 @@ final class MicrosoftSessions {
      * @return the bearer supplier
      */
     static Supplier<String> tokenSupplier(GraphAuth auth) {
+        return tokenSupplier(auth, GraphAuth.GRAPH_SCOPE);
+    }
+
+    /**
+     * A lazily refreshed client-credentials token for one resource.
+     *
+     * @param auth the Entra helper
+     * @param scope the resource's {@code .default} scope
+     * @return the bearer supplier
+     */
+    static Supplier<String> tokenSupplier(GraphAuth auth, String scope) {
         Object lock = new Object();
         GraphAuth.Token[] holder = new GraphAuth.Token[1];
         return () -> {
             synchronized (lock) {
                 if (holder[0] == null || holder[0].expired()) {
                     try {
-                        holder[0] = auth.clientCredentials();
+                        holder[0] = auth.clientCredentials(scope);
                     } catch (IOException e) {
                         throw new IllegalStateException("token request failed: " + e.getMessage(), e);
                     } catch (InterruptedException e) {
