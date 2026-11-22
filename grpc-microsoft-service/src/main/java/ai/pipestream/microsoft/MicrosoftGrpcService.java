@@ -13,6 +13,8 @@ import ai.pipestream.microsoft.v1.SiteSecurable;
 import ai.pipestream.microsoft.v1.ColumnDefinition;
 import ai.pipestream.microsoft.v1.DeltaDriveItemsRequest;
 import ai.pipestream.microsoft.v1.DeltaDriveItemsResponse;
+import ai.pipestream.microsoft.v1.DeltaGroupsRequest;
+import ai.pipestream.microsoft.v1.DeltaGroupsResponse;
 import ai.pipestream.microsoft.v1.DeltaListItemsRequest;
 import ai.pipestream.microsoft.v1.DeltaListItemsResponse;
 import ai.pipestream.microsoft.v1.DeltaResync;
@@ -452,6 +454,38 @@ public final class MicrosoftGrpcService
                         }
                     });
             observer.onNext(DeltaSitesResponse.newBuilder().setDeltaLink(outcome.deltaLink()).build());
+        });
+    }
+
+    @Override
+    public void deltaGroups(DeltaGroupsRequest request, StreamObserver<DeltaGroupsResponse> observer) {
+        stream(observer, () -> {
+            MicrosoftSessions.Session session = sessions.resolve(request.getConnectionId());
+            String base = "/groups/delta";
+            String link = request.getDeltaLink().trim();
+            List<String> fresh = List.of(base + "?$select=" + GraphPaths.GROUP_SELECT
+                    + (request.getIncludeMembers() ? ",members" : ""));
+            if (link.equalsIgnoreCase("latest")) {
+                // Directory deltas spell the "from now" token differently from drives and sites.
+                fresh = List.of(base + "?$deltatoken=latest");
+                link = "";
+            } else if (!link.isEmpty()) {
+                GraphLinks.requireDeltaLink(session.graph().baseUrl(), link, "groups");
+            }
+            GraphPager.DeltaOutcome outcome = session.pager().delta(fresh, link, Map.of(),
+                    new GraphPager.DeltaVisitor() {
+                        @Override
+                        public void resync(DeltaResync resync) {
+                            observer.onNext(DeltaGroupsResponse.newBuilder().setResync(resync).build());
+                        }
+
+                        @Override
+                        public void item(JsonNode node) {
+                            observer.onNext(DeltaGroupsResponse.newBuilder()
+                                    .setChange(valid(mapper.toGroupChange(node))).build());
+                        }
+                    });
+            observer.onNext(DeltaGroupsResponse.newBuilder().setDeltaLink(outcome.deltaLink()).build());
         });
     }
 

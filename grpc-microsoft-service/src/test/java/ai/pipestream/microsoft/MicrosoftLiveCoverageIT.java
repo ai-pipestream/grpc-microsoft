@@ -140,6 +140,7 @@ class MicrosoftLiveCoverageIT {
             Map.entry("GetSiteRoleInheritance", "GET {web}/_api/{securable}?$select=HasUniqueRoleAssignments"),
             Map.entry("ListUsers", "GET /users"),
             Map.entry("ListGroups", "GET /groups"),
+            Map.entry("DeltaGroups", "GET /groups/delta"),
             Map.entry("ListGroupTransitiveMembers", "GET /groups/{group-id}/transitiveMembers"),
             Map.entry("ListUserTransitiveMemberOf", "GET /users/{user-id}/transitiveMemberOf"),
             Map.entry("Sync", "delta crawl of one drive"));
@@ -415,6 +416,11 @@ class MicrosoftLiveCoverageIT {
         List<ListGroupsResponse> groups = stream("ListGroups", "ListGroups", LIST_CAP,
                 s -> s.listGroups(ListGroupsRequest.getDefaultInstance()),
                 l -> l.size() + " group(s)");
+        delta("DeltaGroups", "tenant", LIST_CAP,
+                link -> s -> s.deltaGroups(DeltaGroupsRequest.newBuilder().setDeltaLink(link)
+                        .setIncludeMembers(true).build()),
+                r -> r.getEventCase() == DeltaGroupsResponse.EventCase.DELTA_LINK ? r.getDeltaLink() : null,
+                r -> r.getEventCase() == DeltaGroupsResponse.EventCase.RESYNC);
         if (groups == null || groups.isEmpty()) {
             skip("ListGroupTransitiveMembers", "no group was listed");
         } else {

@@ -65,3 +65,26 @@ message DirectoryMember {
     DirectoryObject other = 3;
   }
 }
+
+// A direct member that was added to or removed from a group.
+message GroupMemberChange {
+  // Graph object id of the member.
+  string id = 1;
+  // Graph type of the member, as `@odata.type` reports it without the
+  // `#microsoft.graph.` prefix: `user`, `group`, `device`, `servicePrincipal`,
+  // `orgContact`. Open string: Graph adds values over time.
+  string type = 2;
+  // True when the member was removed from the group; false when it was added.
+  bool removed = 3;
+}
+
+// One change of a group, as a delta query reports it.
+message GroupChange {
+  // The group. On a later delta only the id and the changed properties are
+  // set; on a removal only the id.
+  GraphGroup group = 1;
+  // True when the group was deleted.
+  bool removed = 2;
+  // Members added or removed; only when the request asked for members.
+  repeated GroupMemberChange member_changes = 3;
+}

@@ -11,6 +11,8 @@ import ai.pipestream.microsoft.v1.DeltaListItemsRequest;
 import ai.pipestream.microsoft.v1.DeltaListItemsResponse;
 import ai.pipestream.microsoft.v1.DeltaPreferences;
 import ai.pipestream.microsoft.v1.DeltaResyncReason;
+import ai.pipestream.microsoft.v1.DeltaGroupsRequest;
+import ai.pipestream.microsoft.v1.DeltaGroupsResponse;
 import ai.pipestream.microsoft.v1.DeltaSitesRequest;
 import ai.pipestream.microsoft.v1.DeltaSitesResponse;
 import ai.pipestream.microsoft.v1.DownloadContentRequest;
@@ -27,6 +29,8 @@ import ai.pipestream.microsoft.v1.GetListRequest;
 import ai.pipestream.microsoft.v1.GetMeRequest;
 import ai.pipestream.microsoft.v1.GetSiteRequest;
 import ai.pipestream.microsoft.v1.GraphUser;
+import ai.pipestream.microsoft.v1.GroupChange;
+import ai.pipestream.microsoft.v1.GroupMemberChange;
 import ai.pipestream.microsoft.v1.MicrosoftChange;
 import ai.pipestream.microsoft.v1.ListUsersRequest;
 import ai.pipestream.microsoft.v1.ListUserTransitiveMemberOfRequest;
@@ -80,6 +84,7 @@ import java.util.concurrent.Executors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
 
 /**
  * One test per {@code MicrosoftService} rpc against the in-process fake Graph:
@@ -352,6 +357,47 @@ class MicrosoftRpcSurfaceTest {
         int before = fake.requests().size();
         assertThat(code(() -> drain(appStub.deltaSites(DeltaSitesRequest.newBuilder()
                 .setDeltaLink("https://attacker.example/v1.0/sites/delta?token=x").build()))))
+                .isEqualTo(Status.Code.INVALID_ARGUMENT);
+        assertThat(fake.requests()).hasSize(before);
+    }
+
+    @Test
+    void deltaGroupsReportsGroupsMembersRemovalsAndTheLink() {
+        String d1 = fake.baseUrl() + "/groups/delta?$deltatoken=abc";
+        fake.stub("/groups/delta", MicrosoftFixtures.deltaJson(d1, """
+                {"id":"g1","displayName":"Research","securityEnabled":true,
+                 "members@delta":[{"@odata.type":"#microsoft.graph.user","id":"u1"},
+                   {"@odata.type":"#microsoft.graph.group","id":"g2","@removed":{"reason":"deleted"}}]}""", """
+                {"id":"g3","@removed":{"reason":"changed"}}"""));
+        List<DeltaGroupsResponse> full = drain(appStub.deltaGroups(DeltaGroupsRequest.newBuilder()
+                .setIncludeMembers(true).build()));
+        assertThat(fake.requestsTo("/groups/delta").get(0).query())
+                .isEqualTo("$select=" + GraphPaths.GROUP_SELECT + ",members");
+        assertThat(full).hasSize(3);
+        GroupChange first = full.get(0).getChange();
+        assertThat(first.getGroup().getDisplayName()).isEqualTo("Research");
+        assertThat(first.getRemoved()).isFalse();
+        assertThat(first.getMemberChangesList()).extracting(GroupMemberChange::getId,
+                GroupMemberChange::getType, GroupMemberChange::getRemoved)
+                .containsExactly(tuple("u1", "user", false), tuple("g2", "group", true));
+        assertThat(full.get(1).getChange().getGroup().getId()).isEqualTo("g3");
+        assertThat(full.get(1).getChange().getRemoved()).isTrue();
+        assertThat(full.get(2).getDeltaLink()).isEqualTo(d1);
+
+        fake.stub("/groups/delta?$deltatoken=abc", MicrosoftFixtures.deltaJson(d1));
+        List<DeltaGroupsResponse> resumed = drain(appStub.deltaGroups(DeltaGroupsRequest.newBuilder()
+                .setDeltaLink(d1).build()));
+        assertThat(resumed).hasSize(1);
+        assertThat(resumed.get(0).getDeltaLink()).isEqualTo(d1);
+
+        fake.stub("/groups/delta?$deltatoken=latest", MicrosoftFixtures.deltaJson(d1));
+        List<DeltaGroupsResponse> latest = drain(appStub.deltaGroups(DeltaGroupsRequest.newBuilder()
+                .setDeltaLink("latest").build()));
+        assertThat(latest).hasSize(1);
+
+        int before = fake.requests().size();
+        assertThat(code(() -> drain(appStub.deltaGroups(DeltaGroupsRequest.newBuilder()
+                .setDeltaLink(fake.baseUrl() + "/sites/delta?token=x").build()))))
                 .isEqualTo(Status.Code.INVALID_ARGUMENT);
         assertThat(fake.requests()).hasSize(before);
     }

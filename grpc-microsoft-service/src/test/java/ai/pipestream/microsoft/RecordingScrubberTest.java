@@ -157,4 +157,16 @@ class RecordingScrubberTest {
         assertThat(member.path("Title").asText()).isEqualTo("Principal 3");
         assertThat(member.path("UserId").path("NameId").asText()).isEqualTo("nameid-0001");
     }
+
+    @Test
+    void pagingAndDeltaTokensOfGraphLinksAreReplaced() {
+        RecordingScrubber scrubber = new RecordingScrubber("https://graph.microsoft.com/v1.0");
+        String link = scrubber.text("https://graph.microsoft.com/v1.0/groups/delta?$deltatoken=AbC-dEf_123.xyz");
+        assertThat(link).isEqualTo("https://graph.microsoft.com/v1.0/groups/delta?$deltatoken=cursor-0001");
+        assertThat(scrubber.text("https://graph.microsoft.com/v1.0/groups/delta?$skiptoken=Q9z&$top=5"))
+                .isEqualTo("https://graph.microsoft.com/v1.0/groups/delta?$skiptoken=cursor-0002&$top=5");
+        assertThat(scrubber.text("https://graph.microsoft.com/v1.0/groups/delta?$deltatoken=latest"))
+                .endsWith("$deltatoken=latest");
+        assertThat(scrubber.text(link)).isEqualTo(link);
+    }
 }

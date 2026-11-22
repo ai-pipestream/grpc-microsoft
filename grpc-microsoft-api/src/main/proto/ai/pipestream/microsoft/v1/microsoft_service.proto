@@ -168,6 +168,11 @@ service MicrosoftService {
   // directly or through nested groups, as a stream.
   rpc ListUserTransitiveMemberOf(ListUserTransitiveMemberOfRequest) returns (stream ListUserTransitiveMemberOfResponse);
 
+  // GET /groups/delta. Groups that were created, changed or deleted, and
+  // optionally the members added to or removed from them, since a delta
+  // link. Application permission GroupMember.Read.All.
+  rpc DeltaGroups(DeltaGroupsRequest) returns (stream DeltaGroupsResponse);
+
   // --- SharePoint site security ---
 
   // The SharePoint groups of a site, as a stream. Needs a certificate
@@ -958,6 +963,36 @@ message ListUserTransitiveMemberOfRequest {
 message ListUserTransitiveMemberOfResponse {
   // The group or other directory object the user belongs to.
   DirectoryMember member = 1;
+}
+
+// Request for DeltaGroups.
+message DeltaGroupsRequest {
+  // The `@odata.deltaLink` a previous DeltaGroups stream ended with. Empty =
+  // every group; `latest` = emit no groups, only the current delta link. The
+  // server validates the link as for DeltaDriveItems.
+  string delta_link = 1;
+  // Also report membership changes. On a full enumeration this lists every
+  // direct member of every group.
+  bool include_members = 2;
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 3;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// One streamed group delta event.
+message DeltaGroupsResponse {
+  // Exactly one of a resync notice, a group change, or the terminal delta
+  // link.
+  oneof event {
+    // Emitted first when the supplied delta link was rejected (410 Gone).
+    DeltaResync resync = 1;
+    // A created, changed or deleted group. Graph can report one group in
+    // several changes when it has many members.
+    GroupChange change = 2;
+    // Terminal message: the delta link to persist for the next call.
+    string delta_link = 3;
+  }
 }
 
 // ============================================================================
