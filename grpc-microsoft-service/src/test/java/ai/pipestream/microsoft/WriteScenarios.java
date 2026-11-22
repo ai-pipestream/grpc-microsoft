@@ -263,6 +263,8 @@ final class WriteScenarios {
     private Integer siteGroupId;
     private String userMail;
     private boolean linkColumn;
+    private String libraryId;
+    private boolean libraryTried;
 
     /**
      * Creates the scenarios of one run.
@@ -374,6 +376,9 @@ final class WriteScenarios {
                 new Scenario("mutate", "Mutate", "Mutate", this::mutate),
                 new Scenario("links-create-and-mutate", "CreateListItem",
                         "CreateListItem and Mutate [link values]", this::linksThroughCreateAndMutate),
+                new Scenario("upload-with-fields", "UploadItem",
+                        "UploadItem [text and link fields, into a new library]",
+                        this::uploadWithFields),
                 new Scenario("delete-list-item", "DeleteListItem", "DeleteListItem",
                         this::deleteListItem),
                 new Scenario("delete-drive-item", "DeleteDriveItem",
@@ -970,6 +975,51 @@ final class WriteScenarios {
         return "a link written by CreateListItem and by two Mutate ops, each read back";
     }
 
+    private String uploadWithFields() throws Exception {
+        String libraryName = listName + "-lib";
+        libraryTried = true;
+        EnsureListResponse library = stub().ensureList(EnsureListRequest.newBuilder()
+                .setSiteId(siteId).setDisplayName(libraryName)
+                .setDescription("Created by the live write test; safe to delete.")
+                .setTemplate(ListTemplate.LIST_TEMPLATE_DOCUMENT_LIBRARY).build());
+        check(library.getState() == EnsureState.ENSURE_STATE_CREATED,
+                "the library answered " + library.getState());
+        libraryId = library.getList().getId();
+        ColumnSpec.Builder column = ColumnSpec.newBuilder();
+        for (ColumnOutcome outcome : stub().ensureColumns(EnsureColumnsRequest.newBuilder()
+                .setScope(ColumnScope.newBuilder()
+                        .setList(ListRef.newBuilder().setSiteId(siteId).setListId(libraryId)))
+                .addColumns(column.clone().setName("PsText").setType(ColumnType.COLUMN_TYPE_TEXT))
+                .addColumns(column.clone().setName("PsLink").setType(ColumnType.COLUMN_TYPE_URL))
+                .build()).getColumnsList()) {
+            check(outcome.getState() == EnsureState.ENSURE_STATE_CREATED, outcome.getName()
+                    + " answered " + outcome.getState() + " " + outcome.getError().getMessage());
+        }
+        String libraryDrive = client.get(GraphPaths.list(siteId, libraryId) + "/drive?$select=id")
+                .path("id").asText("");
+        check(!libraryDrive.isEmpty(), "the library has no drive");
+        byte[] content = remember(("with fields " + folderName + "\n")
+                .getBytes(StandardCharsets.UTF_8));
+        Collector<UploadItemResponse> responses = new Collector<>();
+        StreamObserver<UploadItemRequest> requests = async.uploadItem(responses);
+        requests.onNext(frame(UploadItemHeader.newBuilder().setDriveId(libraryDrive)
+                .setName("with-fields.txt").setSize(content.length)
+                .addFields(FieldValue.newBuilder().setName("PsText").setText("from the upload"))
+                .addFields(link("https://example.com/uploaded"))));
+        sendChunks(requests, content, 0, content.length);
+        requests.onNext(end(sha256(content)));
+        requests.onCompleted();
+        List<UploadItemResponse> all = responses.await();
+        Map<String, String> columns = new HashMap<>();
+        all.get(all.size() - 1).getItem().getListColumnsList()
+                .forEach(c -> columns.put(c.getName(), c.getStringValue()));
+        check("from the upload".equals(columns.get("PsText")),
+                "PsText answered as " + columns.get("PsText"));
+        check("https://example.com/uploaded".equals(columns.get("PsLink.Url")),
+                "PsLink answered as " + columns.get("PsLink.Url"));
+        return "a file uploaded into a new library with a text and a link column, both answered";
+    }
+
     private static FieldValue.Builder link(String url) {
         return FieldValue.newBuilder().setName("PsLink")
                 .setHyperlink(HyperlinkValue.newBuilder().setUrl(url).setDescription("A page"));
@@ -1451,6 +1501,31 @@ final class WriteScenarios {
             clean = false;
             lines.add("list " + listName + " NOT CLEANED UP, " + e.getMessage());
         }
+        String libraryName = listName + "-lib";
+        try {
+            if (!libraryTried) {
+                return finish(clean, lines);
+            }
+            String id = libraryId;
+            if (id == null) {
+                id = client.get(lists + GraphPaths.segment(libraryName, "list") + "?$select=id")
+                        .path("id").asText("");
+            }
+            client.delete(lists + GraphPaths.segment(id, "list_id"));
+            lines.add("library " + libraryName + " deleted");
+        } catch (GraphClient.GraphApiException e) {
+            if (e.status() != 404 || libraryId != null) {
+                clean = false;
+                lines.add("library " + libraryName + " NOT CLEANED UP, " + e.getMessage());
+            }
+        } catch (IOException | RuntimeException e) {
+            clean = false;
+            lines.add("library " + libraryName + " NOT CLEANED UP, " + e.getMessage());
+        }
+        return finish(clean, lines);
+    }
+
+    private static String finish(boolean clean, List<String> lines) {
         check(clean, String.join("; ", lines));
         return String.join("; ", lines);
     }
