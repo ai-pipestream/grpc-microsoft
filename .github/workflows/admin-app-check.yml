@@ -95,6 +95,9 @@ jobs:
           source "$RUNNER_TEMP/auth.sh"
           umask 077; printf '%s\n' "$PEM" > "$RUNNER_TEMP/probe.pem"
           show "probe cert graph" "$(token_cert "$CID" "$RUNNER_TEMP/probe.pem" https://graph.microsoft.com/.default)"
+          if [[ -n "$(cut -d. -f2 <<<"$TOKEN" | tr '_-' '/+' | { read -r p; while (( ${#p} % 4 )); do p="${p}="; done; base64 -d <<<"$p"; } | jq -r '.roles[] | select(. == "Sites.Read.All" or . == "Sites.ReadWrite.All" or . == "Files.Read.All")')" ]]; then
+            echo "probe still holds a tenant-wide Sites/Files role"; exit 1
+          fi
           code=$(curl -sS -o g.json -w '%{http_code}' -H "Authorization: Bearer ${TOKEN}" "https://graph.microsoft.com/v1.0/groups?\$top=1&\$select=id")
           echo "Graph GET /groups (GroupMember.Read.All): HTTP ${code}"
           show "probe cert spo" "$(token_cert "$CID" "$RUNNER_TEMP/probe.pem" https://pipestreamai.sharepoint.com/.default)"
