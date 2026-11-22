@@ -1,6 +1,6 @@
 package ai.pipestream.microsoft;
 
-import ai.pipestream.microsoft.v1.Drive;
+import ai.pipestream.microsoft.v1.GetSiteRequest;
 import ai.pipestream.microsoft.v1.ListDrivesRequest;
 import ai.pipestream.microsoft.v1.ListSitesRequest;
 import ai.pipestream.microsoft.v1.ListSitesResponse;
@@ -22,8 +22,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * Entra <em>application</em> credentials ({@code MICROSOFT_TENANT_ID},
  * {@code MICROSOFT_CLIENT_ID}, {@code MICROSOFT_CLIENT_SECRET}) — a user
  * mailbox login is not enough. Client-credentials tokens have no {@code /me},
- * so this class never calls {@code GetMe}; it lists sites (and drives when
- * {@code MICROSOFT_SITE_ID} is set). Excluded from the default {@code test}
+ * so this class never calls {@code GetMe}; it reads the site named by
+ * {@code MICROSOFT_SITE_ID} (or lists sites when none is set) and its drives. Excluded from the default {@code test}
  * task; run with {@code ./gradlew :grpc-microsoft-service:liveSmokeTest}.
  * Never prints the secret. Never runs a full {@code Sync} crawl.
  */
@@ -32,7 +32,7 @@ class MicrosoftLiveSmokeIT {
     private static final MicrosoftValidator VALIDATOR = MicrosoftValidator.create();
 
     @Test
-    void clientCredentialsThenListSites() throws Exception {
+    void clientCredentialsThenSiteAndDrives() throws Exception {
         assumeTrue(notBlank(System.getenv(MicrosoftConnectorConfig.ENV_TENANT_ID)));
         assumeTrue(notBlank(System.getenv(MicrosoftConnectorConfig.ENV_CLIENT_ID)));
         assumeTrue(notBlank(System.getenv(MicrosoftConnectorConfig.ENV_CLIENT_SECRET)),
@@ -56,39 +56,37 @@ class MicrosoftLiveSmokeIT {
         try {
             MicrosoftServiceGrpc.MicrosoftServiceBlockingStub stub =
                     MicrosoftServiceGrpc.newBlockingStub(channel);
-            ListSitesResponse sites = stub.listSites(ListSitesRequest.newBuilder()
-                    .setLimit(5)
-                    .build());
-            assertThat(sites.getSitesList()).allSatisfy(site -> {
+            String siteId = first(System.getenv(MicrosoftConnectorConfig.ENV_SITE_ID), "");
+            if (siteId.isBlank()) {
+                // Needs tenant-wide site access; an app with Sites.Selected sets the site id.
+                ListSitesResponse sites = stub.listSites(ListSitesRequest.newBuilder()
+                        .setLimit(5)
+                        .build());
+                assertThat(sites.getSitesList()).allSatisfy(site -> {
+                    assertThat(site.getId()).isNotBlank();
+                    assertThat(VALIDATOR.validate(site).violations()).isEmpty();
+                });
+                System.out.println("[MicrosoftLiveSmokeIT] ListSites -> " + sites.getSitesCount()
+                        + " site(s)");
+                if (sites.getSitesCount() == 0) {
+                    return;
+                }
+                siteId = sites.getSites(0).getId();
+            } else {
+                Site site = stub.getSite(GetSiteRequest.newBuilder().setSiteId(siteId).build()).getSite();
                 assertThat(site.getId()).isNotBlank();
                 assertThat(VALIDATOR.validate(site).violations()).isEmpty();
-            });
-            System.out.println("[MicrosoftLiveSmokeIT] ListSites -> " + sites.getSitesCount()
-                    + " site(s)");
-
-            String siteId = first(System.getenv(MicrosoftConnectorConfig.ENV_SITE_ID),
-                    sites.getSitesCount() > 0 ? sites.getSites(0).getId() : "");
-            if (siteId.isBlank()) {
-                return;
+                System.out.println("[MicrosoftLiveSmokeIT] GetSite -> the configured site");
             }
             var drives = stub.listDrives(ListDrivesRequest.newBuilder()
                     .setSiteId(siteId)
                     .build());
-            assertThat(drives.getDrivesList()).allSatisfy(drive -> {
+            assertThat(drives.getDrivesList()).isNotEmpty().allSatisfy(drive -> {
                 assertThat(drive.getId()).isNotBlank();
                 assertThat(VALIDATOR.validate(drive).violations()).isEmpty();
             });
-            System.out.println("[MicrosoftLiveSmokeIT] ListDrives site=" + siteId
-                    + " drives=" + drives.getDrivesCount());
-            if (!drives.getDrivesList().isEmpty()) {
-                Drive drive = drives.getDrives(0);
-                assertThat(drive.getId()).isNotBlank();
-            }
-            if (!sites.getSitesList().isEmpty()) {
-                Site site = sites.getSites(0);
-                assertThat(site.getDisplayName().isEmpty() ? site.getName() : site.getDisplayName())
-                        .isNotNull();
-            }
+            System.out.println("[MicrosoftLiveSmokeIT] ListDrives -> " + drives.getDrivesCount()
+                    + " drive(s)");
         } finally {
             channel.shutdownNow();
             server.shutdownNow();
