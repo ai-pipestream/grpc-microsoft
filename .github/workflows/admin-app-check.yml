@@ -66,6 +66,7 @@ jobs:
           [[ "$code" == "200" ]]
 
       - name: Admin app, certificate, Graph and SharePoint REST
+        if: always()
         env:
           CID: ${{ secrets.MICROSOFT_ADMIN_CLIENT_ID }}
           PEM: ${{ secrets.MICROSOFT_ADMIN_CLIENT_CERT_PEM }}
@@ -81,6 +82,7 @@ jobs:
           [[ "$code" == "200" ]]
 
       - name: Probe app, certificate, Graph and SharePoint REST
+        if: always()
         env:
           CID: ${{ secrets.MICROSOFT_CLIENT_ID }}
           PEM: ${{ secrets.MICROSOFT_CLIENT_CERT_PEM }}
