@@ -30,6 +30,14 @@ on:
         description: Read the test site's app grants with the admin app and dry-run an ensure (changes nothing)
         type: boolean
         default: false
+      live_admin_change:
+        description: With run_live_admin, also grant, change and revoke a grant for the admin app itself on the test site
+        type: boolean
+        default: false
+      live_admin_set_role:
+        description: With run_live_admin, set the test app's role on the test site (read, write, manage or full_control)
+        type: string
+        default: ""
       import_recordings_run_id:
         description: Commit the recordings artifact of this run id to the branch as replay data
         type: string
@@ -214,7 +222,8 @@ jobs:
           fi
           exit "$status"
 
-  # Manual only: the admin service reads the test site's grants and dry-runs an ensure.
+  # Manual only: the admin service reads the test site's grants and dry-runs an
+  # ensure. It changes grants only when live_admin_change or live_admin_set_role is set.
   live-microsoft-admin:
     if: github.event_name == 'workflow_dispatch' && inputs.run_live_admin
     runs-on: ubuntu-latest
@@ -239,6 +248,8 @@ jobs:
           MICROSOFT_ADMIN_CLIENT_CERT_PEM: ${{ secrets.MICROSOFT_ADMIN_CLIENT_CERT_PEM }}
           MICROSOFT_CLIENT_ID: ${{ secrets.MICROSOFT_CLIENT_ID }}
           MICROSOFT_SITE_ID: ${{ env.LIVE_SITE_ID }}
+          MICROSOFT_ADMIN_LIVE_CHANGE: ${{ inputs.live_admin_change && '1' || '' }}
+          MICROSOFT_ADMIN_LIVE_SET_ROLE: ${{ inputs.live_admin_set_role }}
         run: |
           for name in MICROSOFT_TENANT_ID MICROSOFT_ADMIN_CLIENT_ID MICROSOFT_ADMIN_CLIENT_CERT_PEM MICROSOFT_CLIENT_ID; do
             if [ -z "${!name}" ]; then
