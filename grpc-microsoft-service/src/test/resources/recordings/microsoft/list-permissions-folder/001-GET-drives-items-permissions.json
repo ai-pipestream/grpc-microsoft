@@ -12,7 +12,7 @@
     },
     "body" : {
       "json" : {
-        "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#drives('b%218FWe-5b5AUuTqSDN0boiUaukpeBeel5CoeoUgbWd9TgKQAPGEsHyR7DeZt7UtLqs')/items('item-0001')/permissions",
+        "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#drives('b%21drive-0001')/items('item-0001')/permissions",
         "value" : [ {
           "id" : "permission-0001",
           "roles" : [ "owner" ],
