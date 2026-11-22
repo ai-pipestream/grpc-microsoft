@@ -1,0 +1,98 @@
+name: admin-app-check
+
+on:
+  push:
+    branches: [claude/project-thread-4tyne0]
+    paths: [.github/workflows/admin-app-check.yml]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    env:
+      TENANT: ${{ secrets.MICROSOFT_TENANT_ID }}
+      SITE: pipestreamai.sharepoint.com,fb9e55f0-f996-4b01-93a9-20cdd1ba2251,e0a5a4ab-7a5e-425e-a1ea-1481b59df538
+      SPO_WEB: https://pipestreamai.sharepoint.com/sites/WelcomeToPipestream
+    steps:
+      - name: Write helper
+        run: |
+          cat > "$RUNNER_TEMP/auth.sh" <<'SH'
+          set -euo pipefail
+          b64url() { openssl base64 -A | tr '+/' '-_' | tr -d '='; }
+          # token_secret CLIENT_ID SECRET SCOPE
+          token_secret() {
+            curl -sS -X POST "https://login.microsoftonline.com/${TENANT}/oauth2/v2.0/token" \
+              --data-urlencode "client_id=$1" --data-urlencode "client_secret=$2" \
+              --data-urlencode "scope=$3" --data-urlencode "grant_type=client_credentials"
+          }
+          # token_cert CLIENT_ID PEM_FILE SCOPE
+          token_cert() {
+            local cid="$1" pem="$2" scope="$3" now x5t hdr pl sig
+            now=$(date +%s)
+            x5t=$(openssl x509 -in "$pem" -outform DER | openssl dgst -sha1 -binary | b64url)
+            hdr=$(printf '{"alg":"RS256","typ":"JWT","x5t":"%s"}' "$x5t" | b64url)
+            pl=$(printf '{"aud":"https://login.microsoftonline.com/%s/oauth2/v2.0/token","iss":"%s","sub":"%s","jti":"%s","nbf":%d,"exp":%d}' \
+              "$TENANT" "$cid" "$cid" "$(cat /proc/sys/kernel/random/uuid)" "$now" "$((now+600))" | b64url)
+            sig=$(printf '%s.%s' "$hdr" "$pl" | openssl dgst -sha256 -sign "$pem" -binary | b64url)
+            curl -sS -X POST "https://login.microsoftonline.com/${TENANT}/oauth2/v2.0/token" \
+              --data-urlencode "client_id=$cid" \
+              --data-urlencode "client_assertion_type=urn:ietf:params:oauth:client-assertion-type:jwt-bearer" \
+              --data-urlencode "client_assertion=${hdr}.${pl}.${sig}" \
+              --data-urlencode "scope=$scope" --data-urlencode "grant_type=client_credentials"
+          }
+          # show LABEL RESPONSE -> prints app + roles, sets TOKEN
+          show() {
+            TOKEN=$(jq -r '.access_token // empty' <<<"$2")
+            if [[ -z "$TOKEN" ]]; then echo "$1: NO TOKEN"; jq '{error, error_codes}' <<<"$2"; return 1; fi
+            echo "::add-mask::$TOKEN"
+            local p; p=$(cut -d. -f2 <<<"$TOKEN" | tr '_-' '/+'); while (( ${#p} % 4 )); do p="${p}="; done
+            echo "$1:"; base64 -d <<<"$p" | jq -c '{app_displayname, aud, roles}'
+          }
+          SH
+
+      - name: Admin app, secret, Graph site permissions
+        env:
+          CID: ${{ secrets.MICROSOFT_ADMIN_CLIENT_ID }}
+          SECRET: ${{ secrets.MICROSOFT_ADMIN_CLIENT_SECRET }}
+        run: |
+          source "$RUNNER_TEMP/auth.sh"
+          show "admin secret graph" "$(token_secret "$CID" "$SECRET" https://graph.microsoft.com/.default)"
+          code=$(curl -sS -o perms.json -w '%{http_code}' -H "Authorization: Bearer ${TOKEN}" \
+            "https://graph.microsoft.com/v1.0/sites/${SITE}/permissions")
+          echo "GET /sites/{id}/permissions: HTTP ${code}"
+          jq -c '[.value[]? | {roles, apps: [.grantedToIdentitiesV2[]?.application.displayName]}]' perms.json || cat perms.json
+          [[ "$code" == "200" ]]
+
+      - name: Admin app, certificate, Graph and SharePoint REST
+        env:
+          CID: ${{ secrets.MICROSOFT_ADMIN_CLIENT_ID }}
+          PEM: ${{ secrets.MICROSOFT_ADMIN_CLIENT_CERT_PEM }}
+        run: |
+          source "$RUNNER_TEMP/auth.sh"
+          umask 077; printf '%s\n' "$PEM" > "$RUNNER_TEMP/admin.pem"
+          show "admin cert graph" "$(token_cert "$CID" "$RUNNER_TEMP/admin.pem" https://graph.microsoft.com/.default)"
+          show "admin cert spo" "$(token_cert "$CID" "$RUNNER_TEMP/admin.pem" https://pipestreamai.sharepoint.com/.default)"
+          code=$(curl -sS -o ra.json -w '%{http_code}' -H "Authorization: Bearer ${TOKEN}" -H 'Accept: application/json;odata=nometadata' \
+            "${SPO_WEB}/_api/web/roleassignments?\$expand=RoleDefinitionBindings")
+          echo "SPO REST web/roleassignments: HTTP ${code}, count $(jq '.value | length' ra.json 2>/dev/null || echo n/a)"
+          rm -f "$RUNNER_TEMP/admin.pem"
+          [[ "$code" == "200" ]]
+
+      - name: Probe app, certificate, Graph and SharePoint REST
+        env:
+          CID: ${{ secrets.MICROSOFT_CLIENT_ID }}
+          PEM: ${{ secrets.MICROSOFT_CLIENT_CERT_PEM }}
+        run: |
+          source "$RUNNER_TEMP/auth.sh"
+          umask 077; printf '%s\n' "$PEM" > "$RUNNER_TEMP/probe.pem"
+          show "probe cert graph" "$(token_cert "$CID" "$RUNNER_TEMP/probe.pem" https://graph.microsoft.com/.default)"
+          code=$(curl -sS -o g.json -w '%{http_code}' -H "Authorization: Bearer ${TOKEN}" "https://graph.microsoft.com/v1.0/groups?\$top=1&\$select=id")
+          echo "Graph GET /groups (GroupMember.Read.All): HTTP ${code}"
+          show "probe cert spo" "$(token_cert "$CID" "$RUNNER_TEMP/probe.pem" https://pipestreamai.sharepoint.com/.default)"
+          code2=$(curl -sS -o sg.json -w '%{http_code}' -H "Authorization: Bearer ${TOKEN}" -H 'Accept: application/json;odata=nometadata' \
+            "${SPO_WEB}/_api/web/sitegroups?\$select=Title")
+          echo "SPO REST web/sitegroups: HTTP ${code2}, count $(jq '.value | length' sg.json 2>/dev/null || echo n/a)"
+          rm -f "$RUNNER_TEMP/probe.pem"
+          [[ "$code" == "200" && "$code2" == "200" ]]
