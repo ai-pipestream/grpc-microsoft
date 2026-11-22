@@ -14,6 +14,10 @@ on:
         description: Run the live write test against the test site (writes, then cleans up)
         type: boolean
         default: false
+      import_recordings_run_id:
+        description: Commit the recordings artifact of this run id to the branch as replay data
+        type: string
+        default: ""
 
 # The shared core (ai-pipestream/grpc-integration) is checked out next to
 # this repo and included as a Gradle composite build (-PintegrationDir), so
@@ -202,3 +206,71 @@ jobs:
           name: recordings
           path: grpc-microsoft/grpc-microsoft-service/src/test/resources/recordings/microsoft/
           if-no-files-found: ignore
+
+  # Copies the recordings a live write run uploaded into the branch, after a
+  # leak check and the recordings hygiene test. Only ever started by hand.
+  import-microsoft-recordings:
+    if: github.event_name == 'workflow_dispatch' && inputs.import_recordings_run_id != ''
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          path: grpc-microsoft
+      - uses: actions/checkout@v5
+        with:
+          repository: ai-pipestream/grpc-integration
+          ref: ${{ env.INTEGRATION_REF }}
+          path: grpc-integration
+      - name: Drop the previous recordings
+        run: rm -rf grpc-microsoft/grpc-microsoft-service/src/test/resources/recordings/microsoft
+      - uses: actions/download-artifact@v4
+        with:
+          name: recordings
+          run-id: ${{ inputs.import_recordings_run_id }}
+          github-token: ${{ github.token }}
+          path: grpc-microsoft/grpc-microsoft-service/src/test/resources/recordings/microsoft/
+      - name: Leak check
+        working-directory: grpc-microsoft/grpc-microsoft-service/src/test/resources/recordings/microsoft
+        run: |
+          echo "files: $(find . -type f | wc -l)"
+          fail=0
+          check() {
+            n=$(grep -rIlE -e "$2" . | wc -l)
+            echo "$1: $n files"
+            if [ "$n" -gt 0 ]; then grep -rIlE -e "$2" . | head -20; fail=1; fi
+          }
+          check "jwt" 'eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}'
+          check "bearer credential" 'Bearer [A-Za-z0-9._-]{16,}'
+          check "client secret field" 'client_secret'
+          check "tenant host" 'pipestreamai'
+          n=$(grep -rIhoE '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}' . | grep -vcE '@example\.(invalid|com|org)$' || true)
+          echo "email address: $n matches outside the placeholder domains"
+          if [ "$n" -gt 0 ]; then fail=1; fi
+          exit $fail
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "25"
+      - name: Hygiene test on the imported recordings
+        working-directory: grpc-microsoft
+        run: |
+          ./gradlew --no-daemon -PintegrationDir=../grpc-integration :grpc-microsoft-service:test \
+            --tests '*RecordingsHygieneTest'
+      - name: Commit the recordings
+        working-directory: grpc-microsoft
+        env:
+          BRANCH: ${{ github.ref_name }}
+          RUN_ID: ${{ inputs.import_recordings_run_id }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add grpc-microsoft-service/src/test/resources/recordings
+          if git diff --cached --quiet; then
+            echo "Nothing to commit"
+            exit 0
+          fi
+          git commit -m "Add recorded Graph write exchanges from live run ${RUN_ID}"
+          git push origin "HEAD:${BRANCH}"
