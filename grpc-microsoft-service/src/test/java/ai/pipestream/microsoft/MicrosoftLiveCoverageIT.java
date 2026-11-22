@@ -184,7 +184,9 @@ class MicrosoftLiveCoverageIT {
      */
     List<String> run(MicrosoftConnectorConfig config, Path out) throws Exception {
         this.config = config;
-        secrets.add(config.clientSecret());
+        if (notBlank(config.clientSecret())) {
+            secrets.add(config.clientSecret());
+        }
         GraphAuth auth = new GraphAuth(config.authConfig());
         AtomicReference<GraphAuth.Token> token = new AtomicReference<>(issue(auth));
         GraphClient client = new GraphClient(config.graphBaseUrl(), () -> {

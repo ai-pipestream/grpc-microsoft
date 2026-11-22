@@ -189,6 +189,7 @@ jobs:
           MICROSOFT_TENANT_ID: ${{ secrets.MICROSOFT_TENANT_ID }}
           MICROSOFT_CLIENT_ID: ${{ secrets.MICROSOFT_CLIENT_ID }}
           MICROSOFT_CLIENT_SECRET: ${{ secrets.MICROSOFT_CLIENT_SECRET }}
+          MICROSOFT_CLIENT_CERT_PEM: ${{ secrets.MICROSOFT_CLIENT_CERT_PEM }}
           MICROSOFT_SITE_ID: ${{ inputs.live_write_site_id || secrets.MICROSOFT_SITE_ID }}
           MICROSOFT_DRIVE_IDS: ${{ secrets.MICROSOFT_DRIVE_IDS }}
         run: |

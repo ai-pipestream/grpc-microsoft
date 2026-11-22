@@ -242,7 +242,8 @@ After they are set, `live-microsoft` runs on same-repo PRs and pushes
 |---|---|
 | `MICROSOFT_TENANT_ID` | yes |
 | `MICROSOFT_CLIENT_ID` | yes |
-| `MICROSOFT_CLIENT_SECRET` | yes |
+| `MICROSOFT_CLIENT_SECRET` | yes, unless the certificate is set |
+| `MICROSOFT_CLIENT_CERT_PEM` | no (private key and certificate PEM; used instead of the secret when set) |
 | `MICROSOFT_SITE_ID` | no (first `ListSites` hit is used for drives) |
 | `MICROSOFT_DRIVE_IDS` | no |
 
