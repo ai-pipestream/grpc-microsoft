@@ -429,8 +429,17 @@ class MicrosoftLiveCoverageIT {
                         .filter(r -> r.getUser().getUserPrincipalName().equalsIgnoreCase(wanted)).count();
                 long sameDomain = users.stream().filter(r -> endsWithDomain(r.getUser().getMail(), domain)
                         || endsWithDomain(r.getUser().getUserPrincipalName(), domain)).count();
-                directoryLine += "\n- Entra join: " + (mail + signIn > 0 ? "match" : "no match") + " (mail "
-                        + mail + ", sign-in name " + signIn + ", users on the same domain " + sameDomain + ")";
+                long alias = users.stream().filter(r -> r.getUser().getProxyAddressesList().stream()
+                        .anyMatch(address -> address.substring(address.indexOf(':') + 1)
+                                .equalsIgnoreCase(wanted))).count();
+                long other = users.stream().filter(r -> r.getUser().getOtherMailsList().stream()
+                        .anyMatch(address -> address.equalsIgnoreCase(wanted))).count();
+                long aliases = users.stream().mapToLong(r -> r.getUser().getProxyAddressesCount()).sum();
+                long others = users.stream().mapToLong(r -> r.getUser().getOtherMailsCount()).sum();
+                directoryLine += "\n- Entra join: " + (mail + signIn + alias + other > 0 ? "match" : "no match")
+                        + " (mail " + mail + ", sign-in name " + signIn + ", proxy address " + alias
+                        + " of " + aliases + ", other mail " + other + " of " + others
+                        + ", users on the same domain " + sameDomain + ")";
             }
         }
         List<ListGroupsResponse> groups = stream("ListGroups", "ListGroups", LIST_CAP,

@@ -158,10 +158,15 @@ class MicrosoftRpcSurfaceTest {
                 {"id":"u1","displayName":"Ada","userPrincipalName":"ada@contoso.com",
                  "mail":"ada@contoso.com","givenName":"Ada","surname":"Lovelace","jobTitle":"Eng",
                  "department":"R&D","officeLocation":"B1","userType":"Guest","accountEnabled":false,
-                 "preferredLanguage":"en-GB"}
+                 "preferredLanguage":"en-GB",
+                 "proxyAddresses":["SMTP:ada@contoso.com","smtp:countess@contoso.com"],
+                 "otherMails":["ada@example.org"]}
                 """);
         GraphUser user = delegatedStub.getMe(GetMeRequest.getDefaultInstance()).getUser();
         assertThat(fake.only("/me").query()).isEqualTo("$select=" + GraphPaths.USER_SELECT);
+        assertThat(user.getProxyAddressesList()).containsExactly("SMTP:ada@contoso.com",
+                "smtp:countess@contoso.com");
+        assertThat(user.getOtherMailsList()).containsExactly("ada@example.org");
         assertThat(user.getSurname()).isEqualTo("Lovelace");
         assertThat(user.getUserType()).isEqualTo("Guest");
         assertThat(user.hasAccountEnabled()).isTrue();

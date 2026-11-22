@@ -44,7 +44,7 @@ public final class GraphPaths {
     /** Every {@code user} property {@code GraphUser} maps. */
     public static final String USER_SELECT = "id,displayName,userPrincipalName,mail,givenName,"
             + "surname,jobTitle,department,officeLocation,userType,accountEnabled,"
-            + "preferredLanguage";
+            + "preferredLanguage,proxyAddresses,otherMails";
     /** Every {@code group} property the contract maps. */
     public static final String GROUP_SELECT = "id,displayName,description,mail,mailNickname,"
             + "mailEnabled,securityEnabled,groupTypes,visibility,securityIdentifier";
