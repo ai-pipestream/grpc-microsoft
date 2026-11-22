@@ -1,7 +1,7 @@
 {
   "request" : {
     "method" : "GET",
-    "url" : "https://graph.microsoft.com/v1.0/users?$select=id,displayName,userPrincipalName,mail,givenName,surname,jobTitle,department,officeLocation,userType,accountEnabled,preferredLanguage",
+    "url" : "https://graph.microsoft.com/v1.0/users?$select=id,displayName,userPrincipalName,mail,givenName,surname,jobTitle,department,officeLocation,userType,accountEnabled,preferredLanguage,proxyAddresses,otherMails",
     "authorized" : true,
     "headers" : { }
   },
@@ -12,7 +12,7 @@
     },
     "body" : {
       "json" : {
-        "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#users(id,displayName,userPrincipalName,mail,givenName,surname,jobTitle,department,officeLocation,userType,accountEnabled,preferredLanguage)",
+        "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#users(id,displayName,userPrincipalName,mail,givenName,surname,jobTitle,department,officeLocation,userType,accountEnabled,preferredLanguage,proxyAddresses,otherMails)",
         "value" : [ {
           "id" : "00000000-0000-4000-8000-000000000013",
           "displayName" : "Directory value 1",
@@ -25,7 +25,9 @@
           "officeLocation" : null,
           "userType" : "Member",
           "accountEnabled" : true,
-          "preferredLanguage" : "en"
+          "preferredLanguage" : "en",
+          "proxyAddresses" : [ "smtp:email-2@example.invalid", "SMTP:email-1@example.invalid" ],
+          "otherMails" : [ "email-3@example.invalid" ]
         } ]
       }
     }

@@ -8,7 +8,7 @@
       "content-type" : "application/octet-stream"
     },
     "body" : {
-      "sha256" : "975ac4b6c1051bc8f361fd4e80a67798236467af5e48ff6386c65d0f884d06fc",
+      "sha256" : "9a2754adcd81626da437a318a2bd3d9c8928260404653e03434105bd38e9d672",
       "length" : 1311497
     }
   },
@@ -31,7 +31,7 @@
             "displayName" : "Identity 2"
           }
         },
-        "createdDateTime" : "2026-11-22T16:22:34Z",
+        "createdDateTime" : "2026-11-22T16:50:53Z",
         "eTag" : "\"{00000000-0000-4000-8000-000000000012},2\"",
         "id" : "item-0005",
         "lastModifiedBy" : {
@@ -43,14 +43,14 @@
             "displayName" : "Identity 2"
           }
         },
-        "lastModifiedDateTime" : "2026-11-22T16:22:36Z",
+        "lastModifiedDateTime" : "2026-11-22T16:50:56Z",
         "name" : "resumed.bin",
         "parentReference" : {
           "driveType" : "documentLibrary",
           "driveId" : "b!drive-0001",
           "id" : "item-0001",
-          "name" : "pipestream-live-write-20261122-162228-c133717d",
-          "path" : "/drives/b!drive-0001/root:/pipestream-live-write-20261122-162228-c133717d",
+          "name" : "pipestream-live-write-20261122-165044-79eec5c4",
+          "path" : "/drives/b!drive-0001/root:/pipestream-live-write-20261122-165044-79eec5c4",
           "siteId" : "00000000-0000-4000-8000-000000000001"
         },
         "webUrl" : "https://redacted.example/url/17",
@@ -58,15 +58,15 @@
         "file" : {
           "fileExtension" : ".bin",
           "hashes" : {
-            "quickXorHash" : "AwEXJ5B21es2ChQXxi+tp/VuYrY="
+            "quickXorHash" : "ONJGDGtBgpmD/jrDhigbgXTj4kY="
           },
           "irmEffectivelyEnabled" : false,
           "irmEnabled" : false,
           "mimeType" : "application/octet-stream"
         },
         "fileSystemInfo" : {
-          "createdDateTime" : "2026-11-22T16:22:34Z",
-          "lastModifiedDateTime" : "2026-11-22T16:22:36Z"
+          "createdDateTime" : "2026-11-22T16:50:53Z",
+          "lastModifiedDateTime" : "2026-11-22T16:50:56Z"
         },
         "isAuthoritative" : false,
         "shared" : {

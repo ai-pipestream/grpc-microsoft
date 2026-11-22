@@ -16,7 +16,7 @@
         "@odata.nextLink" : "https://graph.microsoft.com/v1.0/groups/delta?$skiptoken=cursor-0001",
         "value" : [ {
           "displayName" : "Directory value 4",
-          "mail" : "email-2@example.invalid",
+          "mail" : "email-4@example.invalid",
           "mailNickname" : "Directory value 5",
           "mailEnabled" : true,
           "securityEnabled" : false,
@@ -30,7 +30,7 @@
           } ]
         }, {
           "displayName" : "Directory value 4",
-          "mail" : "email-6@example.invalid",
+          "mail" : "email-8@example.invalid",
           "mailNickname" : "Directory value 15",
           "mailEnabled" : true,
           "securityEnabled" : false,
@@ -44,7 +44,7 @@
           } ]
         }, {
           "displayName" : "Directory value 4",
-          "mail" : "email-5@example.invalid",
+          "mail" : "email-7@example.invalid",
           "mailNickname" : "Directory value 13",
           "mailEnabled" : true,
           "securityEnabled" : false,
@@ -59,7 +59,7 @@
         }, {
           "displayName" : "Directory value 4",
           "description" : "Directory value 4",
-          "mail" : "email-4@example.invalid",
+          "mail" : "email-6@example.invalid",
           "mailNickname" : "Directory value 11",
           "mailEnabled" : true,
           "securityEnabled" : false,
@@ -74,7 +74,7 @@
         }, {
           "displayName" : "Directory value 17",
           "description" : "Directory value 18",
-          "mail" : "email-7@example.invalid",
+          "mail" : "email-9@example.invalid",
           "mailNickname" : "Directory value 19",
           "mailEnabled" : true,
           "securityEnabled" : false,
@@ -89,7 +89,7 @@
         }, {
           "displayName" : "Directory value 7",
           "description" : "Directory value 8",
-          "mail" : "email-3@example.invalid",
+          "mail" : "email-5@example.invalid",
           "mailNickname" : "Directory value 9",
           "mailEnabled" : true,
           "securityEnabled" : false,

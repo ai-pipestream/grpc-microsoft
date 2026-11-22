@@ -49,7 +49,7 @@
             "Location" : "https://redacted.example/url/50",
             "Cache-Control" : "no-store, no-cache",
             "SPLogId" : "00000000-0000-4000-8000-000000000070",
-            "SPRequestDuration" : "212",
+            "SPRequestDuration" : "187",
             "OData-Version" : "4.0",
             "Content-Type" : "application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8",
             "ETag" : "\"{00000000-0000-4000-8000-000000000071},1\""
@@ -58,8 +58,8 @@
             "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#drives('b%21drive-0001')/items('item-0001')/children/$entity",
             "@odata.etag" : "\"{00000000-0000-4000-8000-000000000071},1\"",
             "eTag" : "\"{00000000-0000-4000-8000-000000000071},1\"",
-            "lastModifiedDateTime" : "2026-11-22T16:22:57Z",
-            "createdDateTime" : "2026-11-22T16:22:57Z",
+            "lastModifiedDateTime" : "2026-11-22T16:51:19Z",
+            "createdDateTime" : "2026-11-22T16:51:19Z",
             "id" : "item-0009",
             "name" : "batch-b",
             "size" : 0,
@@ -91,7 +91,7 @@
               "driveId" : "b!drive-0001",
               "driveType" : "documentLibrary",
               "id" : "item-0001",
-              "path" : "/drives/b!drive-0001/root:/pipestream-live-write-20261122-162228-c133717d",
+              "path" : "/drives/b!drive-0001/root:/pipestream-live-write-20261122-165044-79eec5c4",
               "sharepointIds" : {
                 "listId" : "00000000-0000-4000-8000-000000000005",
                 "listItemUniqueId" : "00000000-0000-4000-8000-000000000003",
@@ -102,8 +102,8 @@
               }
             },
             "fileSystemInfo" : {
-              "createdDateTime" : "2026-11-22T16:22:57Z",
-              "lastModifiedDateTime" : "2026-11-22T16:22:57Z"
+              "createdDateTime" : "2026-11-22T16:51:19Z",
+              "lastModifiedDateTime" : "2026-11-22T16:51:19Z"
             },
             "folder" : {
               "childCount" : 0
