@@ -15,10 +15,10 @@
       "json" : {
         "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#sites('tenant-1.example%2C00000000-0000-4000-8000-000000000001%2C00000000-0000-4000-8000-000000000002')/lists('00000000-0000-4000-8000-000000000019')/items(fields())/$entity",
         "@odata.etag" : "\"00000000-0000-4000-8000-000000000084,2\"",
-        "createdDateTime" : "2026-11-22T18:11:13Z",
+        "createdDateTime" : "2026-11-22T21:11:34Z",
         "eTag" : "\"00000000-0000-4000-8000-000000000084,2\"",
         "id" : "4",
-        "lastModifiedDateTime" : "2026-11-22T18:11:13Z",
+        "lastModifiedDateTime" : "2026-11-22T21:11:34Z",
         "webUrl" : "https://redacted.example/url/61",
         "createdBy" : {
           "user" : {
@@ -39,7 +39,7 @@
           "siteId" : "tenant-1.example,00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000002"
         },
         "contentType" : {
-          "id" : "0x0100A0FFEBD24E5AFB49BC66F569F0568BDC",
+          "id" : "0x0100A64C3D2A4B5DF041809D02569F8E2AC6",
           "name" : "Item"
         },
         "fields@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#sites('tenant-1.example%2C00000000-0000-4000-8000-000000000001%2C00000000-0000-4000-8000-000000000002')/lists('00000000-0000-4000-8000-000000000019')/items('4')/fields/$entity",
@@ -53,8 +53,8 @@
           "PsLookups" : [ ],
           "id" : "4",
           "ContentType" : "Item",
-          "Modified" : "2026-11-22T18:11:13Z",
-          "Created" : "2026-11-22T18:11:13Z",
+          "Modified" : "2026-11-22T21:11:34Z",
+          "Created" : "2026-11-22T21:11:34Z",
           "AuthorLookupId" : "1073741822",
           "EditorLookupId" : "1073741822",
           "_UIVersionString" : "2.0",

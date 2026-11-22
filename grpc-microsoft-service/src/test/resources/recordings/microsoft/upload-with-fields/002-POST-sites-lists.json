@@ -8,7 +8,7 @@
     },
     "body" : {
       "json" : {
-        "displayName" : "pipestream-live-write-20261122-181037-7dd74cde-lib",
+        "displayName" : "pipestream-live-write-20261122-211100-0fb602c3-lib",
         "description" : "Created by the live write test; safe to delete.",
         "list" : {
           "template" : "documentLibrary"
@@ -28,13 +28,13 @@
         "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#sites('tenant-1.example%2C00000000-0000-4000-8000-000000000001%2C00000000-0000-4000-8000-000000000002')/lists/$entity",
         "@odata.etag" : "00000000-0000-4000-8000-000000000089,0",
         "eTag" : "00000000-0000-4000-8000-000000000089,0",
-        "lastModifiedDateTime" : "2026-11-22T18:11:15Z",
-        "createdDateTime" : "2026-11-22T18:11:15Z",
+        "lastModifiedDateTime" : "2026-11-22T21:11:36Z",
+        "createdDateTime" : "2026-11-22T21:11:36Z",
         "description" : "Created by the live write test; safe to delete.",
         "id" : "00000000-0000-4000-8000-000000000089",
-        "name" : "pipestreamlivewrite202611221810377dd74cdelib",
+        "name" : "pipestreamlivewrite202611222111000fb602c3lib",
         "webUrl" : "https://redacted.example/url/65",
-        "displayName" : "pipestream-live-write-20261122-181037-7dd74cde-lib",
+        "displayName" : "pipestream-live-write-20261122-211100-0fb602c3-lib",
         "parentReference" : {
           "siteId" : "tenant-1.example,00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000002"
         },
