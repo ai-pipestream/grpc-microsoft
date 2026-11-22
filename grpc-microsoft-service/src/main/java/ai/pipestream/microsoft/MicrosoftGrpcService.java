@@ -239,7 +239,7 @@ public final class MicrosoftGrpcService
         this.attachmentMaxBytes = attachmentMaxBytes;
         this.downstream = downstream;
         this.downloadChunkBytes = downloadChunkBytes;
-        this.plans = new WritePlans(mapper);
+        this.plans = new WritePlans(mapper, () -> sharePoint);
     }
 
     /**

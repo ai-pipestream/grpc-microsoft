@@ -101,6 +101,17 @@ final class SharePointRest {
         if (webUrl.isEmpty()) {
             throw Status.NOT_FOUND.withDescription("site " + siteId + " has no web URL").asRuntimeException();
         }
+        return webAt(session, webUrl);
+    }
+
+    /**
+     * The REST API of the site at this URL.
+     *
+     * @param session the connection
+     * @param webUrl the site's URL
+     * @return the site's REST API
+     */
+    Web webAt(MicrosoftSessions.Session session, String webUrl) {
         URI uri = URI.create(webUrl);
         String resource = uri.getScheme() + "://" + uri.getAuthority();
         Supplier<String> bearer = cached.computeIfAbsent(session.connectionId() + "\n" + resource,
@@ -139,6 +150,17 @@ final class SharePointRest {
      */
     static String fields(String listId) {
         return (listId.isBlank() ? "/web" : list(listId)) + "/fields";
+    }
+
+    /**
+     * The REST path of a list item.
+     *
+     * @param listId the list's GUID
+     * @param itemId the item's number
+     * @return the path, relative to {@code {web}/_api}
+     */
+    static String item(String listId, String itemId) {
+        return list(listId) + "/items(" + itemId(itemId) + ")";
     }
 
     private static String list(String listId) {

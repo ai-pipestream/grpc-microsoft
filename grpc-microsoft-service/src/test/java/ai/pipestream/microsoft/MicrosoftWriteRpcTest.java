@@ -89,6 +89,9 @@ class MicrosoftWriteRpcTest {
     private static final int UNIT = GraphFiles.FRAGMENT_UNIT_BYTES;
     private static final String SITE = "contoso.sharepoint.com,c1,w1";
     private static final String LIST_ROUTE = "/sites/" + SITE + "/lists/l1";
+    private static final String LIST_GUID = "0f8fad5b-d9cb-469f-a165-70867728950e";
+    private static final String ITEM_REST = "/sites/Team/_api/web/lists(guid'" + LIST_GUID
+            + "')/items(7)";
 
     private FakeGraphServer fake;
     private Server server;
@@ -106,8 +109,10 @@ class MicrosoftWriteRpcTest {
                 .build();
         GraphFiles files = new GraphFiles(new GraphClient(fake.baseUrl(), () -> "token"));
         String name = InProcessServerBuilder.generateName();
+        MicrosoftGrpcService service = new MicrosoftGrpcService(config, files, 0);
+        service.sharePointTokens((session, resource) -> () -> "sharepoint-token");
         server = InProcessServerBuilder.forName(name).executor(executor)
-                .addService(new MicrosoftGrpcService(config, files, 0)).build().start();
+                .addService(service).build().start();
         channel = InProcessChannelBuilder.forName(name).build();
         stub = MicrosoftServiceGrpc.newBlockingStub(channel);
         async = MicrosoftServiceGrpc.newStub(channel);
@@ -622,6 +627,11 @@ class MicrosoftWriteRpcTest {
         fake.stub(LIST_ROUTE + "/columns", "{\"value\":["
                 + "{\"name\":\"Topic\",\"displayName\":\"Topic\"},"
                 + "{\"name\":\"a1b2\",\"displayName\":\"Topic_0\"}]}");
+        fake.stub(LIST_ROUTE + "/items/7", "{\"id\":\"7\",\"sharepointIds\":{\"listId\":\""
+                + LIST_GUID + "\",\"listItemId\":\"7\",\"siteUrl\":\"" + fake.baseUrl()
+                + "/sites/Team\"}}");
+        fake.stub("POST", ITEM_REST + "/ValidateUpdateListItem", FakeGraphServer.Stub.json(
+                "{\"value\":[{\"FieldName\":\"Link\",\"HasException\":false}]}"));
 
         UpdateListItemFieldsResponse response = stub.updateListItemFields(
                 UpdateListItemFieldsRequest.newBuilder().setExpectedEtag("\"v1\"")
@@ -653,15 +663,17 @@ class MicrosoftWriteRpcTest {
                                                 .addPeople(PersonValue.newBuilder().setLookupId(5))
                                                 .addPeople(PersonValue.newBuilder().setLookupId(6))))
                                 .addFields(field("Link").setHyperlink(
-                                        HyperlinkValue.newBuilder().setUrl("https://example.com")))
+                                        HyperlinkValue.newBuilder().setUrl("https://example.com/a,b")))
                                 .addFields(field("Parent").setLookup(9))
                                 .addFields(field("Related").setMultiLookup(
                                         MultiLookupValue.newBuilder().addLookupIds(1).addLookupIds(2)))
                                 .addFields(field("Old").setClear(ClearValue.getDefaultInstance())))
                         .build());
 
-        FakeGraphServer.RecordedRequest patch = fake.only(LIST_ROUTE + "/items/7/fields");
-        assertThat(patch.method()).isEqualTo("PATCH");
+        List<FakeGraphServer.RecordedRequest> fields = fake.requestsTo(LIST_ROUTE + "/items/7/fields");
+        assertThat(fields).extracting(FakeGraphServer.RecordedRequest::method)
+                .containsExactly("PATCH", "GET");
+        FakeGraphServer.RecordedRequest patch = fields.get(0);
         assertThat(patch.ifMatch()).isEqualTo("\"v1\"");
         assertThat(body(patch)).isEqualTo(JSON.readTree("""
                 {"Title":"Hello","Body":"long","Score":4.5,"Done":true,
@@ -671,10 +683,16 @@ class MicrosoftWriteRpcTest {
                  "TopicsNote":"3;#Cats|g1;#-1;#Dogs|g2",
                  "OwnerLookupId":12,
                  "ReviewersLookupId@odata.type":"Collection(Edm.Int32)","ReviewersLookupId":[5,6],
-                 "Link":{"Url":"https://example.com","Description":"https://example.com"},
                  "ParentLookupId":9,
                  "RelatedLookupId@odata.type":"Collection(Edm.Int32)","RelatedLookupId":[1,2],
                  "Old":null}
+                """));
+        FakeGraphServer.RecordedRequest link = fake.only(ITEM_REST + "/ValidateUpdateListItem");
+        assertThat(link.authorization()).isEqualTo("Bearer sharepoint-token");
+        assertThat(body(link)).isEqualTo(JSON.readTree("""
+                {"formValues":[{"FieldName":"Link",
+                  "FieldValue":"https://example.com/a,,b, https://example.com/a,b"}],
+                 "bNewDocumentUpdate":false}
                 """));
         assertThat(fake.only("/sites/" + SITE + "/lists/User Information List/items").query())
                 .contains("fields%2FEMail%20eq%20%27o%27%27neil%40contoso.com%27");
@@ -685,6 +703,52 @@ class MicrosoftWriteRpcTest {
                 .allMatch(o -> o.getState() == FieldWriteState.FIELD_WRITE_STATE_WRITTEN);
         assertThat(response.getOutcomesList()).extracting(FieldOutcome::getGraphField)
                 .contains("a1b2", "TopicsNote", "OwnerLookupId", "RelatedLookupId", "Title");
+    }
+
+    @Test
+    void aHyperlinkOnItsOwnChecksTheEtagByReading() {
+        fake.stub(LIST_ROUTE + "/items/7", "{\"id\":\"7\",\"eTag\":\"\\\"v2\\\"\"}");
+
+        assertThat(code(() -> stub.updateListItemFields(
+                UpdateListItemFieldsRequest.newBuilder().setExpectedEtag("\"v1\"")
+                        .setPatch(ListItemPatch.newBuilder()
+                                .setTarget(ListItemTarget.newBuilder().setListItem(
+                                        ListItemRef.newBuilder().setSiteId(SITE).setListId("l1")
+                                                .setItemId("7")))
+                                .addFields(field("Link").setHyperlink(
+                                        HyperlinkValue.newBuilder().setUrl("https://example.com"))))
+                        .build()))).isEqualTo(Status.Code.ABORTED);
+        assertThat(fake.requestsTo(ITEM_REST + "/ValidateUpdateListItem")).isEmpty();
+    }
+
+    @Test
+    void ensureColumnsCreatesAHyperlinkColumnThroughSharePoint() throws Exception {
+        String listRoute = "/sites/" + SITE + "/lists/" + LIST_GUID;
+        fake.stub("/sites/" + SITE, "{\"id\":\"s\",\"webUrl\":\"" + fake.baseUrl()
+                + "/sites/Team\"}");
+        fake.stubOnce(listRoute + "/columns", FakeGraphServer.Stub.json("{\"value\":[]}"));
+        fake.stub("GET", listRoute + "/columns", FakeGraphServer.Stub.json("{\"value\":["
+                + "{\"id\":\"c9\",\"name\":\"Link\",\"hyperlinkOrPicture\":{\"isPicture\":false}}]}"));
+        String create = "/sites/Team/_api/web/lists(guid'" + LIST_GUID + "')/fields/CreateFieldAsXml";
+        fake.stub("POST", create, FakeGraphServer.Stub.json("{\"InternalName\":\"Link\"}"));
+
+        ColumnOutcome outcome = stub.ensureColumns(EnsureColumnsRequest.newBuilder()
+                .setScope(ColumnScope.newBuilder()
+                        .setList(ListRef.newBuilder().setSiteId(SITE).setListId(LIST_GUID)))
+                .addColumns(ColumnSpec.newBuilder().setName("Link").setDisplayName("A \"link\" & more")
+                        .setType(ColumnType.COLUMN_TYPE_URL).setRequired(true))
+                .build()).getColumns(0);
+
+        assertThat(outcome.getState()).isEqualTo(EnsureState.ENSURE_STATE_CREATED);
+        assertThat(outcome.getActual().getName()).isEqualTo("Link");
+        FakeGraphServer.RecordedRequest sent = fake.only(create);
+        assertThat(sent.authorization()).isEqualTo("Bearer sharepoint-token");
+        assertThat(body(sent).path("parameters").path("Options").asInt()).isEqualTo(8);
+        assertThat(body(sent).path("parameters").path("SchemaXml").asText()).isEqualTo(
+                "<Field Type=\"URL\" Format=\"Hyperlink\" Name=\"Link\" StaticName=\"Link\""
+                        + " DisplayName=\"A &quot;link&quot; &amp; more\" Required=\"TRUE\"/>");
+        assertThat(fake.requestsTo(listRoute + "/columns")).extracting(
+                FakeGraphServer.RecordedRequest::method).containsOnly("GET");
     }
 
     @Test
