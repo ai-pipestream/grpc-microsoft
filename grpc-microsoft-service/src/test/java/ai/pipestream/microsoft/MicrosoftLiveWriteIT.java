@@ -96,7 +96,9 @@ class MicrosoftLiveWriteIT {
      * prints the report; answers the failed rows.
      */
     List<String> run(MicrosoftConnectorConfig config, Path out, Path recordings) throws Exception {
-        secrets.add(config.clientSecret());
+        if (notBlank(config.clientSecret())) {
+            secrets.add(config.clientSecret());
+        }
         GraphAuth auth = new GraphAuth(config.authConfig());
         AtomicReference<GraphAuth.Token> token = new AtomicReference<>(issue(auth));
         tokenSummary = summary(token.get().accessToken());
