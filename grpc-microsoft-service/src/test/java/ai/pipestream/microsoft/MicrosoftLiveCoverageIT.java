@@ -279,6 +279,13 @@ class MicrosoftLiveCoverageIT {
                         .setClientId(config.clientId()).setClientSecret(config.clientSecret())
                         .setLimit(1).build()),
                 MicrosoftLiveCoverageIT::probeDetail);
+        if (notBlank(config.clientCertificatePem())) {
+            unary("ProbeConnection", "ProbeConnection [inline certificate, no secret]",
+                    s -> s.probeConnection(ProbeConnectionRequest.newBuilder().setTenantId(config.tenantId())
+                            .setClientId(config.clientId())
+                            .setClientCertificatePem(config.clientCertificatePem()).setLimit(1).build()),
+                    MicrosoftLiveCoverageIT::probeDetail);
+        }
         unary("GetMe", "GetMe [app-only token]",
                 s -> s.getMe(GetMeRequest.getDefaultInstance()),
                 r -> "user " + r.getUser().getId());
