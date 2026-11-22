@@ -268,17 +268,18 @@ public final class MicrosoftGrpcService
     public void probeConnection(ProbeConnectionRequest request,
             StreamObserver<ProbeConnectionResponse> observer) {
         unary(observer, () -> {
+            boolean credential = !request.getClientSecret().isBlank()
+                    || !request.getClientCertificatePem().isBlank();
             boolean inline = !request.getTenantId().isBlank() || !request.getClientId().isBlank()
-                    || !request.getClientSecret().isBlank();
+                    || credential;
             MicrosoftSessions.Session session;
             if (inline) {
-                if (request.getTenantId().isBlank() || request.getClientId().isBlank()
-                        || request.getClientSecret().isBlank()) {
-                    throw new IllegalArgumentException(
-                            "an inline probe needs tenant_id, client_id and client_secret");
+                if (request.getTenantId().isBlank() || request.getClientId().isBlank() || !credential) {
+                    throw new IllegalArgumentException("an inline probe needs tenant_id, client_id and"
+                            + " client_secret or client_certificate_pem");
                 }
                 session = sessions.inline(request.getTenantId(), request.getClientId(),
-                        request.getClientSecret());
+                        request.getClientSecret(), request.getClientCertificatePem());
             } else {
                 session = sessions.resolve(request.getConnectionId());
             }

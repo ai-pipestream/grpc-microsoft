@@ -296,6 +296,10 @@ After they are set, `live-microsoft` runs on same-repo PRs and pushes
 | `MICROSOFT_SITE_ID` | no (first `ListSites` hit is used for drives) |
 | `MICROSOFT_DRIVE_IDS` | no |
 
+A catalog connection (`connection_id`) and an inline `ProbeConnection` carry
+the same choice: `client_secret`, or `client_certificate_pem` to sign in with
+a certificate. SharePoint site security reads need the certificate.
+
 Do not paste tokens into issues, PR text, or agent chat.
 
 ## Docker

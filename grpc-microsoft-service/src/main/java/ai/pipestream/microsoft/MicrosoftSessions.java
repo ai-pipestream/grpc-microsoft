@@ -17,7 +17,7 @@ import java.util.function.Supplier;
 /**
  * Resolves a request's {@code connection_id} to an authorized Graph session: the
  * process-default (environment) connection, a catalog connection read from
- * {@code ConnectionService} (secret included, held in memory only), or an
+ * {@code ConnectionService} (secret or certificate included, held in memory only), or an
  * unsaved inline credential set for {@code ProbeConnection}. Catalog and inline
  * sessions use the client-credentials flow against the default config's
  * authority and Graph endpoint, so their auth mode is application.
@@ -93,7 +93,7 @@ final class MicrosoftSessions {
                     .asRuntimeException();
         }
         if (row.getTenantId().isBlank() || row.getClientId().isBlank()
-                || row.getClientSecret().isBlank()) {
+                || (row.getClientSecret().isBlank() && row.getClientCertificatePem().isBlank())) {
             throw Status.FAILED_PRECONDITION
                     .withDescription("connection " + connectionId + " is missing credentials")
                     .asRuntimeException();
@@ -107,6 +107,7 @@ final class MicrosoftSessions {
                 .tenantId(row.getTenantId())
                 .clientId(row.getClientId())
                 .clientSecret(row.getClientSecret())
+                .clientCertificatePem(row.getClientCertificatePem())
                 .siteId(row.getSiteId())
                 .driveIds(row.getDriveIdsList())
                 .graphBaseUrl(defaultConfig.graphBaseUrl())
@@ -123,13 +124,15 @@ final class MicrosoftSessions {
      * @param tenantId Entra tenant
      * @param clientId application id
      * @param clientSecret client secret; never logged
+     * @param clientCertificatePem private key and certificate in PEM; never logged
      * @return the session
      */
-    Session inline(String tenantId, String clientId, String clientSecret) {
+    Session inline(String tenantId, String clientId, String clientSecret, String clientCertificatePem) {
         MicrosoftConnectorConfig config = MicrosoftConnectorConfig.builder()
                 .tenantId(tenantId)
                 .clientId(clientId)
                 .clientSecret(clientSecret)
+                .clientCertificatePem(clientCertificatePem)
                 .graphBaseUrl(defaultConfig.graphBaseUrl())
                 .authority(defaultConfig.authority())
                 .build();

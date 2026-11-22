@@ -386,6 +386,10 @@ message ProbeConnectionRequest {
   string client_secret = 4;
   // Max site ids to return as evidence the token works; 0 = 5.
   int32 limit = 5;
+  // Inline certificate credential for an unsaved probe: the private key and
+  // the certificate in PEM. Signs in instead of client_secret when set.
+  // Never logged or echoed.
+  string client_certificate_pem = 6;
   // Extensible key-value metadata (extension-metadata map - see convention).
   map<string, string> metadata = 99;
 }
