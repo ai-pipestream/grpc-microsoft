@@ -24,7 +24,7 @@
               "displayName" : "Identity 2"
             }
           },
-          "createdDateTime" : "2026-11-22T15:00:01Z",
+          "createdDateTime" : "2026-11-22T15:11:11Z",
           "eTag" : "\"{00000000-0000-4000-8000-000000000010},2\"",
           "id" : "item-0004",
           "lastModifiedBy" : {
@@ -36,14 +36,14 @@
               "displayName" : "Identity 2"
             }
           },
-          "lastModifiedDateTime" : "2026-11-22T15:00:04Z",
+          "lastModifiedDateTime" : "2026-11-22T15:11:14Z",
           "name" : "large.bin",
           "parentReference" : {
             "driveType" : "documentLibrary",
             "driveId" : "b!drive-0001",
             "id" : "item-0001",
-            "name" : "pipestream-live-write-20261122-145958-9a3153eb",
-            "path" : "/drives/b!drive-0001/root:/pipestream-live-write-20261122-145958-9a3153eb",
+            "name" : "pipestream-live-write-20261122-151108-f573d0ea",
+            "path" : "/drives/b!drive-0001/root:/pipestream-live-write-20261122-151108-f573d0ea",
             "sharepointIds" : {
               "listId" : "00000000-0000-4000-8000-000000000005",
               "listItemUniqueId" : "00000000-0000-4000-8000-000000000003",
@@ -58,20 +58,20 @@
           "file" : {
             "fileExtension" : ".bin",
             "hashes" : {
-              "quickXorHash" : "21K2TklgX1UTLe4PUY8HOa2s7YI="
+              "quickXorHash" : "FHe+8aVZL+6bfjCsee2jY94r2Xg="
             },
             "mimeType" : "application/octet-stream"
           },
           "fileSystemInfo" : {
-            "createdDateTime" : "2026-11-22T15:00:01Z",
-            "lastModifiedDateTime" : "2026-11-22T15:00:04Z"
+            "createdDateTime" : "2026-11-22T15:11:11Z",
+            "lastModifiedDateTime" : "2026-11-22T15:11:14Z"
           },
           "shared" : {
             "scope" : "users"
           },
           "sharepointIds" : {
             "listId" : "00000000-0000-4000-8000-000000000005",
-            "listItemId" : "67",
+            "listItemId" : "75",
             "listItemUniqueId" : "00000000-0000-4000-8000-000000000010",
             "siteId" : "00000000-0000-4000-8000-000000000001",
             "siteUrl" : "https://redacted.example/url/3",
@@ -91,7 +91,7 @@
               "displayName" : "Identity 2"
             }
           },
-          "createdDateTime" : "2026-11-22T15:00:05Z",
+          "createdDateTime" : "2026-11-22T15:11:15Z",
           "eTag" : "\"{00000000-0000-4000-8000-000000000012},2\"",
           "id" : "item-0005",
           "lastModifiedBy" : {
@@ -103,14 +103,14 @@
               "displayName" : "Identity 2"
             }
           },
-          "lastModifiedDateTime" : "2026-11-22T15:00:08Z",
+          "lastModifiedDateTime" : "2026-11-22T15:11:16Z",
           "name" : "resumed.bin",
           "parentReference" : {
             "driveType" : "documentLibrary",
             "driveId" : "b!drive-0001",
             "id" : "item-0001",
-            "name" : "pipestream-live-write-20261122-145958-9a3153eb",
-            "path" : "/drives/b!drive-0001/root:/pipestream-live-write-20261122-145958-9a3153eb",
+            "name" : "pipestream-live-write-20261122-151108-f573d0ea",
+            "path" : "/drives/b!drive-0001/root:/pipestream-live-write-20261122-151108-f573d0ea",
             "sharepointIds" : {
               "listId" : "00000000-0000-4000-8000-000000000005",
               "listItemUniqueId" : "00000000-0000-4000-8000-000000000003",
@@ -125,20 +125,20 @@
           "file" : {
             "fileExtension" : ".bin",
             "hashes" : {
-              "quickXorHash" : "vZ8rzBgrxHiEyL8ONfGs0kOpcnU="
+              "quickXorHash" : "zUpPBNOHZ3KRlN+G+Qmf84alyEE="
             },
             "mimeType" : "application/octet-stream"
           },
           "fileSystemInfo" : {
-            "createdDateTime" : "2026-11-22T15:00:05Z",
-            "lastModifiedDateTime" : "2026-11-22T15:00:08Z"
+            "createdDateTime" : "2026-11-22T15:11:15Z",
+            "lastModifiedDateTime" : "2026-11-22T15:11:16Z"
           },
           "shared" : {
             "scope" : "users"
           },
           "sharepointIds" : {
             "listId" : "00000000-0000-4000-8000-000000000005",
-            "listItemId" : "68",
+            "listItemId" : "76",
             "listItemUniqueId" : "00000000-0000-4000-8000-000000000012",
             "siteId" : "00000000-0000-4000-8000-000000000001",
             "siteUrl" : "https://redacted.example/url/3",
@@ -158,7 +158,7 @@
               "displayName" : "Identity 2"
             }
           },
-          "createdDateTime" : "2026-11-22T15:00:00Z",
+          "createdDateTime" : "2026-11-22T15:11:10Z",
           "eTag" : "\"{00000000-0000-4000-8000-000000000008},1\"",
           "id" : "item-0003",
           "lastModifiedBy" : {
@@ -170,14 +170,14 @@
               "displayName" : "Identity 2"
             }
           },
-          "lastModifiedDateTime" : "2026-11-22T15:00:00Z",
+          "lastModifiedDateTime" : "2026-11-22T15:11:10Z",
           "name" : "small.txt",
           "parentReference" : {
             "driveType" : "documentLibrary",
             "driveId" : "b!drive-0001",
             "id" : "item-0001",
-            "name" : "pipestream-live-write-20261122-145958-9a3153eb",
-            "path" : "/drives/b!drive-0001/root:/pipestream-live-write-20261122-145958-9a3153eb",
+            "name" : "pipestream-live-write-20261122-151108-f573d0ea",
+            "path" : "/drives/b!drive-0001/root:/pipestream-live-write-20261122-151108-f573d0ea",
             "sharepointIds" : {
               "listId" : "00000000-0000-4000-8000-000000000005",
               "listItemUniqueId" : "00000000-0000-4000-8000-000000000003",
@@ -192,20 +192,20 @@
           "file" : {
             "fileExtension" : ".txt",
             "hashes" : {
-              "quickXorHash" : "aRVKVaSObC9rT1hdWC/qMf/LRHs="
+              "quickXorHash" : "KRVOQaSObNdpWlB92AfmMf/IRHk="
             },
             "mimeType" : "text/plain"
           },
           "fileSystemInfo" : {
-            "createdDateTime" : "2026-11-22T15:00:00Z",
-            "lastModifiedDateTime" : "2026-11-22T15:00:00Z"
+            "createdDateTime" : "2026-11-22T15:11:10Z",
+            "lastModifiedDateTime" : "2026-11-22T15:11:10Z"
           },
           "shared" : {
             "scope" : "users"
           },
           "sharepointIds" : {
             "listId" : "00000000-0000-4000-8000-000000000005",
-            "listItemId" : "66",
+            "listItemId" : "74",
             "listItemUniqueId" : "00000000-0000-4000-8000-000000000008",
             "siteId" : "00000000-0000-4000-8000-000000000001",
             "siteUrl" : "https://redacted.example/url/3",
