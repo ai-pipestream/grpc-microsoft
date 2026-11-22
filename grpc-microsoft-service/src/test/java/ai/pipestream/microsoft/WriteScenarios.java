@@ -262,6 +262,7 @@ final class WriteScenarios {
     private String groupId;
     private Integer siteGroupId;
     private String userMail;
+    private boolean linkColumn;
 
     /**
      * Creates the scenarios of one run.
@@ -371,6 +372,8 @@ final class WriteScenarios {
                 new Scenario("update-list-item-fields-drive-item", "UpdateListItemFields",
                         "UpdateListItemFields [drive item]", this::updateDriveItemFields),
                 new Scenario("mutate", "Mutate", "Mutate", this::mutate),
+                new Scenario("links-create-and-mutate", "CreateListItem",
+                        "CreateListItem and Mutate [link values]", this::linksThroughCreateAndMutate),
                 new Scenario("delete-list-item", "DeleteListItem", "DeleteListItem",
                         this::deleteListItem),
                 new Scenario("delete-drive-item", "DeleteDriveItem",
@@ -731,7 +734,8 @@ final class WriteScenarios {
             writeAndRead(problems, FieldValue.newBuilder().setName("PsMoney").setNumber(12.5),
                     "PsMoney", List.of("12.5"));
         }
-        if (created.contains("PsLink")) {
+        linkColumn = created.contains("PsLink");
+        if (linkColumn) {
             writeAndRead(problems, FieldValue.newBuilder().setName("PsLink").setHyperlink(
                     HyperlinkValue.newBuilder().setUrl("https://example.com/page")
                             .setDescription("A page")),
@@ -922,6 +926,53 @@ final class WriteScenarios {
         check(gone(() -> listItem(doomed)), "the batch-deleted list item is still readable");
         check(gone(() -> getItem(copy.getId())), "the batch-deleted copy is still readable");
         return ops.size() + " ops, two depends_on pairs, every result read back";
+    }
+
+    private String linksThroughCreateAndMutate() throws Exception {
+        need(itemId, "the list item");
+        if (!linkColumn) {
+            throw new Skip("needs the link column, which an earlier step did not produce");
+        }
+        ListRef list = ListRef.newBuilder().setSiteId(siteId).setListId(listId).build();
+        ListItem created = stub().createListItem(CreateListItemRequest.newBuilder().setList(list)
+                .addFields(FieldValue.newBuilder().setName("Title").setText("with link"))
+                .addFields(link("https://example.com/created")).build()).getItem();
+        check(created.getFieldsList().stream().anyMatch(column -> column.getName()
+                .equals("PsLink.Url") && column.getStringValue().equals("https://example.com/created")),
+                "CreateListItem answered without the link");
+        check("https://example.com/created".equals(fields(created.getId()).get("PsLink.Url")),
+                "the created item's link reads back differently");
+        List<MutateRequest> ops = List.of(
+                MutateRequest.newBuilder().setOpId("new-with-link").setCreateListItem(
+                        CreateListItemRequest.newBuilder().setList(list)
+                                .addFields(FieldValue.newBuilder().setName("Title").setText("batch link"))
+                                .addFields(link("https://example.com/batch-created"))).build(),
+                MutateRequest.newBuilder().setOpId("relink").setUpdateListItemFields(
+                        UpdateListItemFieldsRequest.newBuilder().setPatch(ListItemPatch.newBuilder()
+                                .setTarget(listItemTarget(itemId))
+                                .addFields(link("https://example.com/batch-updated")))).build());
+        Collector<MutateResponse> responses = new Collector<>();
+        StreamObserver<MutateRequest> requests = async.mutate(responses);
+        ops.forEach(requests::onNext);
+        requests.onCompleted();
+        Map<String, MutateResponse> byId = new HashMap<>();
+        responses.await().forEach(response -> byId.put(response.getOpId(), response));
+        check(byId.size() == ops.size(), "answered " + byId.size() + " of " + ops.size() + " ops");
+        for (MutateResponse response : byId.values()) {
+            check(!response.hasError(), "op " + response.getOpId() + " "
+                    + response.getError().getCode() + " " + response.getError().getMessage());
+        }
+        check("https://example.com/batch-created".equals(fields(byId.get("new-with-link")
+                .getCreateListItem().getItem().getId()).get("PsLink.Url")),
+                "the batch-created item's link reads back differently");
+        check("https://example.com/batch-updated".equals(fields(itemId).get("PsLink.Url")),
+                "the batch-updated link reads back differently");
+        return "a link written by CreateListItem and by two Mutate ops, each read back";
+    }
+
+    private static FieldValue.Builder link(String url) {
+        return FieldValue.newBuilder().setName("PsLink")
+                .setHyperlink(HyperlinkValue.newBuilder().setUrl(url).setDescription("A page"));
     }
 
     // ------------------------------------------------------------ helpers
