@@ -106,8 +106,22 @@ public final class MicrosoftServer {
                         MicrosoftGrpcService.DEFAULT_ATTACHMENT_MAX_BYTES),
                 downstream, connections, parseInt(System.getenv(ENV_DOWNLOAD_CHUNK_BYTES),
                         MicrosoftGrpcService.DEFAULT_DOWNLOAD_CHUNK_BYTES));
-        Server server = startNetty(service, parseInt(System.getenv(ENV_GRPC_PORT),
-                DEFAULT_GRPC_PORT));
+        NotificationBus bus = new NotificationBus();
+        String clientState = java.util.Objects.toString(
+                System.getenv(NotificationReceiver.ENV_CLIENT_STATE), "");
+        String receiverPort = System.getenv(NotificationReceiver.ENV_PORT);
+        boolean receiverOn = receiverPort != null && !receiverPort.isBlank();
+        if (receiverOn) {
+            NotificationReceiver receiver = NotificationReceiver.start(parseInt(receiverPort, 0),
+                    clientState, bus, java.time.Clock.systemUTC());
+            closables.add(receiver);
+            LOG.log(System.Logger.Level.INFO, "microsoft-proxy notification receiver on port {0}",
+                    receiver.port());
+        }
+        MicrosoftChangeGrpcService changes = new MicrosoftChangeGrpcService(service, bus,
+                receiverOn, clientState, java.time.Clock.systemUTC());
+        Server server = startNetty(parseInt(System.getenv(ENV_GRPC_PORT), DEFAULT_GRPC_PORT),
+                service, changes);
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             server.shutdown();
             try {
@@ -140,10 +154,25 @@ public final class MicrosoftServer {
      * @throws IOException if the port cannot be bound
      */
     public static Server startNetty(BindableService service, int port) throws IOException {
+        return startNetty(port, service);
+    }
+
+    /**
+     * Binds {@code services} on Netty with reflection, health, and a virtual-thread executor.
+     *
+     * @param port the listen port
+     * @param services the gRPC services to serve
+     * @return the started server
+     * @throws IOException if the port cannot be bound
+     */
+    public static Server startNetty(int port, BindableService... services) throws IOException {
         HealthStatusManager health = new HealthStatusManager();
-        Server server = NettyServerBuilder.forPort(port)
-                .executor(Executors.newVirtualThreadPerTaskExecutor())
-                .addService(service)
+        NettyServerBuilder builder = NettyServerBuilder.forPort(port)
+                .executor(Executors.newVirtualThreadPerTaskExecutor());
+        for (BindableService service : services) {
+            builder.addService(service);
+        }
+        Server server = builder
                 .addService(health.getHealthService())
                 .addService(ProtoReflectionServiceV1.newInstance())
                 .build().start();

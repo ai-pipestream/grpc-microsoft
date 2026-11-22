@@ -818,6 +818,11 @@ public final class MicrosoftGrpcService
         });
     }
 
+    /** The connection resolver this service uses. */
+    MicrosoftSessions sessions() {
+        return sessions;
+    }
+
     // ------------------------------------------------------------ sync
 
     @Override

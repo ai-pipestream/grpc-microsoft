@@ -1,0 +1,324 @@
+syntax = "proto3";
+
+package ai.pipestream.microsoft.v1;
+
+import "ai/pipestream/microsoft/v1/common.proto";
+import "ai/pipestream/microsoft/v1/events.proto";
+import "ai/pipestream/microsoft/v1/microsoft_service.proto";
+import "google/protobuf/duration.proto";
+import "google/protobuf/timestamp.proto";
+
+option java_multiple_files = true;
+option java_package = "ai.pipestream.microsoft.v1";
+
+// ============================================================================
+// MICROSOFT CHANGE SERVICE - a continuous change feed and the Graph
+// change-notification subscriptions that speed it up.
+//
+// WatchChanges runs Sync passes back to back: one at start, then one each
+// poll interval, and one early whenever a Graph change notification for a
+// watched drive or list arrives. Polling is the baseline; notifications
+// only shorten the wait. The subscription rpcs map 1:1 to Graph
+// /subscriptions. The notification receiver is off unless the server is
+// started with a notification port.
+// ============================================================================
+
+// Streams Microsoft Graph changes continuously and manages Graph change
+// notification subscriptions.
+service MicrosoftChangeService {
+  // Runs Sync passes until the client cancels, streaming every change. Each
+  // message carries the resume cursor of the last completed pass; hand it
+  // back as WatchChangesRequest.resume_cursor to continue after a restart.
+  rpc WatchChanges(WatchChangesRequest) returns (stream WatchChangesResponse);
+
+  // Streams the change notifications the receiver accepts, as they arrive.
+  // Answers FAILED_PRECONDITION when the receiver is off.
+  rpc WatchNotifications(WatchNotificationsRequest) returns (stream WatchNotificationsResponse);
+
+  // POST /subscriptions. Graph validates notification_url before it
+  // answers, so the receiver must be reachable at that URL.
+  rpc CreateSubscription(CreateSubscriptionRequest) returns (CreateSubscriptionResponse);
+
+  // GET /subscriptions/{id}.
+  rpc GetSubscription(GetSubscriptionRequest) returns (GetSubscriptionResponse);
+
+  // GET /subscriptions. The subscriptions the calling app owns.
+  rpc ListSubscriptions(ListSubscriptionsRequest) returns (ListSubscriptionsResponse);
+
+  // PATCH /subscriptions/{id}. Renews (new expiration) or moves the
+  // notification URL.
+  rpc UpdateSubscription(UpdateSubscriptionRequest) returns (UpdateSubscriptionResponse);
+
+  // POST /subscriptions/{id}/reauthorize. Answer to a
+  // reauthorizationRequired lifecycle notification.
+  rpc ReauthorizeSubscription(ReauthorizeSubscriptionRequest) returns (ReauthorizeSubscriptionResponse);
+
+  // DELETE /subscriptions/{id}.
+  rpc DeleteSubscription(DeleteSubscriptionRequest) returns (DeleteSubscriptionResponse);
+}
+
+// ============================================================================
+// CHANGE FEED
+// ============================================================================
+
+// Request to watch changes continuously.
+message WatchChangesRequest {
+  // The scope and options of every pass. Its since_cursor is the starting
+  // point when resume_cursor is empty.
+  SyncRequest sync = 1;
+  // Resume cursor from an earlier WatchChangesResponse; empty = start from
+  // sync.since_cursor.
+  string resume_cursor = 2;
+  // Wait between passes when no notification arrives; unset = the server
+  // default (5 minutes).
+  google.protobuf.Duration poll_interval = 3;
+  // Shortest wait between two passes, so a burst of notifications runs one
+  // pass, not many; unset = 5 seconds.
+  google.protobuf.Duration min_interval = 4;
+}
+
+// What started a pass.
+enum PassTrigger {
+  // Zero value; not set.
+  PASS_TRIGGER_UNSPECIFIED = 0;
+  // The first pass of the stream.
+  PASS_TRIGGER_START = 1;
+  // The poll interval elapsed.
+  PASS_TRIGGER_TIMER = 2;
+  // A change notification for a watched resource arrived.
+  PASS_TRIGGER_NOTIFICATION = 3;
+}
+
+// Marker sent after each completed pass.
+message PassCompleted {
+  // Pass number within this stream, from 1.
+  int64 pass = 1;
+  // What started the pass.
+  PassTrigger trigger = 2;
+  // Notifications that arrived since the previous pass started.
+  int32 notification_count = 3;
+  // Changes the pass emitted.
+  int64 change_count = 4;
+  // When the pass started.
+  google.protobuf.Timestamp started_at = 5;
+  // When the pass completed.
+  google.protobuf.Timestamp completed_at = 6;
+}
+
+// One message of the change feed.
+message WatchChangesResponse {
+  // Position within this stream, from 1, increasing by one per message.
+  int64 sequence = 1;
+  // Resume cursor of the last completed pass (an encoded SyncCursor).
+  // Resuming from it replays the changes of any pass that had not
+  // completed, so delivery is at least once.
+  string resume_cursor = 2;
+  // The streamed event.
+  oneof event {
+    // One entity upsert or delete. Its source is
+    // CHANGE_SOURCE_NOTIFICATION when a notification started the pass.
+    MicrosoftChange change = 3;
+    // A completed drive or list sweep.
+    MicrosoftSnapshot snapshot = 4;
+    // The end of a pass.
+    PassCompleted pass_completed = 5;
+  }
+}
+
+// Request to stream accepted change notifications.
+message WatchNotificationsRequest {
+  // Only notifications of this subscription; empty = all.
+  string subscription_id = 1;
+}
+
+// One accepted change notification.
+message WatchNotificationsResponse {
+  // The notification.
+  ChangeNotification notification = 1;
+}
+
+// Lifecycle event of a Graph subscription.
+enum LifecycleEvent {
+  // Zero value; an ordinary change notification.
+  LIFECYCLE_EVENT_UNSPECIFIED = 0;
+  // The subscription needs POST /reauthorize (or a renewal).
+  LIFECYCLE_EVENT_REAUTHORIZATION_REQUIRED = 1;
+  // Graph removed the subscription.
+  LIFECYCLE_EVENT_SUBSCRIPTION_REMOVED = 2;
+  // Graph dropped notifications.
+  LIFECYCLE_EVENT_MISSED = 3;
+}
+
+// A Graph change notification, after the receiver verified clientState.
+message ChangeNotification {
+  // Graph subscription id.
+  string subscription_id = 1;
+  // Change type Graph reported.
+  SubscriptionChangeType change_type = 2;
+  // Graph resource path the notification is about.
+  string resource = 3;
+  // Tenant id.
+  string tenant_id = 4;
+  // Subscription expiration Graph reported.
+  google.protobuf.Timestamp subscription_expiration_date_time = 5;
+  // Lifecycle event; UNSPECIFIED for change notifications.
+  LifecycleEvent lifecycle_event = 6;
+  // When the receiver accepted it.
+  google.protobuf.Timestamp received_at = 7;
+  // Id of the changed resource (resourceData.id), when Graph sent one.
+  string resource_id = 8;
+}
+
+// ============================================================================
+// SUBSCRIPTIONS
+// ============================================================================
+
+// A change type a subscription can ask for.
+enum SubscriptionChangeType {
+  // Zero value; not set.
+  SUBSCRIPTION_CHANGE_TYPE_UNSPECIFIED = 0;
+  // created.
+  SUBSCRIPTION_CHANGE_TYPE_CREATED = 1;
+  // updated. The only type drive roots and lists support.
+  SUBSCRIPTION_CHANGE_TYPE_UPDATED = 2;
+  // deleted.
+  SUBSCRIPTION_CHANGE_TYPE_DELETED = 3;
+}
+
+// What a subscription watches.
+message SubscriptionResource {
+  // The watched resource.
+  oneof target {
+    // /drives/{drive_id}/root.
+    string drive_root = 1;
+    // /sites/{site_id}/lists/{list_id}.
+    ListRef list = 2;
+    // /groups/{group_id}/members.
+    string group_members = 3;
+    // /groups/{group_id}.
+    string group = 4;
+    // /users/{user_id}.
+    string user = 5;
+    // Any other Graph resource path, sent as given.
+    string path = 6;
+  }
+}
+
+// A Graph change notification subscription.
+message Subscription {
+  // Graph subscription id.
+  string id = 1;
+  // The watched resource as Graph reports it.
+  string resource = 2;
+  // Change types.
+  repeated SubscriptionChangeType change_types = 3;
+  // Where Graph posts change notifications.
+  string notification_url = 4;
+  // Where Graph posts lifecycle notifications; empty = none.
+  string lifecycle_notification_url = 5;
+  // When the subscription expires.
+  google.protobuf.Timestamp expiration_date_time = 6;
+  // App that created the subscription.
+  string application_id = 7;
+  // Principal that created the subscription.
+  string creator_id = 8;
+  // Whether notifications carry resource data.
+  bool include_resource_data = 9;
+  // Lowest TLS version the notification endpoint supports.
+  string latest_supported_tls_version = 10;
+  // App id Graph uses to sign notification validation tokens.
+  string notification_url_app_id = 11;
+}
+
+// Request for POST /subscriptions. The server sets clientState from its
+// own configuration, so it never travels in a request.
+message CreateSubscriptionRequest {
+  // Catalog connection; empty = the process default.
+  string connection_id = 1;
+  // What to watch.
+  SubscriptionResource resource = 2;
+  // Change types; drive roots and lists support only UPDATED.
+  repeated SubscriptionChangeType change_types = 3;
+  // Public HTTPS URL of the receiver's notification path.
+  string notification_url = 4;
+  // Public HTTPS URL of the receiver's lifecycle path; empty = none.
+  string lifecycle_notification_url = 5;
+  // Requested expiration; unset = the longest Graph allows for the
+  // resource.
+  google.protobuf.Timestamp expiration_date_time = 6;
+  // Sends Prefer: includesecuritywebhooks, so permission changes on drive
+  // items notify too (SharePoint and OneDrive for Business).
+  bool include_security_webhooks = 7;
+}
+
+// Response to CreateSubscription.
+message CreateSubscriptionResponse {
+  // The created subscription.
+  Subscription subscription = 1;
+}
+
+// Request for GET /subscriptions/{id}.
+message GetSubscriptionRequest {
+  // Catalog connection; empty = the process default.
+  string connection_id = 1;
+  // Subscription id.
+  string subscription_id = 2;
+}
+
+// Response to GetSubscription.
+message GetSubscriptionResponse {
+  // The subscription.
+  Subscription subscription = 1;
+}
+
+// Request for GET /subscriptions.
+message ListSubscriptionsRequest {
+  // Catalog connection; empty = the process default.
+  string connection_id = 1;
+}
+
+// Response to ListSubscriptions.
+message ListSubscriptionsResponse {
+  // Every subscription the app owns.
+  repeated Subscription subscriptions = 1;
+}
+
+// Request for PATCH /subscriptions/{id}.
+message UpdateSubscriptionRequest {
+  // Catalog connection; empty = the process default.
+  string connection_id = 1;
+  // Subscription id.
+  string subscription_id = 2;
+  // New expiration; unset = the longest Graph allows for the resource.
+  google.protobuf.Timestamp expiration_date_time = 3;
+  // New notification URL; empty = unchanged.
+  string notification_url = 4;
+}
+
+// Response to UpdateSubscription.
+message UpdateSubscriptionResponse {
+  // The updated subscription.
+  Subscription subscription = 1;
+}
+
+// Request for POST /subscriptions/{id}/reauthorize.
+message ReauthorizeSubscriptionRequest {
+  // Catalog connection; empty = the process default.
+  string connection_id = 1;
+  // Subscription id.
+  string subscription_id = 2;
+}
+
+// Response to ReauthorizeSubscription.
+message ReauthorizeSubscriptionResponse {}
+
+// Request for DELETE /subscriptions/{id}.
+message DeleteSubscriptionRequest {
+  // Catalog connection; empty = the process default.
+  string connection_id = 1;
+  // Subscription id.
+  string subscription_id = 2;
+}
+
+// Response to DeleteSubscription.
+message DeleteSubscriptionResponse {}

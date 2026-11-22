@@ -64,6 +64,8 @@ enum ChangeSource {
   CHANGE_SOURCE_CRAWL = 1;
   // Incremental sync driven by a Graph delta token.
   CHANGE_SOURCE_DELTA = 2;
+  // Incremental sync started early by a Graph change notification.
+  CHANGE_SOURCE_NOTIFICATION = 3;
 }
 
 // The kind of change applied to the wrapped entity.

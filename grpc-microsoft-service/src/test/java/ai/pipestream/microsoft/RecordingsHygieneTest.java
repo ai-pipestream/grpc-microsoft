@@ -16,9 +16,11 @@ class RecordingsHygieneTest {
 
     @Test
     void noRecordingHoldsTenantData() throws Exception {
-        Path root = Recordings.dir();
         List<String> found = new ArrayList<>();
-        if (Files.isDirectory(root)) {
+        for (Path root : List.of(Recordings.dir(), ChangeRecordings.dir())) {
+            if (!Files.isDirectory(root)) {
+                continue;
+            }
             try (Stream<Path> tree = Files.walk(root)) {
                 for (Path file : tree.filter(Files::isRegularFile).sorted().toList()) {
                     String text = Files.readString(file, StandardCharsets.UTF_8);
