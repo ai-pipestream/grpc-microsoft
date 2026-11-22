@@ -1,0 +1,19 @@
+{
+  "request" : {
+    "method" : "GET",
+    "url" : "https://redacted.example/url/13",
+    "authorized" : false,
+    "headers" : { }
+  },
+  "response" : {
+    "status" : 200,
+    "headers" : {
+      "etag" : "\"{00000000-0000-4000-8000-000000000010},2\"",
+      "content-type" : "application/octet-stream"
+    },
+    "body" : {
+      "blob" : "b16d369f1c5df44881ee8413576c4ab9c25f074ce81871f3eb9456ac2ad5e4e7",
+      "length" : 4849787
+    }
+  }
+}

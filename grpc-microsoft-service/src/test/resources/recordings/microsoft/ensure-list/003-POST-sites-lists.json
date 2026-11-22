@@ -1,0 +1,49 @@
+{
+  "request" : {
+    "method" : "POST",
+    "url" : "https://graph.microsoft.com/v1.0/sites/tenant-1.example,00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000002/lists",
+    "authorized" : true,
+    "headers" : {
+      "content-type" : "application/json"
+    },
+    "body" : {
+      "json" : {
+        "displayName" : "pipestream-live-write-20261122-112150-ea07dfb9",
+        "description" : "Created by the live write test; safe to delete.",
+        "list" : {
+          "template" : "genericList"
+        }
+      }
+    }
+  },
+  "response" : {
+    "status" : 201,
+    "headers" : {
+      "etag" : "00000000-0000-4000-8000-000000000018,0",
+      "location" : "https://redacted.example/url/33",
+      "content-type" : "application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8"
+    },
+    "body" : {
+      "json" : {
+        "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#sites('tenant-1.example%2C00000000-0000-4000-8000-000000000001%2C00000000-0000-4000-8000-000000000002')/lists/$entity",
+        "@odata.etag" : "00000000-0000-4000-8000-000000000018,0",
+        "eTag" : "00000000-0000-4000-8000-000000000018,0",
+        "lastModifiedDateTime" : "2026-11-22T11:22:06Z",
+        "createdDateTime" : "2026-11-22T11:22:06Z",
+        "description" : "Created by the live write test; safe to delete.",
+        "id" : "00000000-0000-4000-8000-000000000018",
+        "name" : "pipestreamlivewrite20261122112150ea07dfb9",
+        "webUrl" : "https://redacted.example/url/34",
+        "displayName" : "pipestream-live-write-20261122-112150-ea07dfb9",
+        "parentReference" : {
+          "siteId" : "tenant-1.example,00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000002"
+        },
+        "list" : {
+          "contentTypesEnabled" : false,
+          "hidden" : false,
+          "template" : "genericList"
+        }
+      }
+    }
+  }
+}

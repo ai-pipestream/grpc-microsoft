@@ -1,0 +1,85 @@
+{
+  "request" : {
+    "method" : "POST",
+    "url" : "https://graph.microsoft.com/v1.0/drives/b!drive-0001/root/children",
+    "authorized" : true,
+    "headers" : {
+      "content-type" : "application/json"
+    },
+    "body" : {
+      "json" : {
+        "name" : "pipestream-live-write-20261122-112150-ea07dfb9",
+        "folder" : { },
+        "@microsoft.graph.conflictBehavior" : "fail"
+      }
+    }
+  },
+  "response" : {
+    "status" : 201,
+    "headers" : {
+      "etag" : "\"{00000000-0000-4000-8000-000000000003},1\"",
+      "location" : "https://redacted.example/url/1",
+      "content-type" : "application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8"
+    },
+    "body" : {
+      "json" : {
+        "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#drives('b%218FWe-5b5AUuTqSDN0boiUaukpeBeel5CoeoUgbWd9TgKQAPGEsHyR7DeZt7UtLqs')/root/children/$entity",
+        "@odata.etag" : "\"{00000000-0000-4000-8000-000000000003},1\"",
+        "eTag" : "\"{00000000-0000-4000-8000-000000000003},1\"",
+        "lastModifiedDateTime" : "2026-11-22T11:21:51Z",
+        "createdDateTime" : "2026-11-22T11:21:51Z",
+        "id" : "item-0001",
+        "name" : "pipestream-live-write-20261122-112150-ea07dfb9",
+        "size" : 0,
+        "webUrl" : "https://redacted.example/url/2",
+        "commentSettings" : {
+          "commentingDisabled" : {
+            "isDisabled" : false
+          }
+        },
+        "createdBy" : {
+          "application" : {
+            "displayName" : "Identity 1",
+            "id" : "00000000-0000-4000-8000-000000000004"
+          },
+          "user" : {
+            "displayName" : "Identity 2"
+          }
+        },
+        "lastModifiedBy" : {
+          "application" : {
+            "displayName" : "Identity 1",
+            "id" : "00000000-0000-4000-8000-000000000004"
+          },
+          "user" : {
+            "displayName" : "Identity 2"
+          }
+        },
+        "parentReference" : {
+          "driveId" : "b!drive-0001",
+          "driveType" : "documentLibrary",
+          "id" : "item-0002",
+          "path" : "/drives/b!drive-0001/root:",
+          "sharepointIds" : {
+            "listId" : "00000000-0000-4000-8000-000000000005",
+            "listItemUniqueId" : "00000000-0000-4000-8000-000000000006",
+            "siteId" : "00000000-0000-4000-8000-000000000001",
+            "siteUrl" : "https://redacted.example/url/3",
+            "tenantId" : "00000000-0000-4000-8000-000000000007",
+            "webId" : "00000000-0000-4000-8000-000000000002"
+          }
+        },
+        "fileSystemInfo" : {
+          "createdDateTime" : "2026-11-22T11:21:51Z",
+          "lastModifiedDateTime" : "2026-11-22T11:21:51Z"
+        },
+        "folder" : {
+          "childCount" : 0
+        },
+        "shared" : {
+          "scope" : "unknown"
+        }
+      }
+    }
+  }
+}

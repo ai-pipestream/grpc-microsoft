@@ -1,0 +1,73 @@
+{
+  "request" : {
+    "method" : "GET",
+    "url" : "https://graph.microsoft.com/v1.0/drives/b!drive-0001/items/item-0006/listItem?$expand=fields",
+    "authorized" : true,
+    "headers" : { }
+  },
+  "response" : {
+    "status" : 200,
+    "headers" : {
+      "etag" : "\"00000000-0000-4000-8000-000000000014,0\"",
+      "content-type" : "application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8"
+    },
+    "body" : {
+      "json" : {
+        "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#drives('b%218FWe-5b5AUuTqSDN0boiUaukpeBeel5CoeoUgbWd9TgKQAPGEsHyR7DeZt7UtLqs')/items('item-0006')/listItem(fields())/$entity",
+        "@odata.etag" : "\"00000000-0000-4000-8000-000000000014,0\"",
+        "createdDateTime" : "2026-11-22T11:21:53Z",
+        "eTag" : "\"00000000-0000-4000-8000-000000000014,0\"",
+        "id" : "35",
+        "lastModifiedDateTime" : "2026-11-22T11:22:02Z",
+        "webUrl" : "https://redacted.example/url/25",
+        "createdBy" : {
+          "user" : {
+            "displayName" : "Identity 2"
+          }
+        },
+        "lastModifiedBy" : {
+          "user" : {
+            "displayName" : "Identity 2"
+          }
+        },
+        "parentReference" : {
+          "id" : "00000000-0000-4000-8000-000000000003",
+          "siteId" : "tenant-1.example,00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000002"
+        },
+        "contentType" : {
+          "id" : "0x0101000F65C75F20BBAB4BA63EB123BAA3934F",
+          "name" : "Document"
+        },
+        "fields@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#drives('b%218FWe-5b5AUuTqSDN0boiUaukpeBeel5CoeoUgbWd9TgKQAPGEsHyR7DeZt7UtLqs')/items('item-0006')/listItem/fields/$entity",
+        "fields" : {
+          "@odata.etag" : "\"00000000-0000-4000-8000-000000000014,0\"",
+          "id" : "35",
+          "ContentType" : "Document",
+          "Created" : "2026-11-22T11:21:53Z",
+          "AuthorLookupId" : "1073741822",
+          "Modified" : "2026-11-22T11:22:02Z",
+          "EditorLookupId" : "1073741822",
+          "FileLeafRef" : "copy.txt",
+          "_CheckinComment" : "",
+          "LinkFilenameNoMenu" : "copy.txt",
+          "LinkFilename" : "copy.txt",
+          "DocIcon" : "txt",
+          "FileSizeDisplay" : "58",
+          "ItemChildCount" : "0",
+          "FolderChildCount" : "0",
+          "_ComplianceFlags" : "",
+          "_ComplianceTag" : "",
+          "_ComplianceTagWrittenTime" : "",
+          "_ComplianceTagUserId" : "",
+          "_CommentCount" : "",
+          "_LikeCount" : "",
+          "_DisplayName" : "",
+          "Edit" : "0",
+          "_UIVersionString" : "1.0",
+          "ParentVersionStringLookupId" : "35",
+          "ParentLeafNameLookupId" : "35"
+        }
+      }
+    }
+  }
+}

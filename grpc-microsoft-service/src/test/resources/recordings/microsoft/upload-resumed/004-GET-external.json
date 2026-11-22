@@ -1,0 +1,21 @@
+{
+  "request" : {
+    "method" : "GET",
+    "url" : "https://redacted.example/url/14",
+    "authorized" : false,
+    "headers" : { }
+  },
+  "response" : {
+    "status" : 200,
+    "headers" : {
+      "content-type" : "application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8"
+    },
+    "body" : {
+      "json" : {
+        "@odata.context" : "https://redacted.example/url/8",
+        "expirationDateTime" : "2026-11-22T11:36:57.796Z",
+        "nextExpectedRanges" : [ "3276800-4588296" ]
+      }
+    }
+  }
+}

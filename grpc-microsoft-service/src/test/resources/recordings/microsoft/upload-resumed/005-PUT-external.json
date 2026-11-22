@@ -1,0 +1,80 @@
+{
+  "request" : {
+    "method" : "PUT",
+    "url" : "https://redacted.example/url/14",
+    "authorized" : false,
+    "headers" : {
+      "content-range" : "bytes 3276800-4588296/4588297",
+      "content-type" : "application/octet-stream"
+    },
+    "body" : {
+      "sha256" : "aeba96796555de44dac2033235c0f78e2e6d7d2ca2eb77dfc5e745a047b4d53d",
+      "length" : 1311497
+    }
+  },
+  "response" : {
+    "status" : 201,
+    "headers" : {
+      "content-type" : "application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8"
+    },
+    "body" : {
+      "json" : {
+        "@odata.context" : "https://redacted.example/url/9",
+        "@content.downloadUrl" : "https://redacted.example/url/15",
+        "@content.downloadUrlNoAuth" : "https://redacted.example/url/16",
+        "createdBy" : {
+          "application" : {
+            "id" : "00000000-0000-4000-8000-000000000004",
+            "displayName" : "Identity 1"
+          },
+          "user" : {
+            "displayName" : "Identity 2"
+          }
+        },
+        "createdDateTime" : "2026-11-22T11:21:57Z",
+        "eTag" : "\"{00000000-0000-4000-8000-000000000012},2\"",
+        "id" : "item-0005",
+        "lastModifiedBy" : {
+          "application" : {
+            "id" : "00000000-0000-4000-8000-000000000004",
+            "displayName" : "Identity 1"
+          },
+          "user" : {
+            "displayName" : "Identity 2"
+          }
+        },
+        "lastModifiedDateTime" : "2026-11-22T11:21:58Z",
+        "name" : "resumed.bin",
+        "parentReference" : {
+          "driveType" : "documentLibrary",
+          "driveId" : "b!drive-0001",
+          "id" : "item-0001",
+          "name" : "pipestream-live-write-20261122-112150-ea07dfb9",
+          "path" : "/drives/b!drive-0001/root:/pipestream-live-write-20261122-112150-ea07dfb9",
+          "siteId" : "00000000-0000-4000-8000-000000000001"
+        },
+        "webUrl" : "https://redacted.example/url/17",
+        "cTag" : "\"c:{00000000-0000-4000-8000-000000000012},2\"",
+        "file" : {
+          "fileExtension" : ".bin",
+          "hashes" : {
+            "quickXorHash" : "nEbYIt28kd6wjDMilAVAuoiQvJI="
+          },
+          "irmEffectivelyEnabled" : false,
+          "irmEnabled" : false,
+          "mimeType" : "application/octet-stream"
+        },
+        "fileSystemInfo" : {
+          "createdDateTime" : "2026-11-22T11:21:57Z",
+          "lastModifiedDateTime" : "2026-11-22T11:21:58Z"
+        },
+        "isAuthoritative" : false,
+        "shared" : {
+          "effectiveRoles" : [ "write" ],
+          "scope" : "users"
+        },
+        "size" : 4588297
+      }
+    }
+  }
+}

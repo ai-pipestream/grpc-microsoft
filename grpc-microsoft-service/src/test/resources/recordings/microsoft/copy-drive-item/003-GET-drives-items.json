@@ -1,0 +1,62 @@
+{
+  "request" : {
+    "method" : "GET",
+    "url" : "https://graph.microsoft.com/v1.0/drives/b!drive-0001/items/item-0006",
+    "authorized" : true,
+    "headers" : { }
+  },
+  "response" : {
+    "status" : 200,
+    "headers" : {
+      "content-type" : "application/json; odata.metadata=minimal; odata.streaming=true; IEEE754Compatible=false; charset=utf-8"
+    },
+    "body" : {
+      "json" : {
+        "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#Collection(driveItem)/$entity",
+        "@microsoft.graph.downloadUrl" : "https://redacted.example/url/23",
+        "@microsoft.graph.downloadUrlNoAuth" : "https://redacted.example/url/24",
+        "createdBy" : {
+          "user" : {
+            "displayName" : "Identity 2"
+          }
+        },
+        "createdDateTime" : "2026-11-22T11:21:53Z",
+        "eTag" : "\"{00000000-0000-4000-8000-000000000014},1\"",
+        "id" : "item-0006",
+        "lastModifiedBy" : {
+          "user" : {
+            "displayName" : "Identity 2"
+          }
+        },
+        "lastModifiedDateTime" : "2026-11-22T11:22:02Z",
+        "name" : "copy.txt",
+        "parentReference" : {
+          "driveType" : "documentLibrary",
+          "driveId" : "b!drive-0001",
+          "id" : "item-0001",
+          "name" : "pipestream-live-write-20261122-112150-ea07dfb9",
+          "path" : "/drives/b!drive-0001/root:/pipestream-live-write-20261122-112150-ea07dfb9",
+          "siteId" : "00000000-0000-4000-8000-000000000001"
+        },
+        "webUrl" : "https://redacted.example/url/25",
+        "cTag" : "\"c:{00000000-0000-4000-8000-000000000014},1\"",
+        "file" : {
+          "fileExtension" : ".txt",
+          "hashes" : {
+            "quickXorHash" : "GRVOVaSPbM9pT1492Ae+0P+QRHE="
+          },
+          "mimeType" : "text/plain"
+        },
+        "fileSystemInfo" : {
+          "createdDateTime" : "2026-11-22T11:21:53Z",
+          "lastModifiedDateTime" : "2026-11-22T11:22:02Z"
+        },
+        "isAuthoritative" : false,
+        "shared" : {
+          "scope" : "users"
+        },
+        "size" : 58
+      }
+    }
+  }
+}
