@@ -839,6 +839,18 @@ class MicrosoftWriteRpcTest {
 
     // ------------------------------------------------------------ bulk
 
+    private int batchOf(List<FakeGraphServer.RecordedRequest> batches, String urlEnd)
+            throws Exception {
+        for (int i = 0; i < batches.size(); i++) {
+            for (JsonNode request : body(batches.get(i)).path("requests")) {
+                if (request.path("url").asText().endsWith(urlEnd)) {
+                    return i;
+                }
+            }
+        }
+        throw new AssertionError("no batch holds a request to " + urlEnd);
+    }
+
     private static MutateRequest deleteOp(String opId, String itemId, String... dependsOn) {
         return MutateRequest.newBuilder().setOpId(opId).addAllDependsOn(List.of(dependsOn))
                 .setDeleteDriveItem(DeleteDriveItemRequest.newBuilder().setItem(item(itemId))
@@ -917,12 +929,9 @@ class MicrosoftWriteRpcTest {
                 .findFirst().orElseThrow();
         assertThat(stale.path("method").asText()).isEqualTo("DELETE");
         assertThat(stale.path("headers").path("If-Match").asText()).isEqualTo("\"stale\"");
-        if (batches.size() == 1) {
-            assertThat(sent.get(1).path("dependsOn").path(0).asText())
-                    .isEqualTo(sent.get(0).path("id").asText());
-            assertThat(sent.get(1).path("headers").path("Content-Type").asText())
-                    .isEqualTo("application/json");
-        }
+        assertThat(sent).noneMatch(r -> r.has("dependsOn"));
+        assertThat(batchOf(batches, "/drives/d1/items/f1"))
+                .isGreaterThan(batchOf(batches, "/drives/d1/root/children"));
     }
 
     @Test

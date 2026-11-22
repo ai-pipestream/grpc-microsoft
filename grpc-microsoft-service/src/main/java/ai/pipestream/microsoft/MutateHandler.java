@@ -141,22 +141,52 @@ final class MutateHandler implements StreamObserver<MutateRequest> {
         }
     }
 
+    /**
+     * Sends the ops of one connection as fully parallel batches: an op goes in the batch after
+     * the ones it depends on, and is refused when one of those failed.
+     */
     private void sendBatch(List<Planned<?>> ops) throws InterruptedException {
-        Map<String, Integer> indexes = new HashMap<>();
-        List<GraphClient.BatchCall> calls = new ArrayList<>();
-        for (int i = 0; i < ops.size(); i++) {
-            MutateRequest request = ops.get(i).request();
-            List<Integer> dependsOn = new ArrayList<>();
-            for (String dependency : request.getDependsOnList()) {
-                Integer index = indexes.get(dependency);
-                if (index != null) {
-                    dependsOn.add(index);
+        Map<String, Integer> waveOf = new HashMap<>();
+        List<List<Planned<?>>> waves = new ArrayList<>();
+        for (Planned<?> op : ops) {
+            int wave = 0;
+            for (String dependency : op.request().getDependsOnList()) {
+                Integer earlier = waveOf.get(dependency);
+                if (earlier != null) {
+                    wave = Math.max(wave, earlier + 1);
                 }
             }
-            calls.add(new GraphClient.BatchCall(ops.get(i).plan().call(), dependsOn));
-            if (!request.getOpId().isEmpty()) {
-                indexes.put(request.getOpId(), i);
+            if (!op.request().getOpId().isEmpty()) {
+                waveOf.put(op.request().getOpId(), wave);
             }
+            while (waves.size() <= wave) {
+                waves.add(new ArrayList<>());
+            }
+            waves.get(wave).add(op);
+        }
+        for (List<Planned<?>> wave : waves) {
+            List<Planned<?>> ready = new ArrayList<>();
+            for (Planned<?> op : wave) {
+                Optional<String> failedDependency = op.request().getDependsOnList().stream()
+                        .filter(failed::contains).findFirst();
+                if (failedDependency.isPresent()) {
+                    refuse(op.request(), WriteError.newBuilder()
+                            .setCode(WriteErrorCode.WRITE_ERROR_CODE_FAILED_PRECONDITION)
+                            .setMessage("op " + failedDependency.get() + " failed").build());
+                } else {
+                    ready.add(op);
+                }
+            }
+            if (!ready.isEmpty()) {
+                sendParallel(ready);
+            }
+        }
+    }
+
+    private void sendParallel(List<Planned<?>> ops) throws InterruptedException {
+        List<GraphClient.BatchCall> calls = new ArrayList<>();
+        for (Planned<?> op : ops) {
+            calls.add(new GraphClient.BatchCall(op.plan().call(), List.of()));
         }
         List<GraphClient.BatchReply> replies;
         try {
