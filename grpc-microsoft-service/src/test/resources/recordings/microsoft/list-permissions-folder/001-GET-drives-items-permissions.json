@@ -1,0 +1,108 @@
+{
+  "request" : {
+    "method" : "GET",
+    "url" : "https://graph.microsoft.com/v1.0/drives/b!drive-0001/items/item-0001/permissions",
+    "authorized" : true,
+    "headers" : { }
+  },
+  "response" : {
+    "status" : 200,
+    "headers" : {
+      "content-type" : "application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8"
+    },
+    "body" : {
+      "json" : {
+        "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#drives('b%218FWe-5b5AUuTqSDN0boiUaukpeBeel5CoeoUgbWd9TgKQAPGEsHyR7DeZt7UtLqs')/items('item-0001')/permissions",
+        "value" : [ {
+          "id" : "permission-0001",
+          "roles" : [ "owner" ],
+          "grantedToV2" : {
+            "siteGroup" : {
+              "displayName" : "Identity 3",
+              "id" : "3",
+              "loginName" : "Welcome to PipeStream Owners"
+            },
+            "sharePointGroup" : {
+              "id" : "ZmI5ZTU1ZjAtZjk5Ni00YjAxLTkzYTktMjBjZGQxYmEyMjUxXzM",
+              "title" : "Welcome to PipeStream Owners",
+              "principalId" : "3"
+            }
+          },
+          "grantedTo" : {
+            "user" : {
+              "displayName" : "Identity 3"
+            }
+          },
+          "inheritedFrom" : { }
+        }, {
+          "id" : "permission-0002",
+          "roles" : [ "read" ],
+          "grantedToV2" : {
+            "siteGroup" : {
+              "displayName" : "Identity 4",
+              "id" : "4",
+              "loginName" : "Welcome to PipeStream Visitors"
+            },
+            "sharePointGroup" : {
+              "id" : "ZmI5ZTU1ZjAtZjk5Ni00YjAxLTkzYTktMjBjZGQxYmEyMjUxXzQ",
+              "title" : "Welcome to PipeStream Visitors",
+              "principalId" : "4"
+            }
+          },
+          "grantedTo" : {
+            "user" : {
+              "displayName" : "Identity 4"
+            }
+          },
+          "inheritedFrom" : { }
+        }, {
+          "id" : "permission-0003",
+          "roles" : [ "write" ],
+          "grantedToV2" : {
+            "siteGroup" : {
+              "displayName" : "Identity 5",
+              "id" : "5",
+              "loginName" : "Welcome to PipeStream Members"
+            },
+            "sharePointGroup" : {
+              "id" : "ZmI5ZTU1ZjAtZjk5Ni00YjAxLTkzYTktMjBjZGQxYmEyMjUxXzU",
+              "title" : "Welcome to PipeStream Members",
+              "principalId" : "5"
+            }
+          },
+          "grantedTo" : {
+            "user" : {
+              "displayName" : "Identity 5"
+            }
+          },
+          "inheritedFrom" : { }
+        }, {
+          "id" : "permission-0004",
+          "roles" : [ "owner" ],
+          "grantedToV2" : {
+            "user" : {
+              "@odata.type" : "#microsoft.graph.sharePointIdentity",
+              "displayName" : "Identity 6",
+              "email" : "email-1.example.invalid",
+              "id" : "00000000-0000-4000-8000-000000000013"
+            },
+            "siteUser" : {
+              "displayName" : "Identity 6",
+              "email" : "email-1.example.invalid",
+              "id" : "6",
+              "loginName" : "i:0#.f|membership|email-1.example.invalid"
+            }
+          },
+          "grantedTo" : {
+            "user" : {
+              "displayName" : "Identity 6",
+              "email" : "email-1.example.invalid",
+              "id" : "00000000-0000-4000-8000-000000000013"
+            }
+          },
+          "inheritedFrom" : { }
+        } ]
+      }
+    }
+  }
+}

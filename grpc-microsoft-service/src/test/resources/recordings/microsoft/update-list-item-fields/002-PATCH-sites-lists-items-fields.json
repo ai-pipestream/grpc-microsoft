@@ -1,10 +1,10 @@
 {
   "request" : {
     "method" : "PATCH",
-    "url" : "https://graph.microsoft.com/v1.0/sites/tenant-1.example,00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000002/lists/00000000-0000-4000-8000-000000000018/items/1/fields",
+    "url" : "https://graph.microsoft.com/v1.0/sites/tenant-1.example,00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000002/lists/00000000-0000-4000-8000-000000000019/items/1/fields",
     "authorized" : true,
     "headers" : {
-      "if-match" : "\"00000000-0000-4000-8000-000000000048,1\"",
+      "if-match" : "\"00000000-0000-4000-8000-000000000049,1\"",
       "content-type" : "application/json"
     },
     "body" : {
@@ -20,13 +20,13 @@
   "response" : {
     "status" : 200,
     "headers" : {
-      "etag" : "\"00000000-0000-4000-8000-000000000048,2\"",
+      "etag" : "\"00000000-0000-4000-8000-000000000049,2\"",
       "content-type" : "application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8"
     },
     "body" : {
       "json" : {
-        "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#sites('tenant-1.example%2C00000000-0000-4000-8000-000000000001%2C00000000-0000-4000-8000-000000000002')/lists('00000000-0000-4000-8000-000000000018')/items('1')/fields/$entity",
-        "@odata.etag" : "\"00000000-0000-4000-8000-000000000048,2\"",
+        "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#sites('tenant-1.example%2C00000000-0000-4000-8000-000000000001%2C00000000-0000-4000-8000-000000000002')/lists('00000000-0000-4000-8000-000000000019')/items('1')/fields/$entity",
+        "@odata.etag" : "\"00000000-0000-4000-8000-000000000049,2\"",
         "Title" : "live write",
         "PsText" : "hello",
         "PsNumber" : 4.5,
@@ -35,8 +35,8 @@
         "PsWhen" : "2024-01-15T12:00:00Z",
         "id" : "1",
         "ContentType" : "Item",
-        "Modified" : "2026-11-22T11:22:09Z",
-        "Created" : "2026-11-22T11:22:08Z",
+        "Modified" : "2026-11-22T13:30:06Z",
+        "Created" : "2026-11-22T13:30:05Z",
         "AuthorLookupId" : "1073741822",
         "EditorLookupId" : "1073741822",
         "_UIVersionString" : "2.0",

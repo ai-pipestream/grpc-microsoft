@@ -1,7 +1,7 @@
 {
   "request" : {
     "method" : "POST",
-    "url" : "https://graph.microsoft.com/v1.0/sites/tenant-1.example,00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000002/lists/00000000-0000-4000-8000-000000000018/columns",
+    "url" : "https://graph.microsoft.com/v1.0/sites/tenant-1.example,00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000002/lists/00000000-0000-4000-8000-000000000019/columns",
     "authorized" : true,
     "headers" : {
       "content-type" : "application/json"
@@ -22,13 +22,13 @@
     },
     "body" : {
       "json" : {
-        "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#sites('tenant-1.example%2C00000000-0000-4000-8000-000000000001%2C00000000-0000-4000-8000-000000000002')/lists('00000000-0000-4000-8000-000000000018')/columns/$entity",
+        "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#sites('tenant-1.example%2C00000000-0000-4000-8000-000000000001%2C00000000-0000-4000-8000-000000000002')/lists('00000000-0000-4000-8000-000000000019')/columns/$entity",
         "columnGroup" : "Custom Columns",
         "description" : "",
         "displayName" : "PsFlag",
         "enforceUniqueValues" : false,
         "hidden" : false,
-        "id" : "00000000-0000-4000-8000-000000000045",
+        "id" : "00000000-0000-4000-8000-000000000046",
         "indexed" : false,
         "name" : "PsFlag",
         "readOnly" : false,

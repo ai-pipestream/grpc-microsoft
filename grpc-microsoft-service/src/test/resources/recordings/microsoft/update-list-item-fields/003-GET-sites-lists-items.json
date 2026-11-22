@@ -1,24 +1,24 @@
 {
   "request" : {
     "method" : "GET",
-    "url" : "https://graph.microsoft.com/v1.0/sites/tenant-1.example,00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000002/lists/00000000-0000-4000-8000-000000000018/items/1?$select=id,name,webUrl,description,eTag,createdDateTime,lastModifiedDateTime,createdBy,lastModifiedBy,contentType,sharepointIds,parentReference,deleted&$expand=fields",
+    "url" : "https://graph.microsoft.com/v1.0/sites/tenant-1.example,00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000002/lists/00000000-0000-4000-8000-000000000019/items/1?$select=id,name,webUrl,description,eTag,createdDateTime,lastModifiedDateTime,createdBy,lastModifiedBy,contentType,sharepointIds,parentReference,deleted&$expand=fields",
     "authorized" : true,
     "headers" : { }
   },
   "response" : {
     "status" : 200,
     "headers" : {
-      "etag" : "\"00000000-0000-4000-8000-000000000048,2\"",
+      "etag" : "\"00000000-0000-4000-8000-000000000049,2\"",
       "content-type" : "application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8"
     },
     "body" : {
       "json" : {
-        "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#sites('tenant-1.example%2C00000000-0000-4000-8000-000000000001%2C00000000-0000-4000-8000-000000000002')/lists('00000000-0000-4000-8000-000000000018')/items(id,name,webUrl,description,eTag,createdDateTime,lastModifiedDateTime,createdBy,lastModifiedBy,contentType,sharepointIds,parentReference,deleted,fields())/$entity",
-        "@odata.etag" : "\"00000000-0000-4000-8000-000000000048,2\"",
-        "createdDateTime" : "2026-11-22T11:22:08Z",
-        "eTag" : "\"00000000-0000-4000-8000-000000000048,2\"",
+        "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#sites('tenant-1.example%2C00000000-0000-4000-8000-000000000001%2C00000000-0000-4000-8000-000000000002')/lists('00000000-0000-4000-8000-000000000019')/items(id,name,webUrl,description,eTag,createdDateTime,lastModifiedDateTime,createdBy,lastModifiedBy,contentType,sharepointIds,parentReference,deleted,fields())/$entity",
+        "@odata.etag" : "\"00000000-0000-4000-8000-000000000049,2\"",
+        "createdDateTime" : "2026-11-22T13:30:05Z",
+        "eTag" : "\"00000000-0000-4000-8000-000000000049,2\"",
         "id" : "1",
-        "lastModifiedDateTime" : "2026-11-22T11:22:09Z",
+        "lastModifiedDateTime" : "2026-11-22T13:30:06Z",
         "webUrl" : "https://redacted.example/url/41",
         "createdBy" : {
           "user" : {
@@ -35,25 +35,25 @@
           }
         },
         "parentReference" : {
-          "id" : "00000000-0000-4000-8000-000000000049",
+          "id" : "00000000-0000-4000-8000-000000000050",
           "siteId" : "tenant-1.example,00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000002"
         },
         "contentType" : {
-          "id" : "0x01003F139793E4F61C40A8AE2A60C8E74337",
+          "id" : "0x0100F555038966779147813498B7ED2D9922",
           "name" : "Item"
         },
         "sharepointIds" : {
-          "listId" : "00000000-0000-4000-8000-000000000018",
+          "listId" : "00000000-0000-4000-8000-000000000019",
           "listItemId" : "1",
-          "listItemUniqueId" : "00000000-0000-4000-8000-000000000048",
+          "listItemUniqueId" : "00000000-0000-4000-8000-000000000049",
           "siteId" : "00000000-0000-4000-8000-000000000001",
           "siteUrl" : "https://redacted.example/url/3",
           "tenantId" : "00000000-0000-4000-8000-000000000007",
           "webId" : "00000000-0000-4000-8000-000000000002"
         },
-        "fields@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#sites('tenant-1.example%2C00000000-0000-4000-8000-000000000001%2C00000000-0000-4000-8000-000000000002')/lists('00000000-0000-4000-8000-000000000018')/items('1')/fields/$entity",
+        "fields@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#sites('tenant-1.example%2C00000000-0000-4000-8000-000000000001%2C00000000-0000-4000-8000-000000000002')/lists('00000000-0000-4000-8000-000000000019')/items('1')/fields/$entity",
         "fields" : {
-          "@odata.etag" : "\"00000000-0000-4000-8000-000000000048,2\"",
+          "@odata.etag" : "\"00000000-0000-4000-8000-000000000049,2\"",
           "Title" : "live write",
           "PsText" : "hello",
           "PsNumber" : 4.5,
@@ -62,8 +62,8 @@
           "PsWhen" : "2024-01-15T12:00:00Z",
           "id" : "1",
           "ContentType" : "Item",
-          "Modified" : "2026-11-22T11:22:09Z",
-          "Created" : "2026-11-22T11:22:08Z",
+          "Modified" : "2026-11-22T13:30:06Z",
+          "Created" : "2026-11-22T13:30:05Z",
           "AuthorLookupId" : "1073741822",
           "EditorLookupId" : "1073741822",
           "_UIVersionString" : "2.0",

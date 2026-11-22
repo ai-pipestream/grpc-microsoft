@@ -1,7 +1,7 @@
 {
   "request" : {
     "method" : "GET",
-    "url" : "https://graph.microsoft.com/v1.0/sites/tenant-1.example,00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000002/lists/00000000-0000-4000-8000-000000000018/items/2?$select=id,name,webUrl,description,eTag,createdDateTime,lastModifiedDateTime,createdBy,lastModifiedBy,contentType,sharepointIds,parentReference,deleted&$expand=fields",
+    "url" : "https://graph.microsoft.com/v1.0/sites/tenant-1.example,00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000002/lists/00000000-0000-4000-8000-000000000019/items/2?$select=id,name,webUrl,description,eTag,createdDateTime,lastModifiedDateTime,createdBy,lastModifiedBy,contentType,sharepointIds,parentReference,deleted&$expand=fields",
     "authorized" : true,
     "headers" : { }
   },
@@ -16,9 +16,9 @@
           "code" : "itemNotFound",
           "message" : "The specified list item was not found",
           "innerError" : {
-            "date" : "2026-11-22T11:22:11",
-            "request-id" : "00000000-0000-4000-8000-000000000061",
-            "client-request-id" : "00000000-0000-4000-8000-000000000061"
+            "date" : "2026-11-22T13:30:08",
+            "request-id" : "00000000-0000-4000-8000-000000000062",
+            "client-request-id" : "00000000-0000-4000-8000-000000000062"
           }
         }
       }

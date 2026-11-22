@@ -22,7 +22,7 @@
         }, {
           "id" : "1",
           "method" : "POST",
-          "url" : "/sites/tenant-1.example,00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000002/lists/00000000-0000-4000-8000-000000000018/items",
+          "url" : "/sites/tenant-1.example,00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000002/lists/00000000-0000-4000-8000-000000000019/items",
           "body" : {
             "fields" : {
               "Title" : "from batch"
@@ -34,7 +34,7 @@
         }, {
           "id" : "2",
           "method" : "PATCH",
-          "url" : "/sites/tenant-1.example,00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000002/lists/00000000-0000-4000-8000-000000000018/items/1/fields",
+          "url" : "/sites/tenant-1.example,00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000002/lists/00000000-0000-4000-8000-000000000019/items/1/fields",
           "body" : {
             "Title" : "retitled in batch"
           },
@@ -44,7 +44,7 @@
         }, {
           "id" : "3",
           "method" : "DELETE",
-          "url" : "/sites/tenant-1.example,00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000002/lists/00000000-0000-4000-8000-000000000018/items/2"
+          "url" : "/sites/tenant-1.example,00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000002/lists/00000000-0000-4000-8000-000000000019/items/2"
         }, {
           "id" : "4",
           "method" : "PATCH",
@@ -71,20 +71,20 @@
           "status" : 200,
           "headers" : {
             "Cache-Control" : "no-store, no-cache",
-            "SPLogId" : "00000000-0000-4000-8000-000000000051",
+            "SPLogId" : "00000000-0000-4000-8000-000000000052",
             "OData-Version" : "4.0",
             "Content-Type" : "application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8"
           },
           "body" : {
             "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#drives('b%218FWe-5b5AUuTqSDN0boiUaukpeBeel5CoeoUgbWd9TgKQAPGEsHyR7DeZt7UtLqs')/items/$entity",
             "@microsoft.graph.downloadUrl" : "https://redacted.example/url/44",
-            "createdDateTime" : "2026-11-22T11:21:53Z",
-            "eTag" : "\"{00000000-0000-4000-8000-000000000014},2\"",
+            "createdDateTime" : "2026-11-22T13:29:48Z",
+            "eTag" : "\"{00000000-0000-4000-8000-000000000015},2\"",
             "id" : "item-0006",
-            "lastModifiedDateTime" : "2026-11-22T11:22:10Z",
+            "lastModifiedDateTime" : "2026-11-22T13:30:07Z",
             "name" : "renamed-in-batch.txt",
             "webUrl" : "https://redacted.example/url/45",
-            "cTag" : "\"c:{00000000-0000-4000-8000-000000000014},1\"",
+            "cTag" : "\"c:{00000000-0000-4000-8000-000000000015},1\"",
             "isAuthoritative" : false,
             "size" : 58,
             "createdBy" : {
@@ -101,19 +101,19 @@
               "driveType" : "documentLibrary",
               "driveId" : "b!drive-0001",
               "id" : "item-0001",
-              "name" : "pipestream-live-write-20261122-112150-ea07dfb9",
-              "path" : "/drives/b!drive-0001/root:/pipestream-live-write-20261122-112150-ea07dfb9",
+              "name" : "pipestream-live-write-20261122-132946-445d2e95",
+              "path" : "/drives/b!drive-0001/root:/pipestream-live-write-20261122-132946-445d2e95",
               "siteId" : "00000000-0000-4000-8000-000000000001"
             },
             "file" : {
               "mimeType" : "text/plain",
               "hashes" : {
-                "quickXorHash" : "GRVOVaSPbM9pT1492Ae+0P+QRHE="
+                "quickXorHash" : "GRVKUWSPbEcrWlQN3SyysPScRHU="
               }
             },
             "fileSystemInfo" : {
-              "createdDateTime" : "2026-11-22T11:21:53Z",
-              "lastModifiedDateTime" : "2026-11-22T11:22:10Z"
+              "createdDateTime" : "2026-11-22T13:29:48Z",
+              "lastModifiedDateTime" : "2026-11-22T13:30:07Z"
             },
             "shared" : {
               "scope" : "users"
@@ -125,18 +125,18 @@
           "headers" : {
             "Location" : "https://redacted.example/url/46",
             "Cache-Control" : "no-store, no-cache",
-            "SPLogId" : "00000000-0000-4000-8000-000000000052",
-            "SPRequestDuration" : "251",
+            "SPLogId" : "00000000-0000-4000-8000-000000000053",
+            "SPRequestDuration" : "190",
             "OData-Version" : "4.0",
             "Content-Type" : "application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8",
-            "ETag" : "\"{00000000-0000-4000-8000-000000000053},1\""
+            "ETag" : "\"{00000000-0000-4000-8000-000000000054},1\""
           },
           "body" : {
             "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#drives('b%218FWe-5b5AUuTqSDN0boiUaukpeBeel5CoeoUgbWd9TgKQAPGEsHyR7DeZt7UtLqs')/items('item-0001')/children/$entity",
-            "@odata.etag" : "\"{00000000-0000-4000-8000-000000000053},1\"",
-            "eTag" : "\"{00000000-0000-4000-8000-000000000053},1\"",
-            "lastModifiedDateTime" : "2026-11-22T11:22:10Z",
-            "createdDateTime" : "2026-11-22T11:22:10Z",
+            "@odata.etag" : "\"{00000000-0000-4000-8000-000000000054},1\"",
+            "eTag" : "\"{00000000-0000-4000-8000-000000000054},1\"",
+            "lastModifiedDateTime" : "2026-11-22T13:30:07Z",
+            "createdDateTime" : "2026-11-22T13:30:07Z",
             "id" : "item-0008",
             "name" : "batch-a",
             "size" : 0,
@@ -168,7 +168,7 @@
               "driveId" : "b!drive-0001",
               "driveType" : "documentLibrary",
               "id" : "item-0001",
-              "path" : "/drives/b!drive-0001/root:/pipestream-live-write-20261122-112150-ea07dfb9",
+              "path" : "/drives/b!drive-0001/root:/pipestream-live-write-20261122-132946-445d2e95",
               "sharepointIds" : {
                 "listId" : "00000000-0000-4000-8000-000000000005",
                 "listItemUniqueId" : "00000000-0000-4000-8000-000000000003",
@@ -179,8 +179,8 @@
               }
             },
             "fileSystemInfo" : {
-              "createdDateTime" : "2026-11-22T11:22:10Z",
-              "lastModifiedDateTime" : "2026-11-22T11:22:10Z"
+              "createdDateTime" : "2026-11-22T13:30:07Z",
+              "lastModifiedDateTime" : "2026-11-22T13:30:07Z"
             },
             "folder" : {
               "childCount" : 0
@@ -195,18 +195,18 @@
           "headers" : {
             "Location" : "https://redacted.example/url/48",
             "Cache-Control" : "no-cache",
-            "SPLogId" : "00000000-0000-4000-8000-000000000054",
+            "SPLogId" : "00000000-0000-4000-8000-000000000055",
             "OData-Version" : "4.0",
             "Content-Type" : "application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8",
-            "ETag" : "\"00000000-0000-4000-8000-000000000055,1\""
+            "ETag" : "\"00000000-0000-4000-8000-000000000056,1\""
           },
           "body" : {
-            "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#sites('tenant-1.example%2C00000000-0000-4000-8000-000000000001%2C00000000-0000-4000-8000-000000000002')/lists('00000000-0000-4000-8000-000000000018')/items/$entity",
-            "@odata.etag" : "\"00000000-0000-4000-8000-000000000055,1\"",
-            "createdDateTime" : "2026-11-22T11:22:10Z",
-            "eTag" : "\"00000000-0000-4000-8000-000000000055,1\"",
+            "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#sites('tenant-1.example%2C00000000-0000-4000-8000-000000000001%2C00000000-0000-4000-8000-000000000002')/lists('00000000-0000-4000-8000-000000000019')/items/$entity",
+            "@odata.etag" : "\"00000000-0000-4000-8000-000000000056,1\"",
+            "createdDateTime" : "2026-11-22T13:30:07Z",
+            "eTag" : "\"00000000-0000-4000-8000-000000000056,1\"",
             "id" : "3",
-            "lastModifiedDateTime" : "2026-11-22T11:22:10Z",
+            "lastModifiedDateTime" : "2026-11-22T13:30:07Z",
             "webUrl" : "https://redacted.example/url/49",
             "createdBy" : {
               "user" : {
@@ -223,21 +223,21 @@
               }
             },
             "parentReference" : {
-              "id" : "00000000-0000-4000-8000-000000000049",
+              "id" : "00000000-0000-4000-8000-000000000050",
               "siteId" : "tenant-1.example,00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000002"
             },
             "contentType" : {
-              "id" : "0x01003F139793E4F61C40A8AE2A60C8E74337",
+              "id" : "0x0100F555038966779147813498B7ED2D9922",
               "name" : "Item"
             },
-            "fields@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#sites('tenant-1.example%2C00000000-0000-4000-8000-000000000001%2C00000000-0000-4000-8000-000000000002')/lists('00000000-0000-4000-8000-000000000018')/items('3')/fields/$entity",
+            "fields@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#sites('tenant-1.example%2C00000000-0000-4000-8000-000000000001%2C00000000-0000-4000-8000-000000000002')/lists('00000000-0000-4000-8000-000000000019')/items('3')/fields/$entity",
             "fields" : {
-              "@odata.etag" : "\"00000000-0000-4000-8000-000000000055,1\"",
+              "@odata.etag" : "\"00000000-0000-4000-8000-000000000056,1\"",
               "Title" : "from batch",
               "id" : "3",
               "ContentType" : "Item",
-              "Modified" : "2026-11-22T11:22:10Z",
-              "Created" : "2026-11-22T11:22:10Z",
+              "Modified" : "2026-11-22T13:30:07Z",
+              "Created" : "2026-11-22T13:30:07Z",
               "AuthorLookupId" : "1073741822",
               "EditorLookupId" : "1073741822",
               "_UIVersionString" : "1.0",
@@ -256,18 +256,26 @@
             }
           }
         }, {
+          "id" : "3",
+          "status" : 204,
+          "headers" : {
+            "Cache-Control" : "no-store, no-cache",
+            "SPLogId" : "00000000-0000-4000-8000-000000000057"
+          },
+          "body" : null
+        }, {
           "id" : "2",
           "status" : 200,
           "headers" : {
             "Cache-Control" : "no-cache",
-            "SPLogId" : "00000000-0000-4000-8000-000000000056",
+            "SPLogId" : "00000000-0000-4000-8000-000000000058",
             "OData-Version" : "4.0",
             "Content-Type" : "application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8",
-            "ETag" : "\"00000000-0000-4000-8000-000000000048,3\""
+            "ETag" : "\"00000000-0000-4000-8000-000000000049,3\""
           },
           "body" : {
-            "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#sites('tenant-1.example%2C00000000-0000-4000-8000-000000000001%2C00000000-0000-4000-8000-000000000002')/lists('00000000-0000-4000-8000-000000000018')/items('1')/fields/$entity",
-            "@odata.etag" : "\"00000000-0000-4000-8000-000000000048,3\"",
+            "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#sites('tenant-1.example%2C00000000-0000-4000-8000-000000000001%2C00000000-0000-4000-8000-000000000002')/lists('00000000-0000-4000-8000-000000000019')/items('1')/fields/$entity",
+            "@odata.etag" : "\"00000000-0000-4000-8000-000000000049,3\"",
             "Title" : "retitled in batch",
             "PsText" : "hello",
             "PsNumber" : 4.5,
@@ -276,8 +284,8 @@
             "PsWhen" : "2024-01-15T12:00:00Z",
             "id" : "1",
             "ContentType" : "Item",
-            "Modified" : "2026-11-22T11:22:10Z",
-            "Created" : "2026-11-22T11:22:08Z",
+            "Modified" : "2026-11-22T13:30:08Z",
+            "Created" : "2026-11-22T13:30:05Z",
             "AuthorLookupId" : "1073741822",
             "EditorLookupId" : "1073741822",
             "_UIVersionString" : "3.0",
@@ -294,14 +302,6 @@
             "AppAuthorLookupId" : "4",
             "AppEditorLookupId" : "4"
           }
-        }, {
-          "id" : "3",
-          "status" : 204,
-          "headers" : {
-            "Cache-Control" : "no-store, no-cache",
-            "SPLogId" : "00000000-0000-4000-8000-000000000057"
-          },
-          "body" : null
         } ]
       }
     }
