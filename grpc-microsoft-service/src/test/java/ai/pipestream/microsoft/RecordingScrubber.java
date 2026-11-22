@@ -37,6 +37,8 @@ final class RecordingScrubber {
             "visibility", "groupTypes", "preferredLanguage");
     /** Properties of a SharePoint principal that hold its name. */
     private static final Set<String> PRINCIPAL_NAMES = Set.of("Title", "Description", "OwnerTitle");
+    /** Query parameters whose value is a paging or delta token. */
+    private static final List<String> CURSOR_KEYS = List.of("deltatoken=", "skiptoken=");
     /** Host suffixes that name the tenant. */
     private static final List<String> TENANT_HOSTS = List.of(".sharepoint.com",
             ".onmicrosoft.com", ".sharepoint.us", ".sharepoint.de", ".sharepoint.cn");
@@ -175,6 +177,16 @@ final class RecordingScrubber {
                     continue;
                 }
             }
+            int cursor = cursorValue(guidless, i);
+            if (cursor > i) {
+                // The paging or delta token of a Graph link; it encodes tenant state.
+                int end = run(guidless, cursor, ch -> !Character.isWhitespace(ch) && "&\"'<>".indexOf(ch) < 0);
+                String token = guidless.substring(cursor, end);
+                out.append(guidless, i, cursor).append(token.isEmpty() || token.equals("latest")
+                        || token.startsWith("cursor-") ? token : placeholder("cursor", token, "cursor-%04d"));
+                i = end;
+                continue;
+            }
             if (boundary && wordChar(c)) {
                 int end = run(guidless, i, ch -> wordChar(ch) || ch == '@');
                 out.append(word(guidless.substring(i, end)));
@@ -270,6 +282,16 @@ final class RecordingScrubber {
         int at = url.indexOf("/_api/web");
         int end = at + 9;
         return at > 0 && (end == url.length() || "/?".indexOf(url.charAt(end)) >= 0) ? at : -1;
+    }
+
+    /** Where the value of a {@code deltatoken=} or {@code skiptoken=} parameter starts; {@code at} when none starts here. */
+    static int cursorValue(String text, int at) {
+        for (String key : CURSOR_KEYS) {
+            if (text.regionMatches(true, at, key, 0, key.length())) {
+                return at + key.length();
+            }
+        }
+        return at;
     }
 
     /** {@code scheme://host[:port]} of a URL. */

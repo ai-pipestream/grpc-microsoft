@@ -186,22 +186,6 @@ final class MicrosoftSessions {
      * @return the bearer supplier
      */
     static Supplier<String> tokenSupplier(GraphAuth auth, String scope) {
-        Object lock = new Object();
-        GraphAuth.Token[] holder = new GraphAuth.Token[1];
-        return () -> {
-            synchronized (lock) {
-                if (holder[0] == null || holder[0].expired()) {
-                    try {
-                        holder[0] = auth.clientCredentials(scope);
-                    } catch (IOException e) {
-                        throw new IllegalStateException("token request failed: " + e.getMessage(), e);
-                    } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
-                        throw new IllegalStateException("token request interrupted", e);
-                    }
-                }
-                return holder[0].accessToken();
-            }
-        };
+        return auth.tokens(scope);
     }
 }

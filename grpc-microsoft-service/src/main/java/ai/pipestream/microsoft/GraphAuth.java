@@ -16,6 +16,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 /**
  * Microsoft Entra OAuth2 for Graph, with no SDK: the two token flows a headless toolkit
@@ -142,6 +143,34 @@ public final class GraphAuth {
     GraphAuth(Config config, HttpClient http) {
         this.config = Objects.requireNonNull(config, "config");
         this.http = http;
+    }
+
+    /**
+     * A lazily refreshed client-credentials token for one resource. A token
+     * failure surfaces as an {@link IllegalStateException} whose message never
+     * carries the secret.
+     *
+     * @param scope the resource's {@code .default} scope
+     * @return supplies a current access token
+     */
+    public Supplier<String> tokens(String scope) {
+        Object lock = new Object();
+        Token[] holder = new Token[1];
+        return () -> {
+            synchronized (lock) {
+                if (holder[0] == null || holder[0].expired()) {
+                    try {
+                        holder[0] = clientCredentials(scope);
+                    } catch (IOException e) {
+                        throw new IllegalStateException("token request failed: " + e.getMessage(), e);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        throw new IllegalStateException("token request interrupted", e);
+                    }
+                }
+                return holder[0].accessToken();
+            }
+        };
     }
 
     /**

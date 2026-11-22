@@ -24,6 +24,8 @@ import ai.pipestream.microsoft.v1.GeolocationColumn;
 import ai.pipestream.microsoft.v1.DirectoryMember;
 import ai.pipestream.microsoft.v1.DirectoryObject;
 import ai.pipestream.microsoft.v1.GraphGroup;
+import ai.pipestream.microsoft.v1.GroupChange;
+import ai.pipestream.microsoft.v1.GroupMemberChange;
 import ai.pipestream.microsoft.v1.GraphUser;
 import ai.pipestream.microsoft.v1.HyperlinkOrPictureColumn;
 import ai.pipestream.microsoft.v1.Identity;
@@ -145,6 +147,27 @@ public final class MicrosoftMapper {
         }
         node.path("groupTypes").forEach(type -> b.addGroupTypes(type.asText()));
         return b.build();
+    }
+
+    /**
+     * Maps one object of a group delta to a change: the group, whether it was
+     * removed, and its {@code members@delta} entries.
+     *
+     * @param node the API object
+     * @return the proto
+     */
+    public GroupChange toGroupChange(JsonNode node) {
+        GroupChange.Builder change = GroupChange.newBuilder().setGroup(toGroup(node))
+                .setRemoved(node.has("@removed"));
+        String prefix = "#microsoft.graph.";
+        for (JsonNode member : node.path("members@delta")) {
+            String type = text(member, "@odata.type");
+            change.addMemberChanges(GroupMemberChange.newBuilder()
+                    .setId(text(member, "id"))
+                    .setType(type.startsWith(prefix) ? type.substring(prefix.length()) : type)
+                    .setRemoved(member.has("@removed")));
+        }
+        return change.build();
     }
 
     /**

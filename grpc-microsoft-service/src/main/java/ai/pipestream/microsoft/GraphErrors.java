@@ -12,7 +12,7 @@ import io.grpc.protobuf.StatusProto;
 import java.io.IOException;
 
 /** Maps failures of a Graph call to gRPC statuses and typed write errors. */
-final class GraphErrors {
+public final class GraphErrors {
 
     private GraphErrors() {
     }
@@ -24,7 +24,7 @@ final class GraphErrors {
      * @param failure what a handler threw
      * @return the error to send to the client
      */
-    static StatusRuntimeException toException(Throwable failure) {
+    public static StatusRuntimeException toException(Throwable failure) {
         Throwable cause = unwrap(failure);
         if (cause instanceof StatusRuntimeException e) {
             return e;

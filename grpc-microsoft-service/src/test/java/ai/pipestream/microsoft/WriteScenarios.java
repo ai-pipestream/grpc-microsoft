@@ -11,6 +11,8 @@ import ai.pipestream.microsoft.v1.CreateFolderRequest;
 import ai.pipestream.microsoft.v1.CreateListItemRequest;
 import ai.pipestream.microsoft.v1.DateTimeColumnFormat;
 import ai.pipestream.microsoft.v1.DeleteDriveItemRequest;
+import ai.pipestream.microsoft.v1.DeltaGroupsRequest;
+import ai.pipestream.microsoft.v1.DeltaGroupsResponse;
 import ai.pipestream.microsoft.v1.DeleteListItemRequest;
 import ai.pipestream.microsoft.v1.DownloadContentRequest;
 import ai.pipestream.microsoft.v1.DriveItem;
@@ -54,6 +56,8 @@ import ai.pipestream.microsoft.v1.DirectoryMember;
 import ai.pipestream.microsoft.v1.GetSiteRoleInheritanceRequest;
 import ai.pipestream.microsoft.v1.GraphGroup;
 import ai.pipestream.microsoft.v1.GraphUser;
+import ai.pipestream.microsoft.v1.GroupChange;
+import ai.pipestream.microsoft.v1.GroupMemberChange;
 import ai.pipestream.microsoft.v1.ListGroupTransitiveMembersRequest;
 import ai.pipestream.microsoft.v1.ListGroupsRequest;
 import ai.pipestream.microsoft.v1.ListSiteGroupMembersRequest;
@@ -326,6 +330,8 @@ final class WriteScenarios {
                         "ListPermissions [list item]", this::permissionsOfTheListItem),
                 new Scenario("list-users", "ListUsers", "ListUsers", this::users),
                 new Scenario("list-groups", "ListGroups", "ListGroups", this::groups),
+                new Scenario("delta-groups", "DeltaGroups", "DeltaGroups [full, then from its link]",
+                        this::groupChanges),
                 new Scenario("list-group-transitive-members", "ListGroupTransitiveMembers",
                         "ListGroupTransitiveMembers", this::membersOfAGroup),
                 new Scenario("list-user-transitive-member-of", "ListUserTransitiveMemberOf",
@@ -929,6 +935,41 @@ final class WriteScenarios {
             groupId = groups.get(0).getId();
         }
         return groups.size() + " group(s)";
+    }
+
+    private String groupChanges() {
+        List<DeltaGroupsResponse> full = new ArrayList<>();
+        stub().deltaGroups(DeltaGroupsRequest.newBuilder().setIncludeMembers(true).build())
+                .forEachRemaining(full::add);
+        check(!full.isEmpty() && full.get(full.size() - 1).getEventCase()
+                == DeltaGroupsResponse.EventCase.DELTA_LINK, "the stream did not end with a delta link");
+        String link = full.get(full.size() - 1).getDeltaLink();
+        check(!link.isEmpty(), "the delta link is empty");
+        Set<String> ids = new TreeSet<>();
+        int members = 0;
+        for (DeltaGroupsResponse response : full.subList(0, full.size() - 1)) {
+            check(response.hasChange(), "a full enumeration held something other than a change");
+            GroupChange change = response.getChange();
+            check(!change.getGroup().getId().isEmpty(), "a group change has no group id");
+            if (!change.getRemoved()) {
+                ids.add(change.getGroup().getId());
+            }
+            for (GroupMemberChange member : change.getMemberChangesList()) {
+                check(!member.getId().isEmpty() && !member.getType().isEmpty(),
+                        "a member change has no id or type");
+                members++;
+            }
+        }
+        check(groupId == null || ids.contains(groupId), "a listed group is missing from the delta");
+
+        List<DeltaGroupsResponse> next = new ArrayList<>();
+        stub().deltaGroups(DeltaGroupsRequest.newBuilder().setDeltaLink(link).setIncludeMembers(true)
+                .build()).forEachRemaining(next::add);
+        check(!next.isEmpty() && !next.get(next.size() - 1).getDeltaLink().isEmpty(),
+                "the second stream did not end with a delta link");
+        check(next.stream().noneMatch(DeltaGroupsResponse::hasResync), "the fresh link was refused");
+        return ids.size() + " group(s) with " + members + " member change(s); from the link, "
+                + (next.size() - 1) + " change(s)";
     }
 
     private String membersOfAGroup() {
