@@ -305,8 +305,9 @@ jobs:
             echo "::error::the tunnel did not come up"
             exit 1
           fi
+          # Kept in a file, not a step output: a masked value is dropped from outputs.
+          echo "$url" > "$RUNNER_TEMP/tunnel.url"
           echo "::add-mask::$url"
-          echo "url=$url" >> "$GITHUB_OUTPUT"
           # Give the tunnel's DNS name time to resolve for Graph.
           sleep 20
       - name: Live Microsoft Graph change test
@@ -319,9 +320,19 @@ jobs:
           MICROSOFT_DRIVE_IDS: ${{ secrets.MICROSOFT_DRIVE_IDS }}
           MICROSOFT_LIVE_CHANGES: "1"
           MICROSOFT_NOTIFICATION_PORT: "8089"
-          MICROSOFT_NOTIFICATION_PUBLIC_URL: ${{ steps.tunnel.outputs.url }}
         run: |
+          export MICROSOFT_NOTIFICATION_PUBLIC_URL="$(cat "$RUNNER_TEMP/tunnel.url")"
           ./gradlew --no-daemon -PintegrationDir=../grpc-integration :grpc-microsoft-service:liveChangesTest --rerun-tasks
+          python3 - <<'PY'
+          import xml.etree.ElementTree as ET
+          from pathlib import Path
+          report = Path("grpc-microsoft-service/build/test-results/liveChangesTest/TEST-ai.pipestream.microsoft.MicrosoftLiveChangeIT.xml")
+          if not report.exists():
+              raise SystemExit("Missing live change report; no live evidence.")
+          suite = ET.parse(report).getroot()
+          if int(suite.get("skipped", "0")) or int(suite.get("tests", "0")) == 0:
+              raise SystemExit("The live change test was skipped; no live evidence.")
+          PY
       - name: Publish the report
         if: always()
         working-directory: grpc-microsoft
