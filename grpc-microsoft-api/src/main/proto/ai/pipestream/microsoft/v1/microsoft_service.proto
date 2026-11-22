@@ -9,6 +9,7 @@ import "ai/pipestream/microsoft/v1/events.proto";
 import "ai/pipestream/microsoft/v1/list.proto";
 import "ai/pipestream/microsoft/v1/permission.proto";
 import "ai/pipestream/microsoft/v1/site.proto";
+import "ai/pipestream/microsoft/v1/site_security.proto";
 import "ai/pipestream/microsoft/v1/write.proto";
 
 option java_multiple_files = true;
@@ -166,6 +167,26 @@ service MicrosoftService {
   // GET /users/{user-id}/transitiveMemberOf. The groups a user belongs to,
   // directly or through nested groups, as a stream.
   rpc ListUserTransitiveMemberOf(ListUserTransitiveMemberOfRequest) returns (stream ListUserTransitiveMemberOfResponse);
+
+  // --- SharePoint site security ---
+
+  // The SharePoint groups of a site, as a stream. Needs a certificate
+  // credential. SharePoint REST: GET {web}/_api/web/sitegroups.
+  rpc ListSiteGroups(ListSiteGroupsRequest) returns (stream ListSiteGroupsResponse);
+
+  // The members of one SharePoint group, as a stream. Needs a certificate
+  // credential. SharePoint REST: GET {web}/_api/web/sitegroups/getbyid({id})/users.
+  rpc ListSiteGroupMembers(ListSiteGroupMembersRequest) returns (stream ListSiteGroupMembersResponse);
+
+  // The role assignments on a site, list or list item, each with its
+  // principal and permission levels, as a stream. Needs a certificate
+  // credential. SharePoint REST: GET {securable}/roleassignments.
+  rpc ListSiteRoleAssignments(ListSiteRoleAssignmentsRequest) returns (stream ListSiteRoleAssignmentsResponse);
+
+  // Whether a site, list or list item has its own role assignments or
+  // inherits its parent's. Needs a certificate credential.
+  // SharePoint REST: GET {securable}?$select=HasUniqueRoleAssignments.
+  rpc GetSiteRoleInheritance(GetSiteRoleInheritanceRequest) returns (GetSiteRoleInheritanceResponse);
 
   // --- Sync ----------------------------------------------------------------
 
@@ -1003,4 +1024,73 @@ message SyncResponse {
     // SyncRequest.since_cursor next time (an encoded SyncCursor).
     string resume_cursor = 3;
   }
+}
+
+// Request to list the SharePoint groups of a site.
+message ListSiteGroupsRequest {
+  // Site id.
+  string site_id = 1;
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 2;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// One SharePoint group of the site.
+message ListSiteGroupsResponse {
+  // The group.
+  SiteGroup group = 1;
+}
+
+// Request to list the members of one SharePoint group.
+message ListSiteGroupMembersRequest {
+  // Site id.
+  string site_id = 1;
+  // Id of the SharePoint group within the site collection.
+  int32 group_id = 2;
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 3;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// One member of the SharePoint group.
+message ListSiteGroupMembersResponse {
+  // The member: a user or a directory group.
+  SitePrincipal member = 1;
+}
+
+// Request to list the role assignments on a site, list or list item.
+message ListSiteRoleAssignmentsRequest {
+  // What to read the role assignments of.
+  SiteSecurable securable = 1;
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 2;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// One role assignment.
+message ListSiteRoleAssignmentsResponse {
+  // The assignment.
+  SiteRoleAssignment assignment = 1;
+}
+
+// Request to read whether a securable has its own role assignments.
+message GetSiteRoleInheritanceRequest {
+  // What to read.
+  SiteSecurable securable = 1;
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 2;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// Whether the securable has its own role assignments.
+message GetSiteRoleInheritanceResponse {
+  // True when the securable has its own role assignments; false when it
+  // inherits its parent's.
+  bool has_unique_role_assignments = 1;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
 }
