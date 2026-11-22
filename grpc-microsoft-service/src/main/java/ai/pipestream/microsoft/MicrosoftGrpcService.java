@@ -1171,7 +1171,9 @@ public final class MicrosoftGrpcService
                     outcome.setState(EnsureState.ENSURE_STATE_WOULD_CREATE);
                 } else {
                     try {
-                        JsonNode created = session.graph().post(route, bodies.get(spec.getName()));
+                        JsonNode created = ColumnSpecs.needsSharePoint(spec)
+                                ? createThroughSharePoint(session, siteId, listId, route, spec)
+                                : session.graph().post(route, bodies.get(spec.getName()));
                         outcome.setActual(valid(mapper.toColumn(created, siteId, listId, "")))
                                 .setState(EnsureState.ENSURE_STATE_CREATED);
                     } catch (GraphClient.GraphApiException e) {
@@ -1183,6 +1185,25 @@ public final class MicrosoftGrpcService
             }
             return response.build();
         });
+    }
+
+    /** Creates a column with SharePoint's own API and reads it back from Graph. */
+    private JsonNode createThroughSharePoint(MicrosoftSessions.Session session, String siteId,
+            String listId, String route, ColumnSpec spec) throws IOException, InterruptedException {
+        sharePoint.web(session, siteId).post(SharePointRest.fields(listId) + "/CreateFieldAsXml",
+                ColumnSpecs.toSharePoint(spec));
+        JsonNode[] created = new JsonNode[1];
+        session.pager().forEach(List.of(route), Map.of(), node -> {
+            if (node.path("name").asText("").equals(spec.getName())) {
+                created[0] = node;
+            }
+            return created[0] == null;
+        });
+        if (created[0] == null) {
+            throw Status.INTERNAL.withDescription("SharePoint created column " + spec.getName()
+                    + " but Graph does not list it").asRuntimeException();
+        }
+        return created[0];
     }
 
     @Override

@@ -90,6 +90,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
@@ -260,7 +261,7 @@ final class WriteScenarios {
     private String userId;
     private String groupId;
     private Integer siteGroupId;
-    private SitePrincipal siteUser;
+    private String userMail;
 
     /**
      * Creates the scenarios of one run.
@@ -702,7 +703,8 @@ final class WriteScenarios {
     private String updateRichFields() {
         need(itemId, "the list item");
         ColumnSpec.Builder column = ColumnSpec.newBuilder();
-        ensureMoreColumns(List.of(
+        List<String> problems = new ArrayList<>();
+        Set<String> created = ensureMoreColumns(problems, List.of(
                 column.clone().setName("PsNote").setType(ColumnType.COLUMN_TYPE_NOTE).build(),
                 column.clone().setName("PsMulti").setType(ColumnType.COLUMN_TYPE_MULTICHOICE)
                         .addChoices("A").addChoices("B").addChoices("C").build(),
@@ -714,25 +716,36 @@ final class WriteScenarios {
                         .setLookupListId(listId).setMultiValued(true).build()));
         int self = Integer.parseInt(itemId);
         String id = Integer.toString(self);
-        List<String> problems = new ArrayList<>();
-        writeAndRead(problems, FieldValue.newBuilder().setName("PsNote").setNote("line one\nline two"),
-                "PsNote", List.of("line one\nline two"));
-        writeAndRead(problems, FieldValue.newBuilder().setName("PsMulti").setMultiChoice(
-                MultiChoiceValue.newBuilder().addChoices("A").addChoices("C")),
-                "PsMulti", List.of("A", "C"));
-        writeAndRead(problems, FieldValue.newBuilder().setName("PsMoney").setNumber(12.5),
-                "PsMoney", List.of("12.5"));
-        writeAndRead(problems, FieldValue.newBuilder().setName("PsLink").setHyperlink(
-                HyperlinkValue.newBuilder().setUrl("https://example.com/page")
-                        .setDescription("A page")),
-                "PsLink.Url", List.of("https://example.com/page"));
-        writeAndRead(problems, FieldValue.newBuilder().setName("PsLookup").setLookup(self),
-                "PsLookupLookupId", List.of(id));
-        writeAndRead(problems, FieldValue.newBuilder().setName("PsLookups").setMultiLookup(
-                MultiLookupValue.newBuilder().addLookupIds(self)),
-                "PsLookups.LookupId", List.of(id));
-        writeAndRead(problems, FieldValue.newBuilder().setName("PsNote")
-                .setClear(ClearValue.getDefaultInstance()), "PsNote", List.of());
+        if (created.contains("PsNote")) {
+            writeAndRead(problems, FieldValue.newBuilder().setName("PsNote")
+                    .setNote("line one\nline two"), "PsNote", List.of("line one\nline two"));
+            writeAndRead(problems, FieldValue.newBuilder().setName("PsNote")
+                    .setClear(ClearValue.getDefaultInstance()), "PsNote", List.of());
+        }
+        if (created.contains("PsMulti")) {
+            writeAndRead(problems, FieldValue.newBuilder().setName("PsMulti").setMultiChoice(
+                    MultiChoiceValue.newBuilder().addChoices("A").addChoices("C")),
+                    "PsMulti", List.of("A", "C"));
+        }
+        if (created.contains("PsMoney")) {
+            writeAndRead(problems, FieldValue.newBuilder().setName("PsMoney").setNumber(12.5),
+                    "PsMoney", List.of("12.5"));
+        }
+        if (created.contains("PsLink")) {
+            writeAndRead(problems, FieldValue.newBuilder().setName("PsLink").setHyperlink(
+                    HyperlinkValue.newBuilder().setUrl("https://example.com/page")
+                            .setDescription("A page")),
+                    "PsLink.Url", List.of("https://example.com/page"));
+        }
+        if (created.contains("PsLookup")) {
+            writeAndRead(problems, FieldValue.newBuilder().setName("PsLookup").setLookup(self),
+                    "PsLookupLookupId", List.of(id));
+        }
+        if (created.contains("PsLookups")) {
+            writeAndRead(problems, FieldValue.newBuilder().setName("PsLookups").setMultiLookup(
+                    MultiLookupValue.newBuilder().addLookupIds(self)),
+                    "PsLookups.LookupId", List.of(id));
+        }
         check(problems.isEmpty(), String.join("; ", problems));
         return "note, multi choice, currency, link, lookup and multi lookup read back; clear emptied"
                 + " the note";
@@ -740,37 +753,60 @@ final class WriteScenarios {
 
     private String updatePersonFields() {
         need(itemId, "the list item");
-        need(siteUser, "a site user with an email address");
+        need(userMail, "a directory user with a mail address");
         ColumnSpec.Builder column = ColumnSpec.newBuilder().setType(ColumnType.COLUMN_TYPE_USER);
-        ensureMoreColumns(List.of(column.clone().setName("PsPerson").build(),
-                column.clone().setName("PsOwner").build(),
-                column.clone().setName("PsPeople").setMultiValued(true).build()));
-        String id = Integer.toString(siteUser.getId());
         List<String> problems = new ArrayList<>();
-        writeAndRead(problems, FieldValue.newBuilder().setName("PsPerson").setPerson(
-                PersonValue.newBuilder().setLookupId(siteUser.getId())),
-                "PsPersonLookupId", List.of(id));
-        writeAndRead(problems, FieldValue.newBuilder().setName("PsOwner").setPerson(
-                PersonValue.newBuilder().setEmail(siteUser.getEmail())),
-                "PsOwnerLookupId", List.of(id));
-        writeAndRead(problems, FieldValue.newBuilder().setName("PsPeople").setMultiPerson(
-                MultiPersonValue.newBuilder().addPeople(
-                        PersonValue.newBuilder().setLookupId(siteUser.getId()))),
-                "PsPeople.LookupId", List.of(id));
+        Set<String> created = ensureMoreColumns(problems, List.of(
+                column.clone().setName("PsOwner").build(),
+                column.clone().setName("PsPerson").build(),
+                column.clone().setName("PsPeople").setMultiValued(true).build()));
+        if (created.contains("PsOwner")) {
+            writeAndRead(problems, FieldValue.newBuilder().setName("PsOwner").setPerson(
+                    PersonValue.newBuilder().setEmail(userMail)), "PsOwnerLookupId", null);
+        }
+        String id = fields(itemId).getOrDefault("PsOwnerLookupId", "");
+        if (id.isEmpty()) {
+            problems.add("no person id to write the other person columns with");
+        } else {
+            int person = Integer.parseInt(id);
+            if (created.contains("PsPerson")) {
+                writeAndRead(problems, FieldValue.newBuilder().setName("PsPerson").setPerson(
+                        PersonValue.newBuilder().setLookupId(person)),
+                        "PsPersonLookupId", List.of(id));
+            }
+            if (created.contains("PsPeople")) {
+                writeAndRead(problems, FieldValue.newBuilder().setName("PsPeople").setMultiPerson(
+                        MultiPersonValue.newBuilder().addPeople(
+                                PersonValue.newBuilder().setLookupId(person))),
+                        "PsPeople.LookupId", List.of(id));
+            }
+        }
         check(problems.isEmpty(), String.join("; ", problems));
-        return "person by id, person by email and a people column read back";
+        return "person by email, person by id and a people column read back";
     }
 
-    /** Creates columns on the test list and fails when one is not created. */
-    private void ensureMoreColumns(List<ColumnSpec> columns) {
+    /** Creates columns on the test list one by one; notes a problem for each that is not created. */
+    private Set<String> ensureMoreColumns(List<String> problems, List<ColumnSpec> columns) {
         need(listId, "the test list");
-        for (ColumnOutcome outcome : stub().ensureColumns(EnsureColumnsRequest.newBuilder()
-                .setScope(ColumnScope.newBuilder()
-                        .setList(ListRef.newBuilder().setSiteId(siteId).setListId(listId)))
-                .addAllColumns(columns).build()).getColumnsList()) {
-            check(outcome.getState() == EnsureState.ENSURE_STATE_CREATED, outcome.getName()
-                    + " answered " + outcome.getState() + " " + outcome.getError().getMessage());
+        Set<String> created = new HashSet<>();
+        for (ColumnSpec column : columns) {
+            try {
+                ColumnOutcome outcome = stub().ensureColumns(EnsureColumnsRequest.newBuilder()
+                        .setScope(ColumnScope.newBuilder()
+                                .setList(ListRef.newBuilder().setSiteId(siteId).setListId(listId)))
+                        .addColumns(column).build()).getColumns(0);
+                if (outcome.getState() == EnsureState.ENSURE_STATE_CREATED) {
+                    created.add(column.getName());
+                } else {
+                    problems.add(column.getName() + " column answered " + outcome.getState() + " "
+                            + outcome.getError().getMessage());
+                }
+            } catch (StatusRuntimeException e) {
+                problems.add(column.getName() + " column refused: " + e.getStatus().getCode() + " "
+                        + e.getStatus().getDescription());
+            }
         }
+        return created;
     }
 
     /** Writes one column and notes a problem when the write fails or reads back differently. */
@@ -795,7 +831,7 @@ final class WriteScenarios {
                         : List.of(fields(itemId).get(readName));
             }
         }
-        if (!read.equals(expected)) {
+        if (expected == null ? read.isEmpty() : !read.equals(expected)) {
             problems.add(label + " read back as " + readName + "=" + read);
         }
     }
@@ -1039,6 +1075,8 @@ final class WriteScenarios {
         check(users.stream().anyMatch(user -> !user.getUserPrincipalName().isEmpty()),
                 "no user has a sign-in name");
         userId = users.get(0).getId();
+        userMail = users.stream().map(GraphUser::getMail).filter(mail -> !mail.isEmpty())
+                .findFirst().orElse(null);
         return users.size() + " user(s)";
     }
 
@@ -1157,10 +1195,6 @@ final class WriteScenarios {
         Map<String, Integer> kinds = new TreeMap<>();
         for (SitePrincipal member : members) {
             checkPrincipal(member);
-            if (siteUser == null && !member.getEmail().isEmpty()
-                    && member.getPrincipalType() == SitePrincipalType.SITE_PRINCIPAL_TYPE_USER) {
-                siteUser = member;
-            }
             kinds.merge(member.getPrincipalType().name(), 1, Integer::sum);
         }
         return members.size() + " member(s), kinds " + kinds;

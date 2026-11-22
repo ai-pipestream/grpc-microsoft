@@ -109,6 +109,48 @@ final class ColumnSpecs {
     }
 
     /**
+     * Whether Graph refuses to create the column, so SharePoint's own API creates it.
+     *
+     * @param spec the column
+     * @return true for a hyperlink column
+     */
+    static boolean needsSharePoint(ColumnSpec spec) {
+        return spec.getType() == ColumnType.COLUMN_TYPE_URL;
+    }
+
+    /**
+     * The SharePoint {@code CreateFieldAsXml} body for a hyperlink column.
+     *
+     * @param spec the column
+     * @return the request JSON
+     */
+    static ObjectNode toSharePoint(ColumnSpec spec) {
+        StringBuilder xml = new StringBuilder("<Field Type=\"URL\" Format=\"Hyperlink\"");
+        attribute(xml, "Name", spec.getName());
+        attribute(xml, "StaticName", spec.getName());
+        attribute(xml, "DisplayName",
+                spec.getDisplayName().isBlank() ? spec.getName() : spec.getDisplayName());
+        attribute(xml, "Description", spec.getDescription());
+        attribute(xml, "Group", spec.getColumnGroup());
+        attribute(xml, "Indexed", spec.getIndexed() ? "TRUE" : "");
+        attribute(xml, "Hidden", spec.getHidden() ? "TRUE" : "");
+        attribute(xml, "Required", spec.getRequired() ? "TRUE" : "");
+        xml.append("/>");
+        ObjectNode body = GraphClient.object();
+        // Options 8 keeps Name as the internal name.
+        body.putObject("parameters").put("SchemaXml", xml.toString()).put("Options", 8);
+        return body;
+    }
+
+    private static void attribute(StringBuilder xml, String name, String value) {
+        if (value.isEmpty()) {
+            return;
+        }
+        xml.append(' ').append(name).append("=\"").append(value.replace("&", "&amp;")
+                .replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;")).append('"');
+    }
+
+    /**
      * The spec fields an existing column differs in.
      *
      * @param spec the wanted column
