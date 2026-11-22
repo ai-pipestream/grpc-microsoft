@@ -1,0 +1,52 @@
+{
+  "request" : {
+    "method" : "GET",
+    "url" : "https://graph.microsoft.com/v1.0/drives/b!drive-0001?$select=id,name,driveType,description,webUrl,eTag,createdDateTime,lastModifiedDateTime,createdBy,lastModifiedBy,owner,quota,sharePointIds,system",
+    "authorized" : true,
+    "headers" : { }
+  },
+  "response" : {
+    "status" : 200,
+    "headers" : {
+      "content-type" : "application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8"
+    },
+    "body" : {
+      "json" : {
+        "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#drives(id,name,driveType,description,webUrl,eTag,createdDateTime,lastModifiedDateTime,createdBy,lastModifiedBy,owner,quota,sharePointIds,system)/$entity",
+        "createdDateTime" : "2026-10-10T02:58:54Z",
+        "description" : "",
+        "id" : "b!drive-0001",
+        "lastModifiedDateTime" : "2026-11-22T14:29:47Z",
+        "name" : "Documents",
+        "webUrl" : "https://redacted.example/url/4",
+        "driveType" : "documentLibrary",
+        "createdBy" : {
+          "user" : {
+            "displayName" : "Identity 1"
+          }
+        },
+        "owner" : {
+          "user" : {
+            "email" : "email-1.example.invalid",
+            "id" : "00000000-0000-4000-8000-000000000004",
+            "displayName" : "Identity 2"
+          }
+        },
+        "quota" : {
+          "deleted" : 9545386,
+          "remaining" : 27487768449263,
+          "state" : "normal",
+          "total" : 27487790694400,
+          "used" : 12699751
+        },
+        "sharePointIds" : {
+          "listId" : "00000000-0000-4000-8000-000000000005",
+          "siteId" : "00000000-0000-4000-8000-000000000006",
+          "siteUrl" : "https://redacted.example/url/5",
+          "tenantId" : "00000000-0000-4000-8000-000000000007",
+          "webId" : "00000000-0000-4000-8000-000000000008"
+        }
+      }
+    }
+  }
+}

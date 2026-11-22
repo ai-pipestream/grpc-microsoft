@@ -1,0 +1,74 @@
+{
+  "request" : {
+    "method" : "PUT",
+    "url" : "https://graph.microsoft.com/v1.0/drives/b!drive-0001/root:/pipestream-live-change-20261122-142941-64e2bba4.txt:/content",
+    "authorized" : true,
+    "headers" : {
+      "content-type" : "text/plain"
+    },
+    "body" : {
+      "sha256" : "9cd4e3712e6c5a3beeba1c6448d2e520c655ebb2e090247f4e253d577ae1f789",
+      "length" : 47
+    }
+  },
+  "response" : {
+    "status" : 201,
+    "headers" : {
+      "content-type" : "application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8"
+    },
+    "body" : {
+      "json" : {
+        "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#drives('b%21drive-0001')/root/$entity",
+        "@microsoft.graph.downloadUrl" : "https://redacted.example/url/6",
+        "createdDateTime" : "2026-11-22T14:29:47Z",
+        "eTag" : "\"{00000000-0000-4000-8000-000000000010},1\"",
+        "id" : "item-0002",
+        "lastModifiedDateTime" : "2026-11-22T14:29:47Z",
+        "name" : "pipestream-live-change-20261122-142941-64e2bba4.txt",
+        "webUrl" : "https://redacted.example/url/7",
+        "cTag" : "\"c:{00000000-0000-4000-8000-000000000010},1\"",
+        "isAuthoritative" : false,
+        "size" : 47,
+        "createdBy" : {
+          "application" : {
+            "id" : "00000000-0000-4000-8000-000000000002",
+            "displayName" : "Identity 3"
+          },
+          "user" : {
+            "displayName" : "Identity 4"
+          }
+        },
+        "lastModifiedBy" : {
+          "application" : {
+            "id" : "00000000-0000-4000-8000-000000000002",
+            "displayName" : "Identity 3"
+          },
+          "user" : {
+            "displayName" : "Identity 4"
+          }
+        },
+        "parentReference" : {
+          "driveType" : "documentLibrary",
+          "driveId" : "b!drive-0001",
+          "id" : "item-0001",
+          "name" : "Shared Documents",
+          "path" : "/drives/b!drive-0001/root:",
+          "siteId" : "00000000-0000-4000-8000-000000000006"
+        },
+        "file" : {
+          "mimeType" : "text/plain",
+          "hashes" : {
+            "quickXorHash" : "SALwibiIWkY80w859fOebbXnJ1M="
+          }
+        },
+        "fileSystemInfo" : {
+          "createdDateTime" : "2026-11-22T14:29:47Z",
+          "lastModifiedDateTime" : "2026-11-22T14:29:47Z"
+        },
+        "shared" : {
+          "scope" : "users"
+        }
+      }
+    }
+  }
+}

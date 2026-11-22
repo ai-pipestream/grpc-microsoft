@@ -1,0 +1,8 @@
+{
+  "suffix" : "20261122-142941-64e2bba4",
+  "graphBaseUrl" : "https://graph.microsoft.com/v1.0",
+  "driveId" : "b!drive-0001",
+  "startedAt" : "2026-11-22T14:29:41Z",
+  "notificationUrl" : "https://redacted.example/url/1",
+  "lifecycleUrl" : "https://redacted.example/url/2"
+}
