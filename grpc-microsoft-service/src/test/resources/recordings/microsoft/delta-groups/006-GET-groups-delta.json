@@ -13,7 +13,7 @@
     "body" : {
       "json" : {
         "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#groups",
-        "@odata.nextLink" : "https://graph.microsoft.com/v1.0/groups/delta?$skiptoken=cursor-0006",
+        "@odata.deltaLink" : "https://graph.microsoft.com/v1.0/groups/delta?$deltatoken=cursor-0006",
         "value" : [ ]
       }
     }

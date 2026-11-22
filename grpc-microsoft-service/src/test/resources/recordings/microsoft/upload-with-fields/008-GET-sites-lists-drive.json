@@ -1,7 +1,7 @@
 {
   "request" : {
     "method" : "GET",
-    "url" : "https://graph.microsoft.com/v1.0/groups/delta?$skiptoken=cursor-0013",
+    "url" : "https://graph.microsoft.com/v1.0/sites/tenant-1.example,00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000002/lists/00000000-0000-4000-8000-000000000089/drive?$select=id",
     "authorized" : true,
     "headers" : { }
   },
@@ -12,9 +12,8 @@
     },
     "body" : {
       "json" : {
-        "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#groups",
-        "@odata.nextLink" : "https://graph.microsoft.com/v1.0/groups/delta?$skiptoken=cursor-0014",
-        "value" : [ ]
+        "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#drives(id)/$entity",
+        "id" : "b!drive-0002"
       }
     }
   }

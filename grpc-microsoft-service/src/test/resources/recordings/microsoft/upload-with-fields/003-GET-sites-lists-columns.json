@@ -1,0 +1,549 @@
+{
+  "request" : {
+    "method" : "GET",
+    "url" : "https://graph.microsoft.com/v1.0/sites/tenant-1.example,00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000002/lists/00000000-0000-4000-8000-000000000089/columns",
+    "authorized" : true,
+    "headers" : { }
+  },
+  "response" : {
+    "status" : 200,
+    "headers" : {
+      "content-type" : "application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8"
+    },
+    "body" : {
+      "json" : {
+        "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#sites('tenant-1.example%2C00000000-0000-4000-8000-000000000001%2C00000000-0000-4000-8000-000000000002')/lists('00000000-0000-4000-8000-000000000089')/columns",
+        "value" : [ {
+          "columnGroup" : "Custom Columns",
+          "description" : "",
+          "displayName" : "ID",
+          "enforceUniqueValues" : false,
+          "hidden" : false,
+          "id" : "00000000-0000-4000-8000-000000000020",
+          "indexed" : false,
+          "name" : "ID",
+          "readOnly" : true,
+          "required" : false
+        }, {
+          "columnGroup" : "_Hidden",
+          "description" : "",
+          "displayName" : "Content Type",
+          "enforceUniqueValues" : false,
+          "hidden" : false,
+          "id" : "00000000-0000-4000-8000-000000000021",
+          "indexed" : false,
+          "name" : "ContentType",
+          "readOnly" : false,
+          "required" : false
+        }, {
+          "columnGroup" : "Custom Columns",
+          "description" : "",
+          "displayName" : "Created",
+          "enforceUniqueValues" : false,
+          "hidden" : false,
+          "id" : "00000000-0000-4000-8000-000000000024",
+          "indexed" : false,
+          "name" : "Created",
+          "readOnly" : true,
+          "required" : false,
+          "dateTime" : {
+            "displayAs" : "default",
+            "format" : "dateTime"
+          }
+        }, {
+          "columnGroup" : "Custom Columns",
+          "description" : "",
+          "displayName" : "Created By",
+          "enforceUniqueValues" : false,
+          "hidden" : false,
+          "id" : "00000000-0000-4000-8000-000000000025",
+          "indexed" : false,
+          "name" : "Author",
+          "readOnly" : true,
+          "required" : false,
+          "personOrGroup" : {
+            "allowMultipleSelection" : false,
+            "displayAs" : "nameWithPresence",
+            "chooseFromType" : "peopleAndGroups"
+          }
+        }, {
+          "columnGroup" : "Custom Columns",
+          "description" : "",
+          "displayName" : "Modified",
+          "enforceUniqueValues" : false,
+          "hidden" : false,
+          "id" : "00000000-0000-4000-8000-000000000023",
+          "indexed" : false,
+          "name" : "Modified",
+          "readOnly" : true,
+          "required" : false,
+          "dateTime" : {
+            "displayAs" : "default",
+            "format" : "dateTime"
+          }
+        }, {
+          "columnGroup" : "Custom Columns",
+          "description" : "",
+          "displayName" : "Modified By",
+          "enforceUniqueValues" : false,
+          "hidden" : false,
+          "id" : "00000000-0000-4000-8000-000000000026",
+          "indexed" : false,
+          "name" : "Editor",
+          "readOnly" : true,
+          "required" : false,
+          "personOrGroup" : {
+            "allowMultipleSelection" : false,
+            "displayAs" : "nameWithPresence",
+            "chooseFromType" : "peopleAndGroups"
+          }
+        }, {
+          "columnGroup" : "Custom Columns",
+          "description" : "",
+          "displayName" : "Copy Source",
+          "enforceUniqueValues" : false,
+          "hidden" : false,
+          "id" : "00000000-0000-4000-8000-000000000090",
+          "indexed" : false,
+          "name" : "_CopySource",
+          "readOnly" : true,
+          "required" : false,
+          "text" : {
+            "allowMultipleLines" : false,
+            "appendChangesToExistingText" : false,
+            "linesForEditing" : 0,
+            "maxLength" : 255
+          }
+        }, {
+          "columnGroup" : "Custom Columns",
+          "description" : "",
+          "displayName" : "Checked Out To",
+          "enforceUniqueValues" : false,
+          "hidden" : false,
+          "id" : "00000000-0000-4000-8000-000000000091",
+          "indexed" : false,
+          "name" : "CheckoutUser",
+          "readOnly" : true,
+          "required" : false,
+          "personOrGroup" : {
+            "allowMultipleSelection" : false,
+            "displayAs" : "nameWithPresence",
+            "chooseFromType" : "peopleAndGroups"
+          }
+        }, {
+          "columnGroup" : "Custom Columns",
+          "description" : "",
+          "displayName" : "Name",
+          "enforceUniqueValues" : false,
+          "hidden" : false,
+          "id" : "00000000-0000-4000-8000-000000000092",
+          "indexed" : false,
+          "name" : "FileLeafRef",
+          "readOnly" : false,
+          "required" : true
+        }, {
+          "columnGroup" : "Custom Columns",
+          "description" : "",
+          "displayName" : "Check In Comment",
+          "enforceUniqueValues" : false,
+          "hidden" : false,
+          "id" : "00000000-0000-4000-8000-000000000093",
+          "indexed" : false,
+          "name" : "_CheckinComment",
+          "readOnly" : true,
+          "required" : false,
+          "lookup" : {
+            "allowMultipleValues" : false,
+            "allowUnlimitedLength" : false,
+            "columnName" : "CheckinComment",
+            "listId" : "",
+            "primaryLookupColumnId" : "ID"
+          }
+        }, {
+          "columnGroup" : "Custom Columns",
+          "description" : "",
+          "displayName" : "Name",
+          "enforceUniqueValues" : false,
+          "hidden" : false,
+          "id" : "00000000-0000-4000-8000-000000000094",
+          "indexed" : false,
+          "name" : "LinkFilenameNoMenu",
+          "readOnly" : true,
+          "required" : false
+        }, {
+          "columnGroup" : "Custom Columns",
+          "description" : "",
+          "displayName" : "Name",
+          "enforceUniqueValues" : false,
+          "hidden" : false,
+          "id" : "00000000-0000-4000-8000-000000000095",
+          "indexed" : false,
+          "name" : "LinkFilename",
+          "readOnly" : true,
+          "required" : false
+        }, {
+          "columnGroup" : "Custom Columns",
+          "description" : "",
+          "displayName" : "Type",
+          "enforceUniqueValues" : false,
+          "hidden" : false,
+          "id" : "00000000-0000-4000-8000-000000000032",
+          "indexed" : false,
+          "name" : "DocIcon",
+          "readOnly" : true,
+          "required" : false
+        }, {
+          "columnGroup" : "Custom Columns",
+          "description" : "",
+          "displayName" : "File Size",
+          "enforceUniqueValues" : false,
+          "hidden" : false,
+          "id" : "00000000-0000-4000-8000-000000000096",
+          "indexed" : false,
+          "name" : "FileSizeDisplay",
+          "readOnly" : true,
+          "required" : false
+        }, {
+          "columnGroup" : "Custom Columns",
+          "description" : "",
+          "displayName" : "Item Child Count",
+          "enforceUniqueValues" : false,
+          "hidden" : false,
+          "id" : "00000000-0000-4000-8000-000000000033",
+          "indexed" : false,
+          "name" : "ItemChildCount",
+          "readOnly" : true,
+          "required" : false,
+          "lookup" : {
+            "allowMultipleValues" : false,
+            "allowUnlimitedLength" : false,
+            "columnName" : "ItemChildCount",
+            "listId" : "",
+            "primaryLookupColumnId" : "ID"
+          }
+        }, {
+          "columnGroup" : "Custom Columns",
+          "description" : "",
+          "displayName" : "Folder Child Count",
+          "enforceUniqueValues" : false,
+          "hidden" : false,
+          "id" : "00000000-0000-4000-8000-000000000034",
+          "indexed" : false,
+          "name" : "FolderChildCount",
+          "readOnly" : true,
+          "required" : false,
+          "lookup" : {
+            "allowMultipleValues" : false,
+            "allowUnlimitedLength" : false,
+            "columnName" : "FolderChildCount",
+            "listId" : "",
+            "primaryLookupColumnId" : "ID"
+          }
+        }, {
+          "columnGroup" : "Custom Columns",
+          "description" : "",
+          "displayName" : "Label setting",
+          "enforceUniqueValues" : false,
+          "hidden" : false,
+          "id" : "00000000-0000-4000-8000-000000000035",
+          "indexed" : false,
+          "name" : "_ComplianceFlags",
+          "readOnly" : true,
+          "required" : false,
+          "lookup" : {
+            "allowMultipleValues" : false,
+            "allowUnlimitedLength" : false,
+            "columnName" : "ComplianceFlags",
+            "listId" : "",
+            "primaryLookupColumnId" : "ID"
+          }
+        }, {
+          "columnGroup" : "Custom Columns",
+          "description" : "",
+          "displayName" : "Retention label",
+          "enforceUniqueValues" : false,
+          "hidden" : false,
+          "id" : "00000000-0000-4000-8000-000000000036",
+          "indexed" : false,
+          "name" : "_ComplianceTag",
+          "readOnly" : true,
+          "required" : false,
+          "lookup" : {
+            "allowMultipleValues" : false,
+            "allowUnlimitedLength" : false,
+            "columnName" : "ComplianceTag",
+            "listId" : "",
+            "primaryLookupColumnId" : "ID"
+          }
+        }, {
+          "columnGroup" : "Custom Columns",
+          "description" : "",
+          "displayName" : "Retention label Applied",
+          "enforceUniqueValues" : false,
+          "hidden" : false,
+          "id" : "00000000-0000-4000-8000-000000000037",
+          "indexed" : false,
+          "name" : "_ComplianceTagWrittenTime",
+          "readOnly" : true,
+          "required" : false,
+          "lookup" : {
+            "allowMultipleValues" : false,
+            "allowUnlimitedLength" : false,
+            "columnName" : "ComplianceTagWrittenTime",
+            "listId" : "",
+            "primaryLookupColumnId" : "ID"
+          }
+        }, {
+          "columnGroup" : "Custom Columns",
+          "description" : "",
+          "displayName" : "Label applied by",
+          "enforceUniqueValues" : false,
+          "hidden" : false,
+          "id" : "00000000-0000-4000-8000-000000000038",
+          "indexed" : false,
+          "name" : "_ComplianceTagUserId",
+          "readOnly" : true,
+          "required" : false,
+          "lookup" : {
+            "allowMultipleValues" : false,
+            "allowUnlimitedLength" : false,
+            "columnName" : "ComplianceTagUserId",
+            "listId" : "",
+            "primaryLookupColumnId" : "ID"
+          }
+        }, {
+          "columnGroup" : "Custom Columns",
+          "description" : "",
+          "displayName" : "Item is a Record",
+          "enforceUniqueValues" : false,
+          "hidden" : false,
+          "id" : "00000000-0000-4000-8000-000000000039",
+          "indexed" : false,
+          "name" : "_IsRecord",
+          "readOnly" : true,
+          "required" : false
+        }, {
+          "columnGroup" : "Custom Columns",
+          "description" : "",
+          "displayName" : "Comment count",
+          "enforceUniqueValues" : false,
+          "hidden" : false,
+          "id" : "00000000-0000-4000-8000-000000000097",
+          "indexed" : false,
+          "name" : "_CommentCount",
+          "readOnly" : true,
+          "required" : false,
+          "lookup" : {
+            "allowMultipleValues" : false,
+            "allowUnlimitedLength" : false,
+            "columnName" : "CommentCount",
+            "listId" : "",
+            "primaryLookupColumnId" : "ID"
+          }
+        }, {
+          "columnGroup" : "Custom Columns",
+          "description" : "",
+          "displayName" : "Like count",
+          "enforceUniqueValues" : false,
+          "hidden" : false,
+          "id" : "00000000-0000-4000-8000-000000000098",
+          "indexed" : false,
+          "name" : "_LikeCount",
+          "readOnly" : true,
+          "required" : false,
+          "lookup" : {
+            "allowMultipleValues" : false,
+            "allowUnlimitedLength" : false,
+            "columnName" : "LikeCount",
+            "listId" : "",
+            "primaryLookupColumnId" : "ID"
+          }
+        }, {
+          "columnGroup" : "Custom Columns",
+          "description" : "",
+          "displayName" : "Sensitivity",
+          "enforceUniqueValues" : false,
+          "hidden" : false,
+          "id" : "00000000-0000-4000-8000-000000000099",
+          "indexed" : false,
+          "name" : "_DisplayName",
+          "readOnly" : true,
+          "required" : false,
+          "lookup" : {
+            "allowMultipleValues" : false,
+            "allowUnlimitedLength" : false,
+            "columnName" : "DisplayName",
+            "listId" : "",
+            "primaryLookupColumnId" : "LabelId"
+          }
+        }, {
+          "columnGroup" : "Custom Columns",
+          "description" : "",
+          "displayName" : "Color Tag",
+          "enforceUniqueValues" : false,
+          "hidden" : false,
+          "id" : "00000000-0000-4000-8000-000000000040",
+          "indexed" : false,
+          "name" : "_ColorTag",
+          "readOnly" : true,
+          "required" : false,
+          "text" : {
+            "allowMultipleLines" : false,
+            "appendChangesToExistingText" : false,
+            "linesForEditing" : 0,
+            "maxLength" : 255
+          }
+        }, {
+          "columnGroup" : "Custom Columns",
+          "description" : "",
+          "displayName" : "App Created By",
+          "enforceUniqueValues" : false,
+          "hidden" : false,
+          "id" : "00000000-0000-4000-8000-000000000041",
+          "indexed" : false,
+          "name" : "AppAuthor",
+          "readOnly" : true,
+          "required" : false,
+          "lookup" : {
+            "allowMultipleValues" : false,
+            "allowUnlimitedLength" : false,
+            "columnName" : "Title",
+            "listId" : "AppPrincipals"
+          }
+        }, {
+          "columnGroup" : "Custom Columns",
+          "description" : "",
+          "displayName" : "App Modified By",
+          "enforceUniqueValues" : false,
+          "hidden" : false,
+          "id" : "00000000-0000-4000-8000-000000000042",
+          "indexed" : false,
+          "name" : "AppEditor",
+          "readOnly" : true,
+          "required" : false,
+          "lookup" : {
+            "allowMultipleValues" : false,
+            "allowUnlimitedLength" : false,
+            "columnName" : "Title",
+            "listId" : "AppPrincipals"
+          }
+        }, {
+          "columnGroup" : "Custom Columns",
+          "description" : "",
+          "displayName" : "Edit",
+          "enforceUniqueValues" : false,
+          "hidden" : false,
+          "id" : "00000000-0000-4000-8000-000000000029",
+          "indexed" : false,
+          "name" : "Edit",
+          "readOnly" : true,
+          "required" : false
+        }, {
+          "columnGroup" : "Custom Columns",
+          "description" : "",
+          "displayName" : "Version",
+          "enforceUniqueValues" : false,
+          "hidden" : false,
+          "id" : "00000000-0000-4000-8000-000000000027",
+          "indexed" : false,
+          "name" : "_UIVersionString",
+          "readOnly" : true,
+          "required" : false,
+          "text" : {
+            "allowMultipleLines" : false,
+            "appendChangesToExistingText" : false,
+            "linesForEditing" : 0,
+            "maxLength" : 255
+          }
+        }, {
+          "columnGroup" : "Custom Columns",
+          "description" : "",
+          "displayName" : "Source Version (Converted Document)",
+          "enforceUniqueValues" : false,
+          "hidden" : false,
+          "id" : "00000000-0000-4000-8000-000000000100",
+          "indexed" : false,
+          "name" : "ParentVersionString",
+          "readOnly" : true,
+          "required" : false,
+          "lookup" : {
+            "allowMultipleValues" : false,
+            "allowUnlimitedLength" : false,
+            "columnName" : "ParentVersionString",
+            "listId" : "",
+            "primaryLookupColumnId" : "ID"
+          }
+        }, {
+          "columnGroup" : "Custom Columns",
+          "description" : "",
+          "displayName" : "Source Name (Converted Document)",
+          "enforceUniqueValues" : false,
+          "hidden" : false,
+          "id" : "00000000-0000-4000-8000-000000000101",
+          "indexed" : false,
+          "name" : "ParentLeafName",
+          "readOnly" : true,
+          "required" : false,
+          "lookup" : {
+            "allowMultipleValues" : false,
+            "allowUnlimitedLength" : false,
+            "columnName" : "ParentLeafName",
+            "listId" : "",
+            "primaryLookupColumnId" : "ID"
+          }
+        }, {
+          "columnGroup" : "Custom Columns",
+          "description" : "",
+          "displayName" : "Compliance Asset Id",
+          "enforceUniqueValues" : false,
+          "hidden" : false,
+          "id" : "00000000-0000-4000-8000-000000000043",
+          "indexed" : false,
+          "name" : "ComplianceAssetId",
+          "readOnly" : true,
+          "required" : false,
+          "text" : {
+            "allowMultipleLines" : false,
+            "appendChangesToExistingText" : false,
+            "linesForEditing" : 0,
+            "maxLength" : 255
+          }
+        }, {
+          "columnGroup" : "Custom Columns",
+          "description" : "",
+          "displayName" : "Title",
+          "enforceUniqueValues" : false,
+          "hidden" : false,
+          "id" : "00000000-0000-4000-8000-000000000022",
+          "indexed" : false,
+          "name" : "Title",
+          "readOnly" : false,
+          "required" : false,
+          "text" : {
+            "allowMultipleLines" : false,
+            "appendChangesToExistingText" : false,
+            "linesForEditing" : 0,
+            "maxLength" : 255
+          }
+        }, {
+          "columnGroup" : "Custom Columns",
+          "description" : "",
+          "displayName" : "Description",
+          "enforceUniqueValues" : false,
+          "hidden" : false,
+          "id" : "00000000-0000-4000-8000-000000000102",
+          "indexed" : false,
+          "name" : "_ExtendedDescription",
+          "readOnly" : false,
+          "required" : false,
+          "text" : {
+            "allowMultipleLines" : true,
+            "appendChangesToExistingText" : false,
+            "linesForEditing" : 6,
+            "textType" : "richText"
+          }
+        } ]
+      }
+    }
+  }
+}

@@ -25,10 +25,10 @@
       "json" : {
         "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#sites('tenant-1.example%2C00000000-0000-4000-8000-000000000001%2C00000000-0000-4000-8000-000000000002')/lists('00000000-0000-4000-8000-000000000019')/items/$entity",
         "@odata.etag" : "\"00000000-0000-4000-8000-000000000072,1\"",
-        "createdDateTime" : "2026-11-22T17:58:29Z",
+        "createdDateTime" : "2026-11-22T18:11:11Z",
         "eTag" : "\"00000000-0000-4000-8000-000000000072,1\"",
         "id" : "2",
-        "lastModifiedDateTime" : "2026-11-22T17:58:29Z",
+        "lastModifiedDateTime" : "2026-11-22T18:11:11Z",
         "webUrl" : "https://redacted.example/url/51",
         "createdBy" : {
           "user" : {
@@ -49,7 +49,7 @@
           "siteId" : "tenant-1.example,00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000002"
         },
         "contentType" : {
-          "id" : "0x01001B0B7BD863EF3C4FA1EE3FD0A18EF44D",
+          "id" : "0x0100A0FFEBD24E5AFB49BC66F569F0568BDC",
           "name" : "Item"
         },
         "fields@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#sites('tenant-1.example%2C00000000-0000-4000-8000-000000000001%2C00000000-0000-4000-8000-000000000002')/lists('00000000-0000-4000-8000-000000000019')/items('2')/fields/$entity",
@@ -59,8 +59,8 @@
           "PsLookups" : [ ],
           "id" : "2",
           "ContentType" : "Item",
-          "Modified" : "2026-11-22T17:58:29Z",
-          "Created" : "2026-11-22T17:58:29Z",
+          "Modified" : "2026-11-22T18:11:11Z",
+          "Created" : "2026-11-22T18:11:11Z",
           "AuthorLookupId" : "1073741822",
           "EditorLookupId" : "1073741822",
           "_UIVersionString" : "1.0",

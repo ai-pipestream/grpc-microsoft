@@ -1,0 +1,53 @@
+{
+  "request" : {
+    "method" : "GET",
+    "url" : "https://graph.microsoft.com/v1.0/drives/b!drive-0002/items/item-0010/listItem/fields",
+    "authorized" : true,
+    "headers" : { }
+  },
+  "response" : {
+    "status" : 200,
+    "headers" : {
+      "etag" : "\"00000000-0000-4000-8000-000000000105,3\"",
+      "content-type" : "application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8"
+    },
+    "body" : {
+      "json" : {
+        "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#drives('b%21drive-0002')/items('item-0010')/listItem/fields/$entity",
+        "@odata.etag" : "\"00000000-0000-4000-8000-000000000105,3\"",
+        "FileLeafRef" : "with-fields.txt",
+        "PsText" : "from the upload",
+        "PsLink" : {
+          "Description" : "A page",
+          "Url" : "https://example.com/uploaded"
+        },
+        "id" : "1",
+        "ContentType" : "Document",
+        "Created" : "2026-11-22T18:11:16Z",
+        "AuthorLookupId" : "1073741822",
+        "Modified" : "2026-11-22T18:11:18Z",
+        "EditorLookupId" : "1073741822",
+        "_CheckinComment" : "",
+        "LinkFilenameNoMenu" : "with-fields.txt",
+        "LinkFilename" : "with-fields.txt",
+        "DocIcon" : "txt",
+        "FileSizeDisplay" : "59",
+        "ItemChildCount" : "0",
+        "FolderChildCount" : "0",
+        "_ComplianceFlags" : "",
+        "_ComplianceTag" : "",
+        "_ComplianceTagWrittenTime" : "",
+        "_ComplianceTagUserId" : "",
+        "_CommentCount" : "",
+        "_LikeCount" : "",
+        "_DisplayName" : "",
+        "AppAuthorLookupId" : "4",
+        "AppEditorLookupId" : "4",
+        "Edit" : "0",
+        "_UIVersionString" : "3.0",
+        "ParentVersionStringLookupId" : "1",
+        "ParentLeafNameLookupId" : "1"
+      }
+    }
+  }
+}
