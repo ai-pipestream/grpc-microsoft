@@ -8,7 +8,7 @@
     },
     "body" : {
       "json" : {
-        "name" : "pipestream-live-write-20261122-172854-d908adc1",
+        "name" : "pipestream-live-write-20261122-175803-04def12b",
         "folder" : { },
         "@microsoft.graph.conflictBehavior" : "fail"
       }
@@ -26,10 +26,10 @@
         "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#drives('b%21drive-0001')/root/children/$entity",
         "@odata.etag" : "\"{00000000-0000-4000-8000-000000000003},1\"",
         "eTag" : "\"{00000000-0000-4000-8000-000000000003},1\"",
-        "lastModifiedDateTime" : "2026-11-22T17:28:55Z",
-        "createdDateTime" : "2026-11-22T17:28:55Z",
+        "lastModifiedDateTime" : "2026-11-22T17:58:04Z",
+        "createdDateTime" : "2026-11-22T17:58:04Z",
         "id" : "item-0001",
-        "name" : "pipestream-live-write-20261122-172854-d908adc1",
+        "name" : "pipestream-live-write-20261122-175803-04def12b",
         "size" : 0,
         "webUrl" : "https://redacted.example/url/2",
         "commentSettings" : {
@@ -70,8 +70,8 @@
           }
         },
         "fileSystemInfo" : {
-          "createdDateTime" : "2026-11-22T17:28:55Z",
-          "lastModifiedDateTime" : "2026-11-22T17:28:55Z"
+          "createdDateTime" : "2026-11-22T17:58:04Z",
+          "lastModifiedDateTime" : "2026-11-22T17:58:04Z"
         },
         "folder" : {
           "childCount" : 0

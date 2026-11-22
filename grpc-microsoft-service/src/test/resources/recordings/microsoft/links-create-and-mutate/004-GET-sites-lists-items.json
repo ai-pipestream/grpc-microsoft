@@ -1,0 +1,77 @@
+{
+  "request" : {
+    "method" : "GET",
+    "url" : "https://graph.microsoft.com/v1.0/sites/tenant-1.example,00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000002/lists/00000000-0000-4000-8000-000000000019/items/4?$expand=fields",
+    "authorized" : true,
+    "headers" : { }
+  },
+  "response" : {
+    "status" : 200,
+    "headers" : {
+      "etag" : "\"00000000-0000-4000-8000-000000000084,2\"",
+      "content-type" : "application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8"
+    },
+    "body" : {
+      "json" : {
+        "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#sites('tenant-1.example%2C00000000-0000-4000-8000-000000000001%2C00000000-0000-4000-8000-000000000002')/lists('00000000-0000-4000-8000-000000000019')/items(fields())/$entity",
+        "@odata.etag" : "\"00000000-0000-4000-8000-000000000084,2\"",
+        "createdDateTime" : "2026-11-22T17:58:31Z",
+        "eTag" : "\"00000000-0000-4000-8000-000000000084,2\"",
+        "id" : "4",
+        "lastModifiedDateTime" : "2026-11-22T17:58:32Z",
+        "webUrl" : "https://redacted.example/url/61",
+        "createdBy" : {
+          "user" : {
+            "displayName" : "Identity 2"
+          }
+        },
+        "lastModifiedBy" : {
+          "application" : {
+            "id" : "00000000-0000-4000-8000-000000000004",
+            "displayName" : "Identity 1"
+          },
+          "user" : {
+            "displayName" : "Identity 2"
+          }
+        },
+        "parentReference" : {
+          "id" : "00000000-0000-4000-8000-000000000050",
+          "siteId" : "tenant-1.example,00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000002"
+        },
+        "contentType" : {
+          "id" : "0x01001B0B7BD863EF3C4FA1EE3FD0A18EF44D",
+          "name" : "Item"
+        },
+        "fields@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#sites('tenant-1.example%2C00000000-0000-4000-8000-000000000001%2C00000000-0000-4000-8000-000000000002')/lists('00000000-0000-4000-8000-000000000019')/items('4')/fields/$entity",
+        "fields" : {
+          "@odata.etag" : "\"00000000-0000-4000-8000-000000000084,2\"",
+          "Title" : "with link",
+          "PsLink" : {
+            "Description" : "A page",
+            "Url" : "https://example.com/created"
+          },
+          "PsLookups" : [ ],
+          "id" : "4",
+          "ContentType" : "Item",
+          "Modified" : "2026-11-22T17:58:32Z",
+          "Created" : "2026-11-22T17:58:31Z",
+          "AuthorLookupId" : "1073741822",
+          "EditorLookupId" : "1073741822",
+          "_UIVersionString" : "2.0",
+          "Attachments" : false,
+          "Edit" : "",
+          "LinkTitleNoMenu" : "with link",
+          "LinkTitle" : "with link",
+          "ItemChildCount" : "0",
+          "FolderChildCount" : "0",
+          "_ComplianceFlags" : "",
+          "_ComplianceTag" : "",
+          "_ComplianceTagWrittenTime" : "",
+          "_ComplianceTagUserId" : "",
+          "AppAuthorLookupId" : "4",
+          "AppEditorLookupId" : "4"
+        }
+      }
+    }
+  }
+}

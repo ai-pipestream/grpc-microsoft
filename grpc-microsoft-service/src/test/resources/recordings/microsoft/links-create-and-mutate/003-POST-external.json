@@ -1,0 +1,37 @@
+{
+  "request" : {
+    "method" : "POST",
+    "url" : "https://redacted.example/url/3/_api/web/lists(guid'00000000-0000-4000-8000-000000000019')/items(4)/ValidateUpdateListItem",
+    "authorized" : true,
+    "headers" : {
+      "content-type" : "application/json"
+    },
+    "body" : {
+      "json" : {
+        "formValues" : [ {
+          "FieldName" : "PsLink",
+          "FieldValue" : "https://example.com/created, A page"
+        } ],
+        "bNewDocumentUpdate" : false
+      }
+    }
+  },
+  "response" : {
+    "status" : 200,
+    "headers" : {
+      "content-type" : "application/json;odata=nometadata;streaming=true;charset=utf-8"
+    },
+    "body" : {
+      "json" : {
+        "value" : [ {
+          "ErrorCode" : 0,
+          "ErrorMessage" : null,
+          "FieldName" : "PsLink",
+          "FieldValue" : "https://example.com/created, A page",
+          "HasException" : false,
+          "ItemId" : 4
+        } ]
+      }
+    }
+  }
+}

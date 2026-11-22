@@ -23,7 +23,7 @@
     "body" : {
       "json" : {
         "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#microsoft.graph.uploadSession",
-        "expirationDateTime" : "2026-11-22T17:43:59.654Z",
+        "expirationDateTime" : "2026-11-22T18:13:08.855Z",
         "nextExpectedRanges" : [ "0-" ],
         "uploadUrl" : "https://redacted.example/url/14"
       }

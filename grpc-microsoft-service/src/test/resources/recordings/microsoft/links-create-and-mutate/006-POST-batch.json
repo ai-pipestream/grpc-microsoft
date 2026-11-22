@@ -1,0 +1,125 @@
+{
+  "request" : {
+    "method" : "POST",
+    "url" : "https://graph.microsoft.com/v1.0/$batch",
+    "authorized" : true,
+    "headers" : {
+      "content-type" : "application/json"
+    },
+    "body" : {
+      "json" : {
+        "requests" : [ {
+          "id" : "0",
+          "method" : "POST",
+          "url" : "/sites/tenant-1.example,00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000002/lists/00000000-0000-4000-8000-000000000019/items",
+          "body" : {
+            "fields" : {
+              "Title" : "batch link"
+            }
+          },
+          "headers" : {
+            "Content-Type" : "application/json"
+          }
+        }, {
+          "id" : "1",
+          "method" : "GET",
+          "url" : "/sites/tenant-1.example,00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000002/lists/00000000-0000-4000-8000-000000000019/items/1?$select=id,eTag"
+        } ]
+      }
+    }
+  },
+  "response" : {
+    "status" : 200,
+    "headers" : {
+      "content-type" : "application/json"
+    },
+    "body" : {
+      "json" : {
+        "responses" : [ {
+          "id" : "1",
+          "status" : 200,
+          "headers" : {
+            "Cache-Control" : "no-cache",
+            "SPLogId" : "00000000-0000-4000-8000-000000000085",
+            "OData-Version" : "4.0",
+            "Content-Type" : "application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8",
+            "ETag" : "\"00000000-0000-4000-8000-000000000049,13\""
+          },
+          "body" : {
+            "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#sites('tenant-1.example%2C00000000-0000-4000-8000-000000000001%2C00000000-0000-4000-8000-000000000002')/lists('00000000-0000-4000-8000-000000000019')/items(id,eTag)/$entity",
+            "@odata.etag" : "\"00000000-0000-4000-8000-000000000049,13\"",
+            "eTag" : "\"00000000-0000-4000-8000-000000000049,13\"",
+            "id" : "1"
+          }
+        }, {
+          "id" : "0",
+          "status" : 201,
+          "headers" : {
+            "Location" : "https://redacted.example/url/62",
+            "Cache-Control" : "no-cache",
+            "SPLogId" : "00000000-0000-4000-8000-000000000086",
+            "OData-Version" : "4.0",
+            "Content-Type" : "application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8",
+            "ETag" : "\"00000000-0000-4000-8000-000000000087,1\""
+          },
+          "body" : {
+            "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#sites('tenant-1.example%2C00000000-0000-4000-8000-000000000001%2C00000000-0000-4000-8000-000000000002')/lists('00000000-0000-4000-8000-000000000019')/items/$entity",
+            "@odata.etag" : "\"00000000-0000-4000-8000-000000000087,1\"",
+            "createdDateTime" : "2026-11-22T17:58:31Z",
+            "eTag" : "\"00000000-0000-4000-8000-000000000087,1\"",
+            "id" : "5",
+            "lastModifiedDateTime" : "2026-11-22T17:58:31Z",
+            "webUrl" : "https://redacted.example/url/63",
+            "createdBy" : {
+              "user" : {
+                "displayName" : "Identity 2"
+              }
+            },
+            "lastModifiedBy" : {
+              "application" : {
+                "id" : "00000000-0000-4000-8000-000000000004",
+                "displayName" : "Identity 1"
+              },
+              "user" : {
+                "displayName" : "Identity 2"
+              }
+            },
+            "parentReference" : {
+              "id" : "00000000-0000-4000-8000-000000000050",
+              "siteId" : "tenant-1.example,00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000002"
+            },
+            "contentType" : {
+              "id" : "0x01001B0B7BD863EF3C4FA1EE3FD0A18EF44D",
+              "name" : "Item"
+            },
+            "fields@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#sites('tenant-1.example%2C00000000-0000-4000-8000-000000000001%2C00000000-0000-4000-8000-000000000002')/lists('00000000-0000-4000-8000-000000000019')/items('5')/fields/$entity",
+            "fields" : {
+              "@odata.etag" : "\"00000000-0000-4000-8000-000000000087,1\"",
+              "Title" : "batch link",
+              "PsLookups" : [ ],
+              "id" : "5",
+              "ContentType" : "Item",
+              "Modified" : "2026-11-22T17:58:31Z",
+              "Created" : "2026-11-22T17:58:31Z",
+              "AuthorLookupId" : "1073741822",
+              "EditorLookupId" : "1073741822",
+              "_UIVersionString" : "1.0",
+              "Attachments" : false,
+              "Edit" : "",
+              "LinkTitleNoMenu" : "batch link",
+              "LinkTitle" : "batch link",
+              "ItemChildCount" : "0",
+              "FolderChildCount" : "0",
+              "_ComplianceFlags" : "",
+              "_ComplianceTag" : "",
+              "_ComplianceTagWrittenTime" : "",
+              "_ComplianceTagUserId" : "",
+              "AppAuthorLookupId" : "4",
+              "AppEditorLookupId" : "4"
+            }
+          }
+        } ]
+      }
+    }
+  }
+}

@@ -23,7 +23,7 @@
             "displayName" : "Identity 2"
           }
         },
-        "createdDateTime" : "2026-11-22T17:28:55Z",
+        "createdDateTime" : "2026-11-22T17:58:05Z",
         "eTag" : "\"{00000000-0000-4000-8000-000000000008},1\"",
         "id" : "item-0003",
         "lastModifiedBy" : {
@@ -35,14 +35,14 @@
             "displayName" : "Identity 2"
           }
         },
-        "lastModifiedDateTime" : "2026-11-22T17:28:55Z",
+        "lastModifiedDateTime" : "2026-11-22T17:58:05Z",
         "name" : "small.txt",
         "parentReference" : {
           "driveType" : "documentLibrary",
           "driveId" : "b!drive-0001",
           "id" : "item-0001",
-          "name" : "pipestream-live-write-20261122-172854-d908adc1",
-          "path" : "/drives/b!drive-0001/root:/pipestream-live-write-20261122-172854-d908adc1",
+          "name" : "pipestream-live-write-20261122-175803-04def12b",
+          "path" : "/drives/b!drive-0001/root:/pipestream-live-write-20261122-175803-04def12b",
           "sharepointIds" : {
             "listId" : "00000000-0000-4000-8000-000000000005",
             "listItemUniqueId" : "00000000-0000-4000-8000-000000000003",
@@ -57,20 +57,20 @@
         "file" : {
           "fileExtension" : ".txt",
           "hashes" : {
-            "quickXorHash" : "GZVKVSSPbMdpWV7NWAW28P+YRH0="
+            "quickXorHash" : "aZVKQcSPbGcrWvYd3Qbi0fXLRH0="
           },
           "mimeType" : "text/plain"
         },
         "fileSystemInfo" : {
-          "createdDateTime" : "2026-11-22T17:28:55Z",
-          "lastModifiedDateTime" : "2026-11-22T17:28:55Z"
+          "createdDateTime" : "2026-11-22T17:58:05Z",
+          "lastModifiedDateTime" : "2026-11-22T17:58:05Z"
         },
         "shared" : {
           "scope" : "users"
         },
         "sharepointIds" : {
           "listId" : "00000000-0000-4000-8000-000000000005",
-          "listItemId" : "122",
+          "listItemId" : "130",
           "listItemUniqueId" : "00000000-0000-4000-8000-000000000008",
           "siteId" : "00000000-0000-4000-8000-000000000001",
           "siteUrl" : "https://redacted.example/url/3",

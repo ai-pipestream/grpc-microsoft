@@ -1,0 +1,31 @@
+{
+  "request" : {
+    "method" : "GET",
+    "url" : "https://graph.microsoft.com/v1.0/sites/tenant-1.example,00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000002/lists/00000000-0000-4000-8000-000000000019/items/5?$select=id,sharepointIds",
+    "authorized" : true,
+    "headers" : { }
+  },
+  "response" : {
+    "status" : 200,
+    "headers" : {
+      "etag" : "\"00000000-0000-4000-8000-000000000087,1\"",
+      "content-type" : "application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8"
+    },
+    "body" : {
+      "json" : {
+        "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#sites('tenant-1.example%2C00000000-0000-4000-8000-000000000001%2C00000000-0000-4000-8000-000000000002')/lists('00000000-0000-4000-8000-000000000019')/items(id,sharepointIds)/$entity",
+        "@odata.etag" : "\"00000000-0000-4000-8000-000000000087,1\"",
+        "id" : "5",
+        "sharepointIds" : {
+          "listId" : "00000000-0000-4000-8000-000000000019",
+          "listItemId" : "5",
+          "listItemUniqueId" : "00000000-0000-4000-8000-000000000087",
+          "siteId" : "00000000-0000-4000-8000-000000000001",
+          "siteUrl" : "https://redacted.example/url/3",
+          "tenantId" : "00000000-0000-4000-8000-000000000007",
+          "webId" : "00000000-0000-4000-8000-000000000002"
+        }
+      }
+    }
+  }
+}

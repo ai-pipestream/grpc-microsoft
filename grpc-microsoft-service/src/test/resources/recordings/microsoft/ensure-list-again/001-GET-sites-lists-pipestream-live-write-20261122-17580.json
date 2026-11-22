@@ -1,7 +1,7 @@
 {
   "request" : {
     "method" : "GET",
-    "url" : "https://graph.microsoft.com/v1.0/sites/tenant-1.example,00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000002/lists/pipestream-live-write-20261122-172854-d908adc1",
+    "url" : "https://graph.microsoft.com/v1.0/sites/tenant-1.example,00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000002/lists/pipestream-live-write-20261122-175803-04def12b",
     "authorized" : true,
     "headers" : { }
   },
@@ -15,14 +15,14 @@
       "json" : {
         "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#sites('tenant-1.example%2C00000000-0000-4000-8000-000000000001%2C00000000-0000-4000-8000-000000000002')/lists/$entity",
         "@odata.etag" : "\"00000000-0000-4000-8000-000000000019,0\"",
-        "createdDateTime" : "2026-11-22T17:29:09Z",
+        "createdDateTime" : "2026-11-22T17:58:16Z",
         "description" : "Created by the live write test; safe to delete.",
         "eTag" : "\"00000000-0000-4000-8000-000000000019,0\"",
         "id" : "00000000-0000-4000-8000-000000000019",
-        "lastModifiedDateTime" : "2026-11-22T17:29:09Z",
-        "name" : "pipestreamlivewrite20261122172854d908adc1",
+        "lastModifiedDateTime" : "2026-11-22T17:58:16Z",
+        "name" : "pipestreamlivewrite2026112217580304def12b",
         "webUrl" : "https://redacted.example/url/34",
-        "displayName" : "pipestream-live-write-20261122-172854-d908adc1",
+        "displayName" : "pipestream-live-write-20261122-175803-04def12b",
         "createdBy" : {
           "user" : {
             "displayName" : "Identity 2"
