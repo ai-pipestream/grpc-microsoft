@@ -18,6 +18,10 @@ on:
         description: Graph site id the live write test may write to (falls back to the MICROSOFT_SITE_ID secret)
         type: string
         default: ""
+      run_live_coverage:
+        description: Call every read rpc against the test site and print each call's outcome (read-only)
+        type: boolean
+        default: false
       import_recordings_run_id:
         description: Commit the recordings artifact of this run id to the branch as replay data
         type: string
@@ -160,6 +164,45 @@ jobs:
           with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as summary:
               summary.write(f"Microsoft live smoke: PASSED ({len(cases)} executed tests, none skipped).\n")
           PYTHON
+
+  # Manual only, read-only: every read rpc against the test site. The log of a
+  # public repository gets each call's label and outcome, never its detail.
+  live-microsoft-coverage:
+    if: github.event_name == 'workflow_dispatch' && inputs.run_live_coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          path: grpc-microsoft
+      - uses: actions/checkout@v5
+        with:
+          repository: ai-pipestream/grpc-integration
+          ref: ${{ env.INTEGRATION_REF }}
+          path: grpc-integration
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "25"
+      - name: Live Microsoft Graph coverage run
+        working-directory: grpc-microsoft
+        env:
+          MICROSOFT_TENANT_ID: ${{ secrets.MICROSOFT_TENANT_ID }}
+          MICROSOFT_CLIENT_ID: ${{ secrets.MICROSOFT_CLIENT_ID }}
+          MICROSOFT_CLIENT_SECRET: ${{ secrets.MICROSOFT_CLIENT_SECRET }}
+          MICROSOFT_SITE_ID: ${{ inputs.live_write_site_id || secrets.MICROSOFT_SITE_ID }}
+          MICROSOFT_DRIVE_IDS: ${{ secrets.MICROSOFT_DRIVE_IDS }}
+        run: |
+          status=0
+          ./gradlew --no-daemon -PintegrationDir=../grpc-integration :grpc-microsoft-service:liveCoverageTest --rerun-tasks > "$RUNNER_TEMP/coverage.log" 2>&1 || status=$?
+          report=grpc-microsoft-service/build/live-coverage.md
+          if [ -f "$report" ]; then
+            grep -E '^- Calls:' "$report" || true
+            awk -F ' \\| ' '/^## RPCs/ { on = 1; next } /^## / { on = 0 } on && /^\| / { print $1 " | " $2 }' "$report"
+          else
+            echo "::error::no coverage report was written"
+            grep -E '^(BUILD|FAILURE|> Task|e: |.*error:)' "$RUNNER_TEMP/coverage.log" | tail -n 30 || true
+          fi
+          exit "$status"
 
   # Manual only: writes to the test site, then deletes what it created.
   live-microsoft-write:
