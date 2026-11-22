@@ -409,7 +409,7 @@ class MicrosoftLiveCoverageIT {
         List<ListGroupsResponse> groups = stream("ListGroups", "ListGroups", LIST_CAP,
                 s -> s.listGroups(ListGroupsRequest.getDefaultInstance()),
                 l -> l.size() + " group(s)");
-        if (groups.isEmpty()) {
+        if (groups == null || groups.isEmpty()) {
             skip("ListGroupTransitiveMembers", "no group was listed");
         } else {
             String groupId = groups.get(0).getGroup().getId();
@@ -418,7 +418,7 @@ class MicrosoftLiveCoverageIT {
                             .setGroupId(groupId).build()),
                     l -> l.size() + " member(s)");
         }
-        if (users.isEmpty()) {
+        if (users == null || users.isEmpty()) {
             skip("ListUserTransitiveMemberOf", "no user was listed");
         } else {
             String userId = users.get(0).getUser().getId();
