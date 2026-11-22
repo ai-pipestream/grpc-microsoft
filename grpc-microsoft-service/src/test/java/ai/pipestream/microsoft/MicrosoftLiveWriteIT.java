@@ -69,6 +69,7 @@ class MicrosoftLiveWriteIT {
     private String folderName;
     private String listName;
     private String recorded = "";
+    private String tokenSummary = "not read";
 
     private static boolean notBlank(String value) {
         return value != null && !value.isBlank();
@@ -98,6 +99,7 @@ class MicrosoftLiveWriteIT {
         secrets.add(config.clientSecret());
         GraphAuth auth = new GraphAuth(config.authConfig());
         AtomicReference<GraphAuth.Token> token = new AtomicReference<>(issue(auth));
+        tokenSummary = summary(token.get().accessToken());
         Supplier<String> bearer = () -> {
             GraphAuth.Token current = token.get();
             if (current.expired()) {
@@ -203,6 +205,22 @@ class MicrosoftLiveWriteIT {
         return failures;
     }
 
+    /** The application roles of an access token and the last characters of its app id. */
+    private static String summary(String accessToken) {
+        try {
+            String[] parts = accessToken.split("\\.", -1);
+            com.fasterxml.jackson.databind.JsonNode claims = new com.fasterxml.jackson.databind.ObjectMapper()
+                    .readTree(java.util.Base64.getUrlDecoder().decode(parts[1]));
+            List<String> roles = new ArrayList<>();
+            claims.path("roles").forEach(role -> roles.add(role.asText()));
+            String app = claims.path("appid").asText(claims.path("azp").asText(""));
+            String tail = app.length() > 4 ? app.substring(app.length() - 4) : "????";
+            return "roles " + roles + ", app id ends " + tail;
+        } catch (RuntimeException | IOException e) {
+            return "claims not readable";
+        }
+    }
+
     private GraphAuth.Token issue(GraphAuth auth) throws IOException, InterruptedException {
         GraphAuth.Token issued = auth.clientCredentials();
         if (notBlank(issued.accessToken())) {
@@ -232,6 +250,7 @@ class MicrosoftLiveWriteIT {
         StringBuilder md = new StringBuilder();
         md.append("# Microsoft Graph live write run\n\n");
         md.append("- Graph: ").append(host).append(" (application token, client credentials)\n");
+        md.append("- Token: ").append(tokenSummary).append("\n");
         md.append("- Run: ").append(started).append(" (")
                 .append(Duration.between(started, Instant.now()).toSeconds()).append(" s)\n");
         md.append("- Test folder: /").append(folderName).append("\n- Test list: ")
