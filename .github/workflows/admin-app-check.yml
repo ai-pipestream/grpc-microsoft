@@ -74,6 +74,10 @@ jobs:
           source "$RUNNER_TEMP/auth.sh"
           umask 077; printf '%s\n' "$PEM" > "$RUNNER_TEMP/admin.pem"
           show "admin cert graph" "$(token_cert "$CID" "$RUNNER_TEMP/admin.pem" https://graph.microsoft.com/.default)"
+          code=$(curl -sS -o perms.json -w '%{http_code}' -H "Authorization: Bearer ${TOKEN}" \
+            "https://graph.microsoft.com/v1.0/sites/${SITE}/permissions")
+          echo "GET /sites/{id}/permissions with cert token: HTTP ${code}"
+          jq -c '[.value[]? | {roles, apps: [.grantedToIdentitiesV2[]?.application.displayName]}]' perms.json || cat perms.json
           show "admin cert spo" "$(token_cert "$CID" "$RUNNER_TEMP/admin.pem" https://pipestreamai.sharepoint.com/.default)"
           code=$(curl -sS -o ra.json -w '%{http_code}' -H "Authorization: Bearer ${TOKEN}" -H 'Accept: application/json;odata=nometadata' \
             "${SPO_WEB}/_api/web/roleassignments?\$expand=RoleDefinitionBindings")
