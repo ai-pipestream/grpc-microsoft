@@ -15,10 +15,10 @@
       "json" : {
         "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#drives('b%21drive-0001')/items('item-0007')/listItem(fields())/$entity",
         "@odata.etag" : "\"00000000-0000-4000-8000-000000000016,3\"",
-        "createdDateTime" : "2026-11-22T15:11:21Z",
+        "createdDateTime" : "2026-11-22T15:28:59Z",
         "eTag" : "\"00000000-0000-4000-8000-000000000016,3\"",
-        "id" : "78",
-        "lastModifiedDateTime" : "2026-11-22T15:11:22Z",
+        "id" : "86",
+        "lastModifiedDateTime" : "2026-11-22T15:29:00Z",
         "webUrl" : "https://redacted.example/url/28",
         "createdBy" : {
           "user" : {
@@ -45,11 +45,11 @@
         "fields@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#drives('b%21drive-0001')/items('item-0007')/listItem/fields/$entity",
         "fields" : {
           "@odata.etag" : "\"00000000-0000-4000-8000-000000000016,3\"",
-          "id" : "78",
+          "id" : "86",
           "ContentType" : "Document",
-          "Created" : "2026-11-22T15:11:21Z",
+          "Created" : "2026-11-22T15:28:59Z",
           "AuthorLookupId" : "1073741822",
-          "Modified" : "2026-11-22T15:11:22Z",
+          "Modified" : "2026-11-22T15:29:00Z",
           "EditorLookupId" : "1073741822",
           "FileLeafRef" : "versioned.txt",
           "_CheckinComment" : "",
@@ -70,8 +70,8 @@
           "AppEditorLookupId" : "4",
           "Edit" : "0",
           "_UIVersionString" : "3.0",
-          "ParentVersionStringLookupId" : "78",
-          "ParentLeafNameLookupId" : "78"
+          "ParentVersionStringLookupId" : "86",
+          "ParentLeafNameLookupId" : "86"
         }
       }
     }

@@ -16,6 +16,7 @@
         "value" : [ {
           "id" : "permission-0001",
           "roles" : [ "owner" ],
+          "shareId" : "V2VsY29tZSB0byBQaXBlU3RyZWFtIE93bmVycw",
           "grantedToV2" : {
             "siteGroup" : {
               "displayName" : "Identity 3",
@@ -37,6 +38,7 @@
         }, {
           "id" : "permission-0002",
           "roles" : [ "read" ],
+          "shareId" : "V2VsY29tZSB0byBQaXBlU3RyZWFtIFZpc2l0b3Jz",
           "grantedToV2" : {
             "siteGroup" : {
               "displayName" : "Identity 4",
@@ -58,6 +60,7 @@
         }, {
           "id" : "permission-0003",
           "roles" : [ "write" ],
+          "shareId" : "V2VsY29tZSB0byBQaXBlU3RyZWFtIE1lbWJlcnM",
           "grantedToV2" : {
             "siteGroup" : {
               "displayName" : "Identity 5",
@@ -79,6 +82,7 @@
         }, {
           "id" : "permission-0004",
           "roles" : [ "owner" ],
+          "shareId" : "aTowIy5mfG1lbWJlcnNoaXB8a3JpY2tlcnRAcGlwZXN0cmVhbS5haQ",
           "grantedToV2" : {
             "user" : {
               "@odata.type" : "#microsoft.graph.sharePointIdentity",
