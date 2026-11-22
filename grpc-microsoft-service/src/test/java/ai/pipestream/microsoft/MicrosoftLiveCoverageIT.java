@@ -422,10 +422,15 @@ class MicrosoftLiveCoverageIT {
             String join = System.getenv("JOIN_PROOF_EMAIL");
             if (notBlank(join)) {
                 // Says only whether the address is there, never the address.
-                boolean match = users.stream().map(r -> r.getUser().getMail().isEmpty()
-                        ? r.getUser().getUserPrincipalName() : r.getUser().getMail())
-                        .anyMatch(address -> address.equalsIgnoreCase(join.trim()));
-                directoryLine += "\n- Entra join: " + (match ? "match" : "no match");
+                String wanted = join.trim();
+                String domain = wanted.substring(wanted.indexOf('@') + 1);
+                long mail = users.stream().filter(r -> r.getUser().getMail().equalsIgnoreCase(wanted)).count();
+                long signIn = users.stream()
+                        .filter(r -> r.getUser().getUserPrincipalName().equalsIgnoreCase(wanted)).count();
+                long sameDomain = users.stream().filter(r -> endsWithDomain(r.getUser().getMail(), domain)
+                        || endsWithDomain(r.getUser().getUserPrincipalName(), domain)).count();
+                directoryLine += "\n- Entra join: " + (mail + signIn > 0 ? "match" : "no match") + " (mail "
+                        + mail + ", sign-in name " + signIn + ", users on the same domain " + sameDomain + ")";
             }
         }
         List<ListGroupsResponse> groups = stream("ListGroups", "ListGroups", LIST_CAP,
@@ -492,6 +497,10 @@ class MicrosoftLiveCoverageIT {
             "hotmail.com", "live.com", "yahoo.com", "icloud.com");
 
     /** How many addresses sit on each kind of domain; no tenant domain is named. */
+    private static boolean endsWithDomain(String address, String domain) {
+        return address.toLowerCase(java.util.Locale.ROOT).endsWith("@" + domain.toLowerCase(java.util.Locale.ROOT));
+    }
+
     private static Map<String, Integer> domainKinds(List<ListUsersResponse> users,
             Function<ListUsersResponse, String> address) {
         Map<String, Integer> kinds = new TreeMap<>();
