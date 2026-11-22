@@ -22,11 +22,11 @@
       "json" : {
         "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#drives('b%21drive-0001')/items('item-0003')/listItem/fields/$entity",
         "@odata.etag" : "\"00000000-0000-4000-8000-000000000008,2\"",
-        "id" : "48",
+        "id" : "56",
         "ContentType" : "Document",
-        "Created" : "2026-11-22T13:44:54Z",
+        "Created" : "2026-11-22T14:18:28Z",
         "AuthorLookupId" : "1073741822",
-        "Modified" : "2026-11-22T13:45:13Z",
+        "Modified" : "2026-11-22T14:18:46Z",
         "EditorLookupId" : "1073741822",
         "FileLeafRef" : "renamed.txt",
         "_CheckinComment" : "",
@@ -47,8 +47,8 @@
         "AppEditorLookupId" : "4",
         "Edit" : "0",
         "_UIVersionString" : "2.0",
-        "ParentVersionStringLookupId" : "48",
-        "ParentLeafNameLookupId" : "48",
+        "ParentVersionStringLookupId" : "56",
+        "ParentLeafNameLookupId" : "56",
         "Title" : "live title"
       }
     }

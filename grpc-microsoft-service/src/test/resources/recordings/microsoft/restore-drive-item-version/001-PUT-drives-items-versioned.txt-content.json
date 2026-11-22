@@ -20,10 +20,10 @@
       "json" : {
         "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#drives('b%21drive-0001')/items/$entity",
         "@microsoft.graph.downloadUrl" : "https://redacted.example/url/27",
-        "createdDateTime" : "2026-11-22T13:45:06Z",
+        "createdDateTime" : "2026-11-22T14:18:40Z",
         "eTag" : "\"{00000000-0000-4000-8000-000000000016},1\"",
         "id" : "item-0007",
-        "lastModifiedDateTime" : "2026-11-22T13:45:06Z",
+        "lastModifiedDateTime" : "2026-11-22T14:18:40Z",
         "name" : "versioned.txt",
         "webUrl" : "https://redacted.example/url/28",
         "cTag" : "\"c:{00000000-0000-4000-8000-000000000016},1\"",
@@ -51,8 +51,8 @@
           "driveType" : "documentLibrary",
           "driveId" : "b!drive-0001",
           "id" : "item-0001",
-          "name" : "pipestream-live-write-20261122-134451-65b44d17",
-          "path" : "/drives/b!drive-0001/root:/pipestream-live-write-20261122-134451-65b44d17",
+          "name" : "pipestream-live-write-20261122-141826-b70e2ff6",
+          "path" : "/drives/b!drive-0001/root:/pipestream-live-write-20261122-141826-b70e2ff6",
           "siteId" : "00000000-0000-4000-8000-000000000001"
         },
         "file" : {
@@ -62,8 +62,8 @@
           }
         },
         "fileSystemInfo" : {
-          "createdDateTime" : "2026-11-22T13:45:06Z",
-          "lastModifiedDateTime" : "2026-11-22T13:45:06Z"
+          "createdDateTime" : "2026-11-22T14:18:40Z",
+          "lastModifiedDateTime" : "2026-11-22T14:18:40Z"
         },
         "shared" : {
           "scope" : "users"
