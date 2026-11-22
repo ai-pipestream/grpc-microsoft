@@ -419,6 +419,14 @@ class MicrosoftLiveCoverageIT {
                     + users.stream().filter(r -> !r.getUser().getMail().isEmpty()).count()
                     + " with mail; mail domains " + domainKinds(users, r -> r.getUser().getMail())
                     + "; sign-in name domains " + domainKinds(users, r -> r.getUser().getUserPrincipalName());
+            String join = System.getenv("JOIN_PROOF_EMAIL");
+            if (notBlank(join)) {
+                // Says only whether the address is there, never the address.
+                boolean match = users.stream().map(r -> r.getUser().getMail().isEmpty()
+                        ? r.getUser().getUserPrincipalName() : r.getUser().getMail())
+                        .anyMatch(address -> address.equalsIgnoreCase(join.trim()));
+                directoryLine += "\n- Entra join: " + (match ? "match" : "no match");
+            }
         }
         List<ListGroupsResponse> groups = stream("ListGroups", "ListGroups", LIST_CAP,
                 s -> s.listGroups(ListGroupsRequest.getDefaultInstance()),

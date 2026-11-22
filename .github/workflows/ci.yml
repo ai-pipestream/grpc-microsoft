@@ -213,12 +213,13 @@ jobs:
           MICROSOFT_CLIENT_CERT_PEM: ${{ inputs.live_coverage_admin && secrets.MICROSOFT_ADMIN_CLIENT_CERT_PEM || secrets.MICROSOFT_CLIENT_CERT_PEM }}
           MICROSOFT_SITE_ID: ${{ inputs.live_write_site_id || env.LIVE_SITE_ID }}
           MICROSOFT_DRIVE_IDS: ${{ secrets.MICROSOFT_DRIVE_IDS }}
+          JOIN_PROOF_EMAIL: ${{ secrets.JOIN_PROOF_EMAIL }}
         run: |
           status=0
           ./gradlew --no-daemon -PintegrationDir=../grpc-integration :grpc-microsoft-service:liveCoverageTest --rerun-tasks > "$RUNNER_TEMP/coverage.log" 2>&1 || status=$?
           report=grpc-microsoft-service/build/live-coverage.md
           if [ -f "$report" ]; then
-            grep -E '^- (Calls|Directory):' "$report" || true
+            grep -E '^- (Calls|Directory|Entra join):' "$report" || true
             awk -F ' \\| ' '/^## RPCs/ { on = 1; next } /^## / { on = 0 } on && /^\| / { print $1 " | " $2 }' "$report"
           else
             echo "::error::no coverage report was written"
