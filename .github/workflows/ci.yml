@@ -256,7 +256,8 @@ jobs:
           check "bearer credential" 'Bearer [A-Za-z0-9._-]{16,}'
           check "client secret field" 'client_secret'
           check "tenant host" 'pipestreamai'
-          n=$(grep -rIhoE '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}' . | grep -vcE '@example\.(invalid|com|org)$' || true)
+          # OData annotation keys such as fields@odata.context have the shape of an address.
+          n=$(grep -rIhoE '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}' . | grep -vE '@(odata|microsoft\.graph)\.[A-Za-z.]+$' | grep -vcE '@example\.(invalid|com|org)$' || true)
           echo "email address: $n matches outside the placeholder domains"
           if [ "$n" -gt 0 ]; then fail=1; fi
           exit $fail
