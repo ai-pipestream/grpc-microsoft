@@ -122,10 +122,10 @@ final class GraphSubscriptions {
         return subscription(graph.patch("/subscriptions/" + segment(id), body));
     }
 
-    /** POST /subscriptions/{id}/reauthorize. */
+    /** POST /subscriptions/{id}/reauthorize, with an empty JSON body so a length is sent. */
     void reauthorize(String id) throws IOException, InterruptedException {
         graph.execute(new GraphClient.Call("POST", "/subscriptions/" + segment(required(id))
-                + "/reauthorize", Map.of(), null));
+                + "/reauthorize", Map.of(), JSON.createObjectNode()));
     }
 
     /** DELETE /subscriptions/{id}. */
