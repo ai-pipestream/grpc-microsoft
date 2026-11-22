@@ -15,14 +15,14 @@
       "json" : {
         "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#sites('tenant-1.example%2C00000000-0000-4000-8000-000000000001%2C00000000-0000-4000-8000-000000000002')/lists(id,name,displayName,description,webUrl,eTag,createdDateTime,lastModifiedDateTime,createdBy,lastModifiedBy,list,sharepointIds,system,parentReference)/$entity",
         "@odata.etag" : "\"00000000-0000-4000-8000-000000000019,0\"",
-        "createdDateTime" : "2026-11-22T14:18:42Z",
+        "createdDateTime" : "2026-11-22T15:00:16Z",
         "description" : "Created by the live write test; safe to delete.",
         "eTag" : "\"00000000-0000-4000-8000-000000000019,0\"",
         "id" : "00000000-0000-4000-8000-000000000019",
-        "lastModifiedDateTime" : "2026-11-22T14:18:42Z",
-        "name" : "pipestreamlivewrite20261122141826b70e2ff6",
+        "lastModifiedDateTime" : "2026-11-22T15:00:16Z",
+        "name" : "pipestreamlivewrite202611221459589a3153eb",
         "webUrl" : "https://redacted.example/url/34",
-        "displayName" : "pipestream-live-write-20261122-141826-b70e2ff6",
+        "displayName" : "pipestream-live-write-20261122-145958-9a3153eb",
         "createdBy" : {
           "user" : {
             "displayName" : "Identity 2"
