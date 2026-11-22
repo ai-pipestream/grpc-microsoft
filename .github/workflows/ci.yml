@@ -26,6 +26,10 @@ on:
         description: Run the read-only coverage with the admin app's certificate instead of the test app
         type: boolean
         default: false
+      run_live_admin:
+        description: Read the test site's app grants with the admin app and dry-run an ensure (changes nothing)
+        type: boolean
+        default: false
       import_recordings_run_id:
         description: Commit the recordings artifact of this run id to the branch as replay data
         type: string
@@ -208,6 +212,44 @@ jobs:
             echo "::error::no coverage report was written"
             grep -E '^(BUILD|FAILURE|> Task|e: |.*error:)' "$RUNNER_TEMP/coverage.log" | tail -n 30 || true
           fi
+          exit "$status"
+
+  # Manual only: the admin service reads the test site's grants and dry-runs an ensure.
+  live-microsoft-admin:
+    if: github.event_name == 'workflow_dispatch' && inputs.run_live_admin
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          path: grpc-microsoft
+      - uses: actions/checkout@v5
+        with:
+          repository: ai-pipestream/grpc-integration
+          ref: ${{ env.INTEGRATION_REF }}
+          path: grpc-integration
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "25"
+      - name: Live admin service read and dry run
+        working-directory: grpc-microsoft
+        env:
+          MICROSOFT_TENANT_ID: ${{ secrets.MICROSOFT_TENANT_ID }}
+          MICROSOFT_ADMIN_CLIENT_ID: ${{ secrets.MICROSOFT_ADMIN_CLIENT_ID }}
+          MICROSOFT_ADMIN_CLIENT_CERT_PEM: ${{ secrets.MICROSOFT_ADMIN_CLIENT_CERT_PEM }}
+          MICROSOFT_CLIENT_ID: ${{ secrets.MICROSOFT_CLIENT_ID }}
+          MICROSOFT_SITE_ID: ${{ env.LIVE_SITE_ID }}
+        run: |
+          for name in MICROSOFT_TENANT_ID MICROSOFT_ADMIN_CLIENT_ID MICROSOFT_ADMIN_CLIENT_CERT_PEM MICROSOFT_CLIENT_ID; do
+            if [ -z "${!name}" ]; then
+              echo "::error::$name is not set; the live admin run needs it"
+              exit 1
+            fi
+          done
+          status=0
+          ./gradlew --no-daemon -PintegrationDir=../grpc-integration :grpc-microsoft-admin:liveAdminTest --rerun-tasks > "$RUNNER_TEMP/admin.log" 2>&1 || status=$?
+          grep -F '[MicrosoftAdminLiveIT]' "$RUNNER_TEMP/admin.log" || true
+          grep -E '^(BUILD|FAILURE)' "$RUNNER_TEMP/admin.log" || true
           exit "$status"
 
   # Manual only: writes to the test site, then deletes what it created.
