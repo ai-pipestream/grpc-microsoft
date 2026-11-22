@@ -138,6 +138,7 @@ class MicrosoftLiveCoverageIT {
             Map.entry("ListSiteGroupMembers", "GET {web}/_api/web/sitegroups/getbyid({id})/users"),
             Map.entry("ListSiteRoleAssignments", "GET {web}/_api/{securable}/roleassignments"),
             Map.entry("GetSiteRoleInheritance", "GET {web}/_api/{securable}?$select=HasUniqueRoleAssignments"),
+            Map.entry("SetSiteRoleInheritance", "POST {web}/_api/{securable}/breakroleinheritance"),
             Map.entry("ListUsers", "GET /users"),
             Map.entry("ListGroups", "GET /groups"),
             Map.entry("DeltaGroups", "GET /groups/delta"),
@@ -1245,7 +1246,8 @@ class MicrosoftLiveCoverageIT {
     private static final List<String> WRITE_RPCS = List.of(
             "UploadItem", "CreateFolder", "UpdateDriveItem", "DeleteDriveItem",
             "RestoreDriveItemVersion", "CopyDriveItem", "CreateListItem",
-            "UpdateListItemFields", "DeleteListItem", "EnsureColumns", "EnsureList", "Mutate");
+            "UpdateListItemFields", "DeleteListItem", "EnsureColumns", "EnsureList", "Mutate",
+            "SetSiteRoleInheritance");
 
     private void skip(String rpc, String reason) {
         skip(rpc, rpc, reason);

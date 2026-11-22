@@ -60,7 +60,7 @@ class MicrosoftLiveWriteIT {
     private static final Set<String> WRITE_RPCS = Set.of("UploadItem", "CreateFolder",
             "UpdateDriveItem", "DeleteDriveItem", "RestoreDriveItemVersion", "CopyDriveItem",
             "CreateListItem", "UpdateListItemFields", "DeleteListItem", "EnsureColumns",
-            "EnsureList", "Mutate");
+            "EnsureList", "Mutate", "SetSiteRoleInheritance");
 
     private record Row(String rpc, String label, String outcome, String detail) {
     }

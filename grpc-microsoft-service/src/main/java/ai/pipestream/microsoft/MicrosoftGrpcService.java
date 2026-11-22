@@ -91,6 +91,8 @@ import ai.pipestream.microsoft.v1.CreateListItemRequest;
 import ai.pipestream.microsoft.v1.CreateListItemResponse;
 import ai.pipestream.microsoft.v1.DeleteDriveItemRequest;
 import ai.pipestream.microsoft.v1.DeleteDriveItemResponse;
+import ai.pipestream.microsoft.v1.SetSiteRoleInheritanceRequest;
+import ai.pipestream.microsoft.v1.SetSiteRoleInheritanceResponse;
 import ai.pipestream.microsoft.v1.DeleteListItemRequest;
 import ai.pipestream.microsoft.v1.DeleteListItemResponse;
 import ai.pipestream.microsoft.v1.EnsureColumnsRequest;
@@ -930,6 +932,28 @@ public final class MicrosoftGrpcService
         });
     }
 
+    @Override
+    public void setSiteRoleInheritance(SetSiteRoleInheritanceRequest request,
+            StreamObserver<SetSiteRoleInheritanceResponse> observer) {
+        unary(observer, () -> {
+            MicrosoftSessions.Session session = sessions.resolve(request.getConnectionId());
+            SiteSecurable securable = request.getSecurable();
+            if (securable.getSecurableCase() == SiteSecurable.SecurableCase.SITE_ID) {
+                throw new IllegalArgumentException("a site's role inheritance cannot be changed here");
+            }
+            SharePointRest.Web web = sharePoint.web(session, SharePointRest.siteId(securable));
+            String path = SharePointRest.path(securable);
+            web.post(path + (request.getInherit() ? "/resetroleinheritance"
+                    : "/breakroleinheritance(copyRoleAssignments=" + request.getCopyRoleAssignments()
+                            + ",clearSubscopes=" + request.getClearSubscopes() + ")"),
+                    com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode());
+            return SetSiteRoleInheritanceResponse.newBuilder()
+                    .setHasUniqueRoleAssignments(web.get(path + "?$select=HasUniqueRoleAssignments")
+                            .path("HasUniqueRoleAssignments").asBoolean(false))
+                    .build();
+        });
+    }
+
     // ------------------------------------------------------------ sync
 
     @Override
@@ -947,7 +971,8 @@ public final class MicrosoftGrpcService
                     request.getIncludeContent(), inlineLimit(request.getMaxInlineBytes()),
                     flags.listColumns(), flags.permissions(), flags.retentionLabel(), flags.publication(),
                     request.getIncludeLists(), listInclude.getDriveItem(), listInclude.getPermissions(),
-                    request.getDeltaPreferences(), request.getIncludeSystem(), since);
+                    request.getDeltaPreferences(), request.getIncludeSystem(),
+                    request.getIncludeSecurity(), since);
             DeltaHeaders.prefer(options.preferences());
             Object lock = new Object();
             MicrosoftChangeSink observerSink = new MicrosoftChangeSink() {
@@ -969,7 +994,7 @@ public final class MicrosoftGrpcService
                     : new CompositeMicrosoftChangeSink(List.of(observerSink,
                             downstream.forConnection(session.connectionId())));
             MicrosoftCrawler.Result result = new MicrosoftCrawler(session.config(), session.files(), sink,
-                    options).crawl();
+                    options, siteId -> sharePoint.web(session, siteId)).crawl();
             sink.completeRun(result.runId(), result.fullSweep());
             synchronized (lock) {
                 observer.onNext(SyncResponse.newBuilder()

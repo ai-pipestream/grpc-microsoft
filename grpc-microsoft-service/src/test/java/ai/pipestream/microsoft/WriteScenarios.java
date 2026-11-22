@@ -251,6 +251,8 @@ final class WriteScenarios {
     private final String listName;
 
     private String folderId;
+    private SiteSecurable folderSecurable;
+    private boolean inheritanceBroken;
     private String listId;
     private DriveItem small;
     private byte[] smallBytes;
@@ -363,6 +365,15 @@ final class WriteScenarios {
                         "GetSiteRoleInheritance [list item]", this::inheritanceOfTheListItem),
                 new Scenario("list-site-role-assignments-list-item", "ListSiteRoleAssignments",
                         "ListSiteRoleAssignments [list item]", this::roleAssignmentsOfTheListItem),
+                new Scenario("set-site-role-inheritance-break", "SetSiteRoleInheritance",
+                        "SetSiteRoleInheritance [list item and folder stop inheriting]",
+                        this::breakInheritance),
+                new Scenario("sync-security", "Sync",
+                        "Sync [site security: groups, role assignments, owner of every item]",
+                        this::syncSecurity),
+                new Scenario("set-site-role-inheritance-reset", "SetSiteRoleInheritance",
+                        "SetSiteRoleInheritance [list item and folder inherit again]",
+                        this::restoreInheritance),
                 new Scenario("update-list-item-fields", "UpdateListItemFields",
                         "UpdateListItemFields [every column type]", this::updateListItemFields),
                 new Scenario("update-list-item-rich-fields", "UpdateListItemFields",
@@ -1338,6 +1349,141 @@ final class WriteScenarios {
     private String roleAssignmentsOfTheListItem() {
         need(itemId, "the list item");
         return roleAssignments(SiteSecurable.newBuilder().setListItem(listItemRef(itemId)).build());
+    }
+
+    /** The test folder as a list item of its library. */
+    private SiteSecurable folderSecurable() {
+        if (folderSecurable == null) {
+            String library = stub().getDrive(ai.pipestream.microsoft.v1.GetDriveRequest.newBuilder()
+                    .setDriveId(driveId).build()).getDrive().getListId();
+            String number = stub().getItem(GetItemRequest.newBuilder().setDriveId(driveId)
+                    .setItemId(need(folderId, "the test folder")).build()).getItem()
+                    .getSharepointIds().getListItemId();
+            check(!library.isEmpty() && !number.isEmpty(), "the folder's list or list item id is unknown");
+            folderSecurable = SiteSecurable.newBuilder().setListItem(ListItemRef.newBuilder()
+                    .setSiteId(siteId).setListId(library).setItemId(number)).build();
+        }
+        return folderSecurable;
+    }
+
+    private String breakInheritance() {
+        need(itemId, "the list item");
+        SiteSecurable item = SiteSecurable.newBuilder().setListItem(listItemRef(itemId)).build();
+        for (SiteSecurable securable : List.of(item, folderSecurable())) {
+            boolean unique = stub().setSiteRoleInheritance(
+                    ai.pipestream.microsoft.v1.SetSiteRoleInheritanceRequest.newBuilder()
+                            .setSecurable(securable).setCopyRoleAssignments(true).build())
+                    .getHasUniqueRoleAssignments();
+            check(unique, "still inheriting after the break");
+            check(stub().getSiteRoleInheritance(GetSiteRoleInheritanceRequest.newBuilder()
+                    .setSecurable(securable).build()).getHasUniqueRoleAssignments(),
+                    "GetSiteRoleInheritance still reports inheritance");
+        }
+        inheritanceBroken = true;
+        return "the list item and the test folder have their own role assignments, copied from the parent";
+    }
+
+    private String syncSecurity() {
+        if (!inheritanceBroken) {
+            throw new Skip("needs the list item and folder with their own role assignments");
+        }
+        need(small, "the small file");
+        Map<String, ai.pipestream.microsoft.v1.MicrosoftEntity> entities = new java.util.LinkedHashMap<>();
+        try {
+            blocking.withDeadlineAfter(5, TimeUnit.MINUTES).sync(
+                    ai.pipestream.microsoft.v1.SyncRequest.newBuilder().addSiteIds(siteId)
+                            .setIncludeLists(true)
+                            .setInclude(ai.pipestream.microsoft.v1.DriveItemInclude.getDefaultInstance())
+                            .setIncludeSecurity(true).build())
+                    .forEachRemaining(response -> {
+                        if (response.hasChange()) {
+                            ai.pipestream.microsoft.v1.MicrosoftEntity entity = response.getChange().getEntity();
+                            entities.put(entity.getEntityCase() + " " + entity.getEntityId(), entity);
+                        }
+                    });
+        } catch (StatusRuntimeException e) {
+            throw notGranted(e);
+        }
+        String siteAcl = MicrosoftEntityIds.siteAcl(SiteSecurable.newBuilder().setSiteId(siteId).build());
+        String itemAcl = MicrosoftEntityIds.siteAcl(
+                SiteSecurable.newBuilder().setListItem(listItemRef(itemId)).build());
+        String folderAcl = MicrosoftEntityIds.siteAcl(folderSecurable());
+        int groups = 0;
+        int acls = 0;
+        int owned = 0;
+        int users = 0;
+        int joinable = 0;
+        for (ai.pipestream.microsoft.v1.MicrosoftEntity entity : entities.values()) {
+            String owner = switch (entity.getEntityCase()) {
+                case DRIVE -> entity.getDrive().getListId().isEmpty() ? null : entity.getDrive().getAclOwnerId();
+                case DRIVE_ITEM -> entity.getDriveItem().getAclOwnerId();
+                case LIST -> entity.getList().getAclOwnerId();
+                case LIST_ITEM -> entity.getListItem().getAclOwnerId();
+                default -> null;
+            };
+            if (owner != null) {
+                check(entities.containsKey("SITE_ACL " + owner),
+                        "an entity names role assignments that were not emitted");
+                owned++;
+            }
+            if (entity.hasSiteGroup()) {
+                groups++;
+                check(entity.getSiteGroup().getCompleteness()
+                        == ai.pipestream.sync.v1.AclCompleteness.ACL_COMPLETENESS_COMPLETE,
+                        "a group's members are not complete");
+                entity.getSiteGroup().getMembersList().forEach(WriteScenarios::checkPrincipal);
+            }
+            if (entity.hasSiteAcl()) {
+                acls++;
+                check(entity.getSiteAcl().getCompleteness()
+                        == ai.pipestream.sync.v1.AclCompleteness.ACL_COMPLETENESS_COMPLETE,
+                        "role assignments are not complete");
+                check(entity.getSiteAcl().getAssignmentsCount() > 0, "role assignments are empty");
+                for (SiteRoleAssignment assignment : entity.getSiteAcl().getAssignmentsList()) {
+                    checkPrincipal(assignment.getMember());
+                    if (assignment.getMember().getPrincipalType()
+                            == SitePrincipalType.SITE_PRINCIPAL_TYPE_USER) {
+                        users++;
+                        joinable += assignment.getMember().getUserPrincipalName().isEmpty() ? 0 : 1;
+                    }
+                }
+            }
+        }
+        check(groups > 0, "no site group was emitted");
+        for (String acl : List.of(siteAcl, itemAcl, folderAcl)) {
+            check(entities.containsKey("SITE_ACL " + acl), "expected role assignments were not emitted");
+        }
+        ai.pipestream.microsoft.v1.MicrosoftEntity list = entities.get("LIST " + listId);
+        check(list != null && list.getList().getAclOwnerId().equals(siteAcl),
+                "the test list does not point at the site's role assignments");
+        ai.pipestream.microsoft.v1.MicrosoftEntity item = entities.get("LIST_ITEM " + listId + "/" + itemId);
+        check(item != null && item.getListItem().getAclOwnerId().equals(itemAcl),
+                "the list item does not point at its own role assignments");
+        ai.pipestream.microsoft.v1.MicrosoftEntity folder = entities.get("DRIVE_ITEM " + folderId);
+        check(folder != null && folder.getDriveItem().getAclOwnerId().equals(folderAcl),
+                "the test folder does not point at its own role assignments");
+        ai.pipestream.microsoft.v1.MicrosoftEntity file = entities.get("DRIVE_ITEM " + small.getId());
+        check(file != null && file.getDriveItem().getAclOwnerId().equals(folderAcl),
+                "a file in the test folder does not point at the folder's role assignments");
+        return groups + " group(s), " + acls + " role assignment set(s), " + owned
+                + " drives, lists and items with an owner, " + joinable + " of " + users
+                + " user grantee(s) with a user principal name";
+    }
+
+    private String restoreInheritance() {
+        if (!inheritanceBroken) {
+            throw new Skip("nothing stopped inheriting");
+        }
+        SiteSecurable item = SiteSecurable.newBuilder().setListItem(listItemRef(itemId)).build();
+        for (SiteSecurable securable : List.of(item, folderSecurable())) {
+            boolean unique = stub().setSiteRoleInheritance(
+                    ai.pipestream.microsoft.v1.SetSiteRoleInheritanceRequest.newBuilder()
+                            .setSecurable(securable).setInherit(true).build())
+                    .getHasUniqueRoleAssignments();
+            check(!unique, "still has its own role assignments after the reset");
+        }
+        inheritanceBroken = false;
+        return "the list item and the test folder inherit again";
     }
 
     private SiteSecurable listSecurable() {

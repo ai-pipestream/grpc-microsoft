@@ -175,7 +175,7 @@ class MicrosoftCrawlerTest {
 
     private MicrosoftCrawler.Options options(SyncCursor since, DeltaPreferences prefs) {
         return new MicrosoftCrawler.Options(List.of(), List.of(), "", false, 0, true, false, false,
-                false, false, false, false, prefs, false, since);
+                false, false, false, false, prefs, false, false, since);
     }
 
     private static DriveItem item(InMemoryMicrosoftChangeSink sink, String id) {

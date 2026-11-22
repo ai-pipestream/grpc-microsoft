@@ -89,6 +89,14 @@ for large files, resumable), `CreateFolder`, `UpdateDriveItem`,
 into Graph `$batch` requests). Updates and deletes take `expected_etag`
 (sent as `If-Match`); a mismatch is `ABORTED`.
 
+`Sync` with `include_security` also reads SharePoint's own security: each
+site's groups with their members (`site_group`), the role assignments of the
+site and of every list and item that has its own (`site_acl`), and on every
+drive, list and item the id of the `site_acl` that applies to it
+(`acl_owner_id`). `SetSiteRoleInheritance` makes a list or list item stop
+inheriting, or inherit again. Both need the certificate credential and the
+site grant `fullcontrol`.
+
 Point the proxy at a running sync-table (from grpc-integration) to record
 crawl / update / delete rows:
 
