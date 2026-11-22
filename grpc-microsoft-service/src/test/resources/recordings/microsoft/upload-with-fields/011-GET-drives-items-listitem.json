@@ -1,25 +1,25 @@
 {
   "request" : {
     "method" : "GET",
-    "url" : "https://graph.microsoft.com/v1.0/drives/b!drive-0002/items/item-0010/listItem?$select=id,sharepointIds",
+    "url" : "https://graph.microsoft.com/v1.0/drives/b!drive-0013/items/item-0010/listItem?$select=id,sharepointIds",
     "authorized" : true,
     "headers" : { }
   },
   "response" : {
     "status" : 200,
     "headers" : {
-      "etag" : "\"00000000-0000-4000-8000-000000000105,2\"",
+      "etag" : "\"00000000-0000-4000-8000-000000000123,2\"",
       "content-type" : "application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8"
     },
     "body" : {
       "json" : {
-        "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#drives('b%21drive-0002')/items('item-0010')/listItem(id,sharepointIds)/$entity",
-        "@odata.etag" : "\"00000000-0000-4000-8000-000000000105,2\"",
+        "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#drives('b%21drive-0013')/items('item-0010')/listItem(id,sharepointIds)/$entity",
+        "@odata.etag" : "\"00000000-0000-4000-8000-000000000123,2\"",
         "id" : "1",
         "sharepointIds" : {
-          "listId" : "00000000-0000-4000-8000-000000000089",
+          "listId" : "00000000-0000-4000-8000-000000000107",
           "listItemId" : "1",
-          "listItemUniqueId" : "00000000-0000-4000-8000-000000000105",
+          "listItemUniqueId" : "00000000-0000-4000-8000-000000000123",
           "siteId" : "00000000-0000-4000-8000-000000000001",
           "siteUrl" : "https://redacted.example/url/3",
           "tenantId" : "00000000-0000-4000-8000-000000000007",

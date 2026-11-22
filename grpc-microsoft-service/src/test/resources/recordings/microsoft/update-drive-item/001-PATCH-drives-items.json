@@ -22,10 +22,10 @@
       "json" : {
         "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#drives('b%21drive-0001')/items/$entity",
         "@microsoft.graph.downloadUrl" : "https://redacted.example/url/19",
-        "createdDateTime" : "2026-11-22T21:11:02Z",
+        "createdDateTime" : "2026-11-22T21:48:16Z",
         "eTag" : "\"{00000000-0000-4000-8000-000000000008},2\"",
         "id" : "item-0003",
-        "lastModifiedDateTime" : "2026-11-22T21:11:11Z",
+        "lastModifiedDateTime" : "2026-11-22T21:48:23Z",
         "name" : "renamed.txt",
         "webUrl" : "https://redacted.example/url/20",
         "cTag" : "\"c:{00000000-0000-4000-8000-000000000008},1\"",
@@ -53,19 +53,19 @@
           "driveType" : "documentLibrary",
           "driveId" : "b!drive-0001",
           "id" : "item-0001",
-          "name" : "pipestream-live-write-20261122-211100-0fb602c3",
-          "path" : "/drives/b!drive-0001/root:/pipestream-live-write-20261122-211100-0fb602c3",
+          "name" : "pipestream-live-write-20261122-214814-e3fbdc0b",
+          "path" : "/drives/b!drive-0001/root:/pipestream-live-write-20261122-214814-e3fbdc0b",
           "siteId" : "00000000-0000-4000-8000-000000000001"
         },
         "file" : {
           "mimeType" : "text/plain",
           "hashes" : {
-            "quickXorHash" : "KRVOQaSPbGerTvot2C3u8f9aRHE="
+            "quickXorHash" : "eZVKRSSPbM/pW/Jt3QeqkPULRHE="
           }
         },
         "fileSystemInfo" : {
-          "createdDateTime" : "2026-11-22T21:11:02Z",
-          "lastModifiedDateTime" : "2026-11-22T21:11:11Z"
+          "createdDateTime" : "2026-11-22T21:48:16Z",
+          "lastModifiedDateTime" : "2026-11-22T21:48:23Z"
         },
         "shared" : {
           "scope" : "users"

@@ -1,7 +1,7 @@
 {
   "request" : {
     "method" : "GET",
-    "url" : "https://graph.microsoft.com/v1.0/drives/b!drive-0002/items/item-0010",
+    "url" : "https://graph.microsoft.com/v1.0/drives/b!drive-0013/items/item-0010",
     "authorized" : true,
     "headers" : { }
   },
@@ -13,8 +13,8 @@
     "body" : {
       "json" : {
         "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#Collection(driveItem)/$entity",
-        "@microsoft.graph.downloadUrl" : "https://redacted.example/url/69",
-        "@microsoft.graph.downloadUrlNoAuth" : "https://redacted.example/url/70",
+        "@microsoft.graph.downloadUrl" : "https://redacted.example/url/88",
+        "@microsoft.graph.downloadUrlNoAuth" : "https://redacted.example/url/89",
         "createdBy" : {
           "application" : {
             "id" : "00000000-0000-4000-8000-000000000004",
@@ -24,8 +24,8 @@
             "displayName" : "Identity 2"
           }
         },
-        "createdDateTime" : "2026-11-22T21:11:37Z",
-        "eTag" : "\"{00000000-0000-4000-8000-000000000105},3\"",
+        "createdDateTime" : "2026-11-22T21:48:46Z",
+        "eTag" : "\"{00000000-0000-4000-8000-000000000123},3\"",
         "id" : "item-0010",
         "lastModifiedBy" : {
           "application" : {
@@ -36,28 +36,28 @@
             "displayName" : "Identity 2"
           }
         },
-        "lastModifiedDateTime" : "2026-11-22T21:11:38Z",
+        "lastModifiedDateTime" : "2026-11-22T21:48:46Z",
         "name" : "with-fields.txt",
         "parentReference" : {
           "driveType" : "documentLibrary",
-          "driveId" : "b!drive-0002",
+          "driveId" : "b!drive-0013",
           "id" : "item-0002",
-          "name" : "pipestreamlivewrite202611222111000fb602c3lib",
-          "path" : "/drives/b!drive-0002/root:",
+          "name" : "pipestreamlivewrite20261122214814e3fbdc0blib",
+          "path" : "/drives/b!drive-0013/root:",
           "siteId" : "00000000-0000-4000-8000-000000000001"
         },
-        "webUrl" : "https://redacted.example/url/68",
-        "cTag" : "\"c:{00000000-0000-4000-8000-000000000105},1\"",
+        "webUrl" : "https://redacted.example/url/87",
+        "cTag" : "\"c:{00000000-0000-4000-8000-000000000123},1\"",
         "file" : {
           "fileExtension" : ".txt",
           "hashes" : {
-            "quickXorHash" : "/WPpdzZyeUdDu3fX1JFqcY//1yI="
+            "quickXorHash" : "/ePrUxZyfUcDrt2X1Ls6UIWsXyA="
           },
           "mimeType" : "text/plain"
         },
         "fileSystemInfo" : {
-          "createdDateTime" : "2026-11-22T21:11:37Z",
-          "lastModifiedDateTime" : "2026-11-22T21:11:38Z"
+          "createdDateTime" : "2026-11-22T21:48:46Z",
+          "lastModifiedDateTime" : "2026-11-22T21:48:46Z"
         },
         "isAuthoritative" : false,
         "shared" : {

@@ -17,19 +17,19 @@
   "response" : {
     "status" : 201,
     "headers" : {
-      "etag" : "\"00000000-0000-4000-8000-000000000072,1\"",
-      "location" : "https://redacted.example/url/50",
+      "etag" : "\"00000000-0000-4000-8000-000000000090,1\"",
+      "location" : "https://redacted.example/url/69",
       "content-type" : "application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8"
     },
     "body" : {
       "json" : {
         "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#sites('tenant-1.example%2C00000000-0000-4000-8000-000000000001%2C00000000-0000-4000-8000-000000000002')/lists('00000000-0000-4000-8000-000000000019')/items/$entity",
-        "@odata.etag" : "\"00000000-0000-4000-8000-000000000072,1\"",
-        "createdDateTime" : "2026-11-22T21:11:32Z",
-        "eTag" : "\"00000000-0000-4000-8000-000000000072,1\"",
+        "@odata.etag" : "\"00000000-0000-4000-8000-000000000090,1\"",
+        "createdDateTime" : "2026-11-22T21:48:41Z",
+        "eTag" : "\"00000000-0000-4000-8000-000000000090,1\"",
         "id" : "2",
-        "lastModifiedDateTime" : "2026-11-22T21:11:32Z",
-        "webUrl" : "https://redacted.example/url/51",
+        "lastModifiedDateTime" : "2026-11-22T21:48:41Z",
+        "webUrl" : "https://redacted.example/url/70",
         "createdBy" : {
           "user" : {
             "displayName" : "Identity 2"
@@ -49,18 +49,18 @@
           "siteId" : "tenant-1.example,00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000002"
         },
         "contentType" : {
-          "id" : "0x0100A64C3D2A4B5DF041809D02569F8E2AC6",
+          "id" : "0x0100B53E64A2C09964459FF9222834972BD9",
           "name" : "Item"
         },
         "fields@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#sites('tenant-1.example%2C00000000-0000-4000-8000-000000000001%2C00000000-0000-4000-8000-000000000002')/lists('00000000-0000-4000-8000-000000000019')/items('2')/fields/$entity",
         "fields" : {
-          "@odata.etag" : "\"00000000-0000-4000-8000-000000000072,1\"",
+          "@odata.etag" : "\"00000000-0000-4000-8000-000000000090,1\"",
           "Title" : "to delete",
           "PsLookups" : [ ],
           "id" : "2",
           "ContentType" : "Item",
-          "Modified" : "2026-11-22T21:11:32Z",
-          "Created" : "2026-11-22T21:11:32Z",
+          "Modified" : "2026-11-22T21:48:41Z",
+          "Created" : "2026-11-22T21:48:41Z",
           "AuthorLookupId" : "1073741822",
           "EditorLookupId" : "1073741822",
           "_UIVersionString" : "1.0",

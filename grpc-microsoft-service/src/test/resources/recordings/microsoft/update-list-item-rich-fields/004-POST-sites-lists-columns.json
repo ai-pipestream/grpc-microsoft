@@ -21,7 +21,7 @@
   "response" : {
     "status" : 201,
     "headers" : {
-      "location" : "https://redacted.example/url/43",
+      "location" : "https://redacted.example/url/62",
       "content-type" : "application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8"
     },
     "body" : {
@@ -32,7 +32,7 @@
         "displayName" : "PsMulti",
         "enforceUniqueValues" : false,
         "hidden" : false,
-        "id" : "00000000-0000-4000-8000-000000000062",
+        "id" : "00000000-0000-4000-8000-000000000080",
         "indexed" : false,
         "name" : "PsMulti",
         "readOnly" : false,

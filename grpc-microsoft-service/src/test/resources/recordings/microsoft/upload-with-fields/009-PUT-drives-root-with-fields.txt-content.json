@@ -1,13 +1,13 @@
 {
   "request" : {
     "method" : "PUT",
-    "url" : "https://graph.microsoft.com/v1.0/drives/b!drive-0002/root:/with-fields.txt:/content",
+    "url" : "https://graph.microsoft.com/v1.0/drives/b!drive-0013/root:/with-fields.txt:/content",
     "authorized" : true,
     "headers" : {
       "content-type" : "application/octet-stream"
     },
     "body" : {
-      "sha256" : "f17217aa2a71de7ce7ca0b14ed15d0dbed7058347418ea9902326d7cf774cf20",
+      "sha256" : "20f9751a13e5cc508c3f8ec0254983ead654eecefce345fb309b1e3e1f524f45",
       "length" : 59
     }
   },
@@ -18,15 +18,15 @@
     },
     "body" : {
       "json" : {
-        "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#drives('b%21drive-0002')/root/$entity",
-        "@microsoft.graph.downloadUrl" : "https://redacted.example/url/67",
-        "createdDateTime" : "2026-11-22T21:11:37Z",
-        "eTag" : "\"{00000000-0000-4000-8000-000000000105},1\"",
+        "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#drives('b%21drive-0013')/root/$entity",
+        "@microsoft.graph.downloadUrl" : "https://redacted.example/url/86",
+        "createdDateTime" : "2026-11-22T21:48:46Z",
+        "eTag" : "\"{00000000-0000-4000-8000-000000000123},1\"",
         "id" : "item-0010",
-        "lastModifiedDateTime" : "2026-11-22T21:11:37Z",
+        "lastModifiedDateTime" : "2026-11-22T21:48:46Z",
         "name" : "with-fields.txt",
-        "webUrl" : "https://redacted.example/url/68",
-        "cTag" : "\"c:{00000000-0000-4000-8000-000000000105},1\"",
+        "webUrl" : "https://redacted.example/url/87",
+        "cTag" : "\"c:{00000000-0000-4000-8000-000000000123},1\"",
         "isAuthoritative" : false,
         "size" : 59,
         "createdBy" : {
@@ -49,21 +49,21 @@
         },
         "parentReference" : {
           "driveType" : "documentLibrary",
-          "driveId" : "b!drive-0002",
+          "driveId" : "b!drive-0013",
           "id" : "item-0002",
-          "name" : "pipestreamlivewrite202611222111000fb602c3lib",
-          "path" : "/drives/b!drive-0002/root:",
+          "name" : "pipestreamlivewrite20261122214814e3fbdc0blib",
+          "path" : "/drives/b!drive-0013/root:",
           "siteId" : "00000000-0000-4000-8000-000000000001"
         },
         "file" : {
           "mimeType" : "text/plain",
           "hashes" : {
-            "quickXorHash" : "/WPpdzZyeUdDu3fX1JFqcY//1yI="
+            "quickXorHash" : "/ePrUxZyfUcDrt2X1Ls6UIWsXyA="
           }
         },
         "fileSystemInfo" : {
-          "createdDateTime" : "2026-11-22T21:11:37Z",
-          "lastModifiedDateTime" : "2026-11-22T21:11:37Z"
+          "createdDateTime" : "2026-11-22T21:48:46Z",
+          "lastModifiedDateTime" : "2026-11-22T21:48:46Z"
         },
         "shared" : {
           "scope" : "users"

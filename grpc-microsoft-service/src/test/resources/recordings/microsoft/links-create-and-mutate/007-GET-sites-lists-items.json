@@ -8,18 +8,18 @@
   "response" : {
     "status" : 200,
     "headers" : {
-      "etag" : "\"00000000-0000-4000-8000-000000000087,1\"",
+      "etag" : "\"00000000-0000-4000-8000-000000000105,1\"",
       "content-type" : "application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8"
     },
     "body" : {
       "json" : {
         "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#sites('tenant-1.example%2C00000000-0000-4000-8000-000000000001%2C00000000-0000-4000-8000-000000000002')/lists('00000000-0000-4000-8000-000000000019')/items(id,sharepointIds)/$entity",
-        "@odata.etag" : "\"00000000-0000-4000-8000-000000000087,1\"",
+        "@odata.etag" : "\"00000000-0000-4000-8000-000000000105,1\"",
         "id" : "5",
         "sharepointIds" : {
           "listId" : "00000000-0000-4000-8000-000000000019",
           "listItemId" : "5",
-          "listItemUniqueId" : "00000000-0000-4000-8000-000000000087",
+          "listItemUniqueId" : "00000000-0000-4000-8000-000000000105",
           "siteId" : "00000000-0000-4000-8000-000000000001",
           "siteUrl" : "https://redacted.example/url/3",
           "tenantId" : "00000000-0000-4000-8000-000000000007",
