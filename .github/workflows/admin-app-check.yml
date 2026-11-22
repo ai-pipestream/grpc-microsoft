@@ -58,6 +58,7 @@ jobs:
           SECRET: ${{ secrets.MICROSOFT_ADMIN_CLIENT_SECRET }}
         run: |
           source "$RUNNER_TEMP/auth.sh"
+          echo "secret length ${#SECRET}, sha256 prefix $(printf '%s' "$SECRET" | sha256sum | cut -c1-6)"
           show "admin secret graph" "$(token_secret "$CID" "$SECRET" https://graph.microsoft.com/.default)"
           code=$(curl -sS -o perms.json -w '%{http_code}' -H "Authorization: Bearer ${TOKEN}" \
             "https://graph.microsoft.com/v1.0/sites/${SITE}/permissions")
