@@ -152,7 +152,7 @@ final class WritePlans {
         String route = GraphPaths.item(ref.getDriveId(), ref.getItemId());
         GraphClient.Call call = request.getPermanent()
                 ? new GraphClient.Call("POST", route + "/permanentDelete",
-                        ifMatch(request.getExpectedEtag()), null)
+                        ifMatch(request.getExpectedEtag()), GraphClient.object())
                 : new GraphClient.Call("DELETE", route, ifMatch(request.getExpectedEtag()), null);
         return new Plan<>(call, reply -> DeleteDriveItemResponse.newBuilder().setItem(ref).build());
     }
@@ -163,7 +163,8 @@ final class WritePlans {
         String route = GraphPaths.item(ref.getDriveId(), ref.getItemId()) + "/versions/"
                 + GraphPaths.segment(request.getVersionId(), "version_id") + "/restoreVersion";
         return new Plan<>(
-                new GraphClient.Call("POST", route, ifMatch(request.getExpectedEtag()), null),
+                new GraphClient.Call("POST", route, ifMatch(request.getExpectedEtag()),
+                        GraphClient.object()),
                 reply -> RestoreDriveItemVersionResponse.newBuilder().setItem(ref)
                         .setVersionId(request.getVersionId()).build());
     }

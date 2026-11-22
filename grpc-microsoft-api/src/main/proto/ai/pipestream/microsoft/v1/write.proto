@@ -475,7 +475,8 @@ message UpdateDriveItemRequest {
   optional string name = 3;
   // Item id of the folder to move the item to; empty = stay.
   string new_parent_id = 4;
-  // New description.
+  // New description. Stored by OneDrive personal drives only; SharePoint and
+  // OneDrive for Business drives accept the request and leave it empty.
   optional string description = 5;
   // New client-side created and last-modified times.
   FileSystemInfo file_system_info = 6;

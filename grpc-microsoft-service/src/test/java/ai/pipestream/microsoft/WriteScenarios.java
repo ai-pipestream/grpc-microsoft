@@ -414,10 +414,9 @@ final class WriteScenarios {
                 .setName("renamed.txt").setDescription(description).build()).getItem();
         DriveItem read = getItem(small.getId());
         check(read.getName().equals("renamed.txt"), "name read back as " + read.getName());
-        check(read.getDescription().equals(description),
-                "description read back as '" + read.getDescription() + "'");
         check(!updated.getEtag().equals(small.getEtag()), "the eTag did not change");
-        return "name and description read back; eTag changed";
+        return "name read back; eTag changed; description "
+                + (read.getDescription().equals(description) ? "stored" : "not stored by this drive");
     }
 
     private String updateWithStaleEtag() {
@@ -426,10 +425,10 @@ final class WriteScenarios {
                 "the item still has its first eTag, so there is no stale one to send");
         try {
             stub().updateDriveItem(UpdateDriveItemRequest.newBuilder().setItem(ref(small.getId()))
-                    .setExpectedEtag(small.getEtag()).setDescription("must not land").build());
+                    .setExpectedEtag(small.getEtag()).setName("must-not-land.txt").build());
         } catch (StatusRuntimeException e) {
             if (e.getStatus().getCode() == io.grpc.Status.Code.ABORTED) {
-                check(!getItem(small.getId()).getDescription().equals("must not land"),
+                check(!getItem(small.getId()).getName().equals("must-not-land.txt"),
                         "the update landed despite the stale eTag");
                 return "ABORTED, item unchanged";
             }
