@@ -117,6 +117,21 @@ OKF_SPO_DRIVE_ID=b!...
 OKF_SPO_FOLDER_PATH=/Knowledge/okf-run
 ```
 
+## Permissions
+
+What each group of rpcs needs, as proven against a real tenant on 2026-11-22.
+All are application permissions with admin consent.
+
+| rpcs | Needs | Proven with |
+|---|---|---|
+| Everything scoped to a site: `GetSite`, drives, items, downloads, lists, list items, columns, item / list / list-item `ListPermissions`, the delta rpcs, `Sync`, and every write rpc | Graph `Sites.Selected` plus a grant on the site | site grant `manage` |
+| `ListSites`, `ListAllSites`, `DeltaSites` | Graph `Sites.Read.All` (tenant-wide) | refused with `Sites.Selected` alone |
+| `ListUsers`, `ListGroups`, `ListGroupTransitiveMembers`, `ListUserTransitiveMemberOf` | Graph `User.Read.All` and `GroupMember.Read.All` | those two |
+| `ListSiteGroups`, `GetSiteRoleInheritance` | SharePoint `Sites.Selected` plus a grant on the site, certificate credential | site grant `manage` |
+| `ListSiteGroupMembers`, `ListSiteRoleAssignments` | More than site grant `manage` (refused with it) | SharePoint `Sites.FullControl.All`; site grant `fullcontrol` not tried yet |
+| `ListPermissions` on a site | Graph `Sites.FullControl.All` | that |
+| `MicrosoftAdminService` | Graph `Sites.FullControl.All` | that (read and dry run) |
+
 ## Site grants (admin service)
 
 The connector app holds `Sites.Selected` and sees only the sites it was
