@@ -161,6 +161,7 @@ class MicrosoftLiveCoverageIT {
     private final List<Row> rows = new ArrayList<>();
     private final Map<String, String> discovered = new LinkedHashMap<>();
     private final List<String> deltaLines = new ArrayList<>();
+    private String directoryLine = "";
     private final List<String> syncLines = new ArrayList<>();
     /** Credential values to scrub: the client secret and every access / refresh token issued. */
     private final Set<String> secrets = ConcurrentHashMap.newKeySet();
@@ -413,6 +414,12 @@ class MicrosoftLiveCoverageIT {
         List<ListUsersResponse> users = stream("ListUsers", "ListUsers", LIST_CAP,
                 s -> s.listUsers(ListUsersRequest.getDefaultInstance()),
                 l -> l.size() + " user(s)");
+        if (users != null) {
+            directoryLine = "- Directory: " + users.size() + " user(s), "
+                    + users.stream().filter(r -> !r.getUser().getMail().isEmpty()).count()
+                    + " with mail; mail domains " + domainKinds(users, r -> r.getUser().getMail())
+                    + "; sign-in name domains " + domainKinds(users, r -> r.getUser().getUserPrincipalName());
+        }
         List<ListGroupsResponse> groups = stream("ListGroups", "ListGroups", LIST_CAP,
                 s -> s.listGroups(ListGroupsRequest.getDefaultInstance()),
                 l -> l.size() + " group(s)");
@@ -470,6 +477,34 @@ class MicrosoftLiveCoverageIT {
         if (syncDrive != null) {
             sync(syncDrive);
         }
+    }
+
+    /** Consumer mail providers; any other domain is counted without being named. */
+    private static final Set<String> PUBLIC_MAIL = Set.of("gmail.com", "googlemail.com", "outlook.com",
+            "hotmail.com", "live.com", "yahoo.com", "icloud.com");
+
+    /** How many addresses sit on each kind of domain; no tenant domain is named. */
+    private static Map<String, Integer> domainKinds(List<ListUsersResponse> users,
+            Function<ListUsersResponse, String> address) {
+        Map<String, Integer> kinds = new TreeMap<>();
+        Set<String> own = new java.util.TreeSet<>();
+        for (ListUsersResponse user : users) {
+            String value = address.apply(user);
+            int at = value.lastIndexOf('@');
+            if (at < 0) {
+                continue;
+            }
+            String domain = value.substring(at + 1).toLowerCase(java.util.Locale.ROOT);
+            String kind = PUBLIC_MAIL.contains(domain) ? domain
+                    : domain.endsWith(".onmicrosoft.com") ? "the tenant's onmicrosoft.com domain"
+                    : "a custom domain";
+            if (!PUBLIC_MAIL.contains(domain)) {
+                own.add(domain);
+            }
+            kinds.merge(kind, 1, Integer::sum);
+        }
+        kinds.put("distinct non-public domains", own.size());
+        return kinds;
     }
 
     private static String probeDetail(ProbeConnectionResponse r) {
@@ -1224,6 +1259,9 @@ class MicrosoftLiveCoverageIT {
         long failures = rows.stream().filter(Row::failure).count();
         Map<String, Integer> outcomes = new TreeMap<>();
         rows.forEach(row -> outcomes.merge(row.outcome(), 1, Integer::sum));
+        if (!directoryLine.isEmpty()) {
+            md.append(directoryLine).append('\n');
+        }
         md.append("- Calls: ").append(rows.size()).append(", outcomes ").append(outcomes)
                 .append(", failures ").append(failures).append("\n\n");
 
