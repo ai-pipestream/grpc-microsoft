@@ -82,6 +82,10 @@ final class RecordingScrubber {
                 } else if (principal && value.isTextual() && (PRINCIPAL_NAMES.contains(entry.getKey())
                         || (entry.getKey().equals("LoginName") && value.asText().indexOf('|') < 0))) {
                     out.put(entry.getKey(), name("principal", value.asText(), "Principal %d"));
+                } else if (value.isTextual() && (node.has(entry.getKey() + "LookupId")
+                        || (entry.getKey().equals("LookupValue") && node.has("LookupId")))) {
+                    // The shown value of a lookup or person column can be a person's name.
+                    out.put(entry.getKey(), name("lookup", value.asText(), "Lookup value %d"));
                 } else if (entry.getKey().equals("NameId") && value.isTextual()) {
                     out.put(entry.getKey(), name("nameid", value.asText(), "nameid-%04d"));
                 } else if (entry.getKey().equals("displayName") && value.isTextual()

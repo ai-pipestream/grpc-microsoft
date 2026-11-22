@@ -186,4 +186,19 @@ class RecordingScrubberTest {
                 .containsExactly("encoded grantee of a site permission");
         assertThat(RecordingScrubber.violations(listed.toString())).isEmpty();
     }
+
+    @Test
+    void theShownValueOfALookupOrPersonColumnIsReplaced() throws Exception {
+        RecordingScrubber scrubber = new RecordingScrubber("https://graph.microsoft.com/v1.0");
+        JsonNode fields = scrubber.json(Recordings.JSON.readTree("""
+                {"Title":"kept","PsPerson":"Ada Lovelace","PsPersonLookupId":"6",
+                 "PsPeople":[{"LookupId":6,"LookupValue":"Ada Lovelace","Email":"ada@contoso.com"}]}"""));
+
+        assertThat(fields.path("Title").asText()).isEqualTo("kept");
+        assertThat(fields.path("PsPersonLookupId").asText()).isEqualTo("6");
+        assertThat(fields.path("PsPerson").asText()).isEqualTo("Lookup value 1");
+        assertThat(fields.path("PsPeople").path(0).path("LookupValue").asText())
+                .isEqualTo("Lookup value 1");
+        assertThat(fields.toString()).doesNotContain("Ada").doesNotContain("contoso");
+    }
 }

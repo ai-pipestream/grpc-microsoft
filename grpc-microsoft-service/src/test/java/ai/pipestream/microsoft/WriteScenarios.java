@@ -2,7 +2,13 @@ package ai.pipestream.microsoft;
 
 import ai.pipestream.microsoft.v1.ColumnOutcome;
 import ai.pipestream.microsoft.v1.ColumnScope;
+import ai.pipestream.microsoft.v1.ClearValue;
 import ai.pipestream.microsoft.v1.ColumnSpec;
+import ai.pipestream.microsoft.v1.HyperlinkValue;
+import ai.pipestream.microsoft.v1.MultiChoiceValue;
+import ai.pipestream.microsoft.v1.MultiLookupValue;
+import ai.pipestream.microsoft.v1.MultiPersonValue;
+import ai.pipestream.microsoft.v1.PersonValue;
 import ai.pipestream.microsoft.v1.ColumnType;
 import ai.pipestream.microsoft.v1.ConflictBehavior;
 import ai.pipestream.microsoft.v1.CopyDriveItemRequest;
@@ -254,6 +260,7 @@ final class WriteScenarios {
     private String userId;
     private String groupId;
     private Integer siteGroupId;
+    private SitePrincipal siteUser;
 
     /**
      * Creates the scenarios of one run.
@@ -354,6 +361,12 @@ final class WriteScenarios {
                         "ListSiteRoleAssignments [list item]", this::roleAssignmentsOfTheListItem),
                 new Scenario("update-list-item-fields", "UpdateListItemFields",
                         "UpdateListItemFields [every column type]", this::updateListItemFields),
+                new Scenario("update-list-item-rich-fields", "UpdateListItemFields",
+                        "UpdateListItemFields [note, multi choice, currency, link, lookups, clear]",
+                        this::updateRichFields),
+                new Scenario("update-list-item-person-fields", "UpdateListItemFields",
+                        "UpdateListItemFields [person by id, by email, several people]",
+                        this::updatePersonFields),
                 new Scenario("update-list-item-fields-drive-item", "UpdateListItemFields",
                         "UpdateListItemFields [drive item]", this::updateDriveItemFields),
                 new Scenario("mutate", "Mutate", "Mutate", this::mutate),
@@ -684,6 +697,107 @@ final class WriteScenarios {
         check(Long.toString(when).equals(read.get("PsWhen")),
                 "PsWhen read back as " + read.get("PsWhen"));
         return "text, number, boolean, choice and date-time read back";
+    }
+
+    private String updateRichFields() {
+        need(itemId, "the list item");
+        ColumnSpec.Builder column = ColumnSpec.newBuilder();
+        ensureMoreColumns(List.of(
+                column.clone().setName("PsNote").setType(ColumnType.COLUMN_TYPE_NOTE).build(),
+                column.clone().setName("PsMulti").setType(ColumnType.COLUMN_TYPE_MULTICHOICE)
+                        .addChoices("A").addChoices("B").addChoices("C").build(),
+                column.clone().setName("PsMoney").setType(ColumnType.COLUMN_TYPE_CURRENCY).build(),
+                column.clone().setName("PsLink").setType(ColumnType.COLUMN_TYPE_URL).build(),
+                column.clone().setName("PsLookup").setType(ColumnType.COLUMN_TYPE_LOOKUP)
+                        .setLookupListId(listId).build(),
+                column.clone().setName("PsLookups").setType(ColumnType.COLUMN_TYPE_LOOKUP)
+                        .setLookupListId(listId).setMultiValued(true).build()));
+        int self = Integer.parseInt(itemId);
+        String id = Integer.toString(self);
+        List<String> problems = new ArrayList<>();
+        writeAndRead(problems, FieldValue.newBuilder().setName("PsNote").setNote("line one\nline two"),
+                "PsNote", List.of("line one\nline two"));
+        writeAndRead(problems, FieldValue.newBuilder().setName("PsMulti").setMultiChoice(
+                MultiChoiceValue.newBuilder().addChoices("A").addChoices("C")),
+                "PsMulti", List.of("A", "C"));
+        writeAndRead(problems, FieldValue.newBuilder().setName("PsMoney").setNumber(12.5),
+                "PsMoney", List.of("12.5"));
+        writeAndRead(problems, FieldValue.newBuilder().setName("PsLink").setHyperlink(
+                HyperlinkValue.newBuilder().setUrl("https://example.com/page")
+                        .setDescription("A page")),
+                "PsLink.Url", List.of("https://example.com/page"));
+        writeAndRead(problems, FieldValue.newBuilder().setName("PsLookup").setLookup(self),
+                "PsLookupLookupId", List.of(id));
+        writeAndRead(problems, FieldValue.newBuilder().setName("PsLookups").setMultiLookup(
+                MultiLookupValue.newBuilder().addLookupIds(self)),
+                "PsLookups.LookupId", List.of(id));
+        writeAndRead(problems, FieldValue.newBuilder().setName("PsNote")
+                .setClear(ClearValue.getDefaultInstance()), "PsNote", List.of());
+        check(problems.isEmpty(), String.join("; ", problems));
+        return "note, multi choice, currency, link, lookup and multi lookup read back; clear emptied"
+                + " the note";
+    }
+
+    private String updatePersonFields() {
+        need(itemId, "the list item");
+        need(siteUser, "a site user with an email address");
+        ColumnSpec.Builder column = ColumnSpec.newBuilder().setType(ColumnType.COLUMN_TYPE_USER);
+        ensureMoreColumns(List.of(column.clone().setName("PsPerson").build(),
+                column.clone().setName("PsOwner").build(),
+                column.clone().setName("PsPeople").setMultiValued(true).build()));
+        String id = Integer.toString(siteUser.getId());
+        List<String> problems = new ArrayList<>();
+        writeAndRead(problems, FieldValue.newBuilder().setName("PsPerson").setPerson(
+                PersonValue.newBuilder().setLookupId(siteUser.getId())),
+                "PsPersonLookupId", List.of(id));
+        writeAndRead(problems, FieldValue.newBuilder().setName("PsOwner").setPerson(
+                PersonValue.newBuilder().setEmail(siteUser.getEmail())),
+                "PsOwnerLookupId", List.of(id));
+        writeAndRead(problems, FieldValue.newBuilder().setName("PsPeople").setMultiPerson(
+                MultiPersonValue.newBuilder().addPeople(
+                        PersonValue.newBuilder().setLookupId(siteUser.getId()))),
+                "PsPeople.LookupId", List.of(id));
+        check(problems.isEmpty(), String.join("; ", problems));
+        return "person by id, person by email and a people column read back";
+    }
+
+    /** Creates columns on the test list and fails when one is not created. */
+    private void ensureMoreColumns(List<ColumnSpec> columns) {
+        need(listId, "the test list");
+        for (ColumnOutcome outcome : stub().ensureColumns(EnsureColumnsRequest.newBuilder()
+                .setScope(ColumnScope.newBuilder()
+                        .setList(ListRef.newBuilder().setSiteId(siteId).setListId(listId)))
+                .addAllColumns(columns).build()).getColumnsList()) {
+            check(outcome.getState() == EnsureState.ENSURE_STATE_CREATED, outcome.getName()
+                    + " answered " + outcome.getState() + " " + outcome.getError().getMessage());
+        }
+    }
+
+    /** Writes one column and notes a problem when the write fails or reads back differently. */
+    private void writeAndRead(List<String> problems, FieldValue.Builder value, String readName,
+            List<String> expected) {
+        String label = value.getName() + " (" + value.getValueCase() + ")";
+        try {
+            stub().updateListItemFields(UpdateListItemFieldsRequest.newBuilder()
+                    .setExpectedEtag(listItem(itemId).getEtag())
+                    .setPatch(ListItemPatch.newBuilder().setTarget(listItemTarget(itemId))
+                            .addFields(value))
+                    .build());
+        } catch (StatusRuntimeException e) {
+            problems.add(label + " refused: " + e.getStatus().getCode() + " "
+                    + e.getStatus().getDescription());
+            return;
+        }
+        List<String> read = List.of();
+        for (ListColumn column : listItem(itemId).getFieldsList()) {
+            if (column.getName().equals(readName)) {
+                read = column.getStringValuesCount() > 0 ? column.getStringValuesList()
+                        : List.of(fields(itemId).get(readName));
+            }
+        }
+        if (!read.equals(expected)) {
+            problems.add(label + " read back as " + readName + "=" + read);
+        }
     }
 
     private String updateDriveItemFields() {
@@ -1043,6 +1157,10 @@ final class WriteScenarios {
         Map<String, Integer> kinds = new TreeMap<>();
         for (SitePrincipal member : members) {
             checkPrincipal(member);
+            if (siteUser == null && !member.getEmail().isEmpty()
+                    && member.getPrincipalType() == SitePrincipalType.SITE_PRINCIPAL_TYPE_USER) {
+                siteUser = member;
+            }
             kinds.merge(member.getPrincipalType().name(), 1, Integer::sum);
         }
         return members.size() + " member(s), kinds " + kinds;
