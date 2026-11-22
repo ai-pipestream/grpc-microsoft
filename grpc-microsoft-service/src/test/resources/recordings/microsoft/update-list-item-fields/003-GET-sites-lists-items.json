@@ -15,10 +15,10 @@
       "json" : {
         "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#sites('tenant-1.example%2C00000000-0000-4000-8000-000000000001%2C00000000-0000-4000-8000-000000000002')/lists('00000000-0000-4000-8000-000000000019')/items(id,name,webUrl,description,eTag,createdDateTime,lastModifiedDateTime,createdBy,lastModifiedBy,contentType,sharepointIds,parentReference,deleted,fields())/$entity",
         "@odata.etag" : "\"00000000-0000-4000-8000-000000000049,2\"",
-        "createdDateTime" : "2026-11-22T16:51:04Z",
+        "createdDateTime" : "2026-11-22T17:29:11Z",
         "eTag" : "\"00000000-0000-4000-8000-000000000049,2\"",
         "id" : "1",
-        "lastModifiedDateTime" : "2026-11-22T16:51:18Z",
+        "lastModifiedDateTime" : "2026-11-22T17:29:14Z",
         "webUrl" : "https://redacted.example/url/41",
         "createdBy" : {
           "user" : {
@@ -39,7 +39,7 @@
           "siteId" : "tenant-1.example,00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000002"
         },
         "contentType" : {
-          "id" : "0x0100F54E86007A5E334496F6C6843B6089BE",
+          "id" : "0x0100754C3447EE89F04D90AD6E6AEF3D3DA8",
           "name" : "Item"
         },
         "sharepointIds" : {
@@ -62,8 +62,8 @@
           "PsWhen" : "2024-01-15T12:00:00Z",
           "id" : "1",
           "ContentType" : "Item",
-          "Modified" : "2026-11-22T16:51:18Z",
-          "Created" : "2026-11-22T16:51:04Z",
+          "Modified" : "2026-11-22T17:29:14Z",
+          "Created" : "2026-11-22T17:29:11Z",
           "AuthorLookupId" : "1073741822",
           "EditorLookupId" : "1073741822",
           "_UIVersionString" : "2.0",

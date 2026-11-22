@@ -8,17 +8,17 @@
   "response" : {
     "status" : 200,
     "headers" : {
-      "etag" : "\"00000000-0000-4000-8000-000000000049,3\"",
+      "etag" : "\"00000000-0000-4000-8000-000000000049,13\"",
       "content-type" : "application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8"
     },
     "body" : {
       "json" : {
         "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#sites('tenant-1.example%2C00000000-0000-4000-8000-000000000001%2C00000000-0000-4000-8000-000000000002')/lists('00000000-0000-4000-8000-000000000019')/items(id,name,webUrl,description,eTag,createdDateTime,lastModifiedDateTime,createdBy,lastModifiedBy,contentType,sharepointIds,parentReference,deleted,fields())/$entity",
-        "@odata.etag" : "\"00000000-0000-4000-8000-000000000049,3\"",
-        "createdDateTime" : "2026-11-22T16:51:04Z",
-        "eTag" : "\"00000000-0000-4000-8000-000000000049,3\"",
+        "@odata.etag" : "\"00000000-0000-4000-8000-000000000049,13\"",
+        "createdDateTime" : "2026-11-22T17:29:11Z",
+        "eTag" : "\"00000000-0000-4000-8000-000000000049,13\"",
         "id" : "1",
-        "lastModifiedDateTime" : "2026-11-22T16:51:19Z",
+        "lastModifiedDateTime" : "2026-11-22T17:29:24Z",
         "webUrl" : "https://redacted.example/url/41",
         "createdBy" : {
           "user" : {
@@ -39,7 +39,7 @@
           "siteId" : "tenant-1.example,00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000002"
         },
         "contentType" : {
-          "id" : "0x0100F54E86007A5E334496F6C6843B6089BE",
+          "id" : "0x0100754C3447EE89F04D90AD6E6AEF3D3DA8",
           "name" : "Item"
         },
         "sharepointIds" : {
@@ -53,20 +53,38 @@
         },
         "fields@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#sites('tenant-1.example%2C00000000-0000-4000-8000-000000000001%2C00000000-0000-4000-8000-000000000002')/lists('00000000-0000-4000-8000-000000000019')/items('1')/fields/$entity",
         "fields" : {
-          "@odata.etag" : "\"00000000-0000-4000-8000-000000000049,3\"",
+          "@odata.etag" : "\"00000000-0000-4000-8000-000000000049,13\"",
           "Title" : "retitled in batch",
           "PsText" : "hello",
           "PsNumber" : 4.5,
           "PsFlag" : true,
           "PsChoice" : "B",
           "PsWhen" : "2024-01-15T12:00:00Z",
+          "PsMulti" : [ "A", "C" ],
+          "PsMoney" : 12.5,
+          "PsLink" : {
+            "Description" : "A page",
+            "Url" : "https://example.com/page"
+          },
+          "PsLookupLookupId" : "1",
+          "PsLookups" : [ {
+            "LookupId" : 1,
+            "LookupValue" : "Lookup value 3"
+          } ],
+          "PsOwnerLookupId" : "6",
+          "PsPersonLookupId" : "6",
+          "PsPeople" : [ {
+            "LookupId" : 6,
+            "LookupValue" : "Lookup value 2",
+            "Email" : "email-1@example.invalid"
+          } ],
           "id" : "1",
           "ContentType" : "Item",
-          "Modified" : "2026-11-22T16:51:19Z",
-          "Created" : "2026-11-22T16:51:04Z",
+          "Modified" : "2026-11-22T17:29:24Z",
+          "Created" : "2026-11-22T17:29:11Z",
           "AuthorLookupId" : "1073741822",
           "EditorLookupId" : "1073741822",
-          "_UIVersionString" : "3.0",
+          "_UIVersionString" : "13.0",
           "Attachments" : false,
           "Edit" : "",
           "LinkTitleNoMenu" : "retitled in batch",

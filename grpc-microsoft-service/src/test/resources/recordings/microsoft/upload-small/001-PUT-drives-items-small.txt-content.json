@@ -7,7 +7,7 @@
       "content-type" : "application/octet-stream"
     },
     "body" : {
-      "sha256" : "955273f3f3a2f1b34456df5efedff60d864c14e9711a0d5b87a7b88c313feb57",
+      "sha256" : "b82254095574fcd2bf39ec66022343769388cbd9281fa4fdce2b808edb1cb905",
       "length" : 58
     }
   },
@@ -20,10 +20,10 @@
       "json" : {
         "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#drives('b%21drive-0001')/items/$entity",
         "@microsoft.graph.downloadUrl" : "https://redacted.example/url/4",
-        "createdDateTime" : "2026-11-22T16:50:46Z",
+        "createdDateTime" : "2026-11-22T17:28:55Z",
         "eTag" : "\"{00000000-0000-4000-8000-000000000008},1\"",
         "id" : "item-0003",
-        "lastModifiedDateTime" : "2026-11-22T16:50:46Z",
+        "lastModifiedDateTime" : "2026-11-22T17:28:55Z",
         "name" : "small.txt",
         "webUrl" : "https://redacted.example/url/5",
         "cTag" : "\"c:{00000000-0000-4000-8000-000000000008},1\"",
@@ -51,19 +51,19 @@
           "driveType" : "documentLibrary",
           "driveId" : "b!drive-0001",
           "id" : "item-0001",
-          "name" : "pipestream-live-write-20261122-165044-79eec5c4",
-          "path" : "/drives/b!drive-0001/root:/pipestream-live-write-20261122-165044-79eec5c4",
+          "name" : "pipestream-live-write-20261122-172854-d908adc1",
+          "path" : "/drives/b!drive-0001/root:/pipestream-live-write-20261122-172854-d908adc1",
           "siteId" : "00000000-0000-4000-8000-000000000001"
         },
         "file" : {
           "mimeType" : "text/plain",
           "hashes" : {
-            "quickXorHash" : "aZVOUSSPbF9rWfQdXQTy8f+dRH8="
+            "quickXorHash" : "GZVKVSSPbMdpWV7NWAW28P+YRH0="
           }
         },
         "fileSystemInfo" : {
-          "createdDateTime" : "2026-11-22T16:50:46Z",
-          "lastModifiedDateTime" : "2026-11-22T16:50:46Z"
+          "createdDateTime" : "2026-11-22T17:28:55Z",
+          "lastModifiedDateTime" : "2026-11-22T17:28:55Z"
         },
         "shared" : {
           "scope" : "users"

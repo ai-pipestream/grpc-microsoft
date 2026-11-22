@@ -201,4 +201,28 @@ class RecordingScrubberTest {
                 .isEqualTo("Lookup value 1");
         assertThat(fields.toString()).doesNotContain("Ada").doesNotContain("contoso");
     }
+
+    @Test
+    void anAddressInsideAUrlIsReplacedAndTheLeakCheckSeesOne() {
+        RecordingScrubber scrubber = new RecordingScrubber("https://graph.microsoft.com/v1.0");
+        String plain = scrubber.text("ada@contoso.com");
+        String url = "https://graph.microsoft.com/v1.0/sites/s/lists/l/items?$filter="
+                + "fields%2FEMail%20eq%20%27ada%40contoso.com%27";
+
+        String scrubbed = scrubber.text(url);
+
+        assertThat(plain).isEqualTo("email-1@example.invalid");
+        assertThat(scrubbed).endsWith("eq%20%27email-1%40example.invalid%27");
+        assertThat(RecordingScrubber.violations(url))
+                .containsExactly("percent-encoded email address");
+        assertThat(RecordingScrubber.violations(scrubbed)).isEmpty();
+    }
+
+    @Test
+    void aDocumentationUrlIsKept() {
+        RecordingScrubber scrubber = new RecordingScrubber("https://graph.microsoft.com/v1.0");
+
+        assertThat(scrubber.text("https://example.com/page, A page"))
+                .isEqualTo("https://example.com/page, A page");
+    }
 }

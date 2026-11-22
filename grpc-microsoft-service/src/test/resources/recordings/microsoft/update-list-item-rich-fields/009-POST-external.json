@@ -1,0 +1,69 @@
+{
+  "request" : {
+    "method" : "POST",
+    "url" : "https://redacted.example/url/3/_api/web/lists(guid'00000000-0000-4000-8000-000000000019')/fields/CreateFieldAsXml",
+    "authorized" : true,
+    "headers" : {
+      "content-type" : "application/json"
+    },
+    "body" : {
+      "json" : {
+        "parameters" : {
+          "SchemaXml" : "<Field Type=\"URL\" Format=\"Hyperlink\" Name=\"PsLink\" StaticName=\"PsLink\" DisplayName=\"PsLink\"/>",
+          "Options" : 8
+        }
+      }
+    }
+  },
+  "response" : {
+    "status" : 200,
+    "headers" : {
+      "content-type" : "application/json;odata=nometadata;streaming=true;charset=utf-8"
+    },
+    "body" : {
+      "json" : {
+        "AutofillInfo" : null,
+        "AutoIndexed" : false,
+        "CanBeDeleted" : true,
+        "ClientSideComponentId" : "00000000-0000-4000-8000-000000000064",
+        "ClientSideComponentProperties" : null,
+        "ClientValidationFormula" : null,
+        "ClientValidationMessage" : null,
+        "CustomFormatter" : null,
+        "DefaultFormula" : null,
+        "DefaultValue" : null,
+        "Description" : "",
+        "Direction" : "none",
+        "EnforceUniqueValues" : false,
+        "EntityPropertyName" : "PsLink",
+        "Filterable" : false,
+        "FromBaseType" : false,
+        "Group" : "Custom Columns",
+        "Hidden" : false,
+        "Id" : "00000000-0000-4000-8000-000000000065",
+        "Indexed" : false,
+        "IndexStatus" : 0,
+        "InternalName" : "PsLink",
+        "IsModern" : false,
+        "JSLink" : "clienttemplates.js",
+        "PinnedToFiltersPane" : false,
+        "ReadOnlyField" : false,
+        "Required" : false,
+        "SchemaXml" : "<Field Type=\"URL\" Format=\"Hyperlink\" Name=\"PsLink\" StaticName=\"PsLink\" DisplayName=\"PsLink\" ID=\"{00000000-0000-4000-8000-000000000065}\" SourceID=\"{00000000-0000-4000-8000-000000000019}\" ColName=\"nvarchar9\" RowOrdinal=\"0\" ColName2=\"nvarchar10\" RowOrdinal2=\"0\" />",
+        "Scope" : "/sites/WelcomeToPipestream/Lists/pipestreamlivewrite20261122172854d908adc1",
+        "Sealed" : false,
+        "ShowInFiltersPane" : 0,
+        "Sortable" : true,
+        "StaticName" : "PsLink",
+        "Title" : "PsLink",
+        "FieldTypeKind" : 11,
+        "TypeAsString" : "URL",
+        "TypeDisplayName" : "Hyperlink or Picture",
+        "TypeShortDescription" : "Hyperlink or Picture",
+        "ValidationFormula" : null,
+        "ValidationMessage" : null,
+        "DisplayFormat" : 0
+      }
+    }
+  }
+}

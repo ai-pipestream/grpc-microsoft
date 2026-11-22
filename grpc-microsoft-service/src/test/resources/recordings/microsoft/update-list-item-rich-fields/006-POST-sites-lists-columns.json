@@ -1,0 +1,42 @@
+{
+  "request" : {
+    "method" : "POST",
+    "url" : "https://graph.microsoft.com/v1.0/sites/tenant-1.example,00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000002/lists/00000000-0000-4000-8000-000000000019/columns",
+    "authorized" : true,
+    "headers" : {
+      "content-type" : "application/json"
+    },
+    "body" : {
+      "json" : {
+        "name" : "PsMoney",
+        "displayName" : "PsMoney",
+        "currency" : { }
+      }
+    }
+  },
+  "response" : {
+    "status" : 201,
+    "headers" : {
+      "location" : "https://redacted.example/url/44",
+      "content-type" : "application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8"
+    },
+    "body" : {
+      "json" : {
+        "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#sites('tenant-1.example%2C00000000-0000-4000-8000-000000000001%2C00000000-0000-4000-8000-000000000002')/lists('00000000-0000-4000-8000-000000000019')/columns/$entity",
+        "columnGroup" : "Custom Columns",
+        "description" : "",
+        "displayName" : "PsMoney",
+        "enforceUniqueValues" : false,
+        "hidden" : false,
+        "id" : "00000000-0000-4000-8000-000000000063",
+        "indexed" : false,
+        "name" : "PsMoney",
+        "readOnly" : false,
+        "required" : false,
+        "currency" : {
+          "locale" : "en-US"
+        }
+      }
+    }
+  }
+}
