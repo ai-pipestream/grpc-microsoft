@@ -14,6 +14,10 @@ on:
         description: Run the live write test against the test site (writes, then cleans up)
         type: boolean
         default: false
+      live_write_site_id:
+        description: Graph site id the live write test may write to (falls back to the MICROSOFT_SITE_ID secret)
+        type: string
+        default: ""
       import_recordings_run_id:
         description: Commit the recordings artifact of this run id to the branch as replay data
         type: string
@@ -180,10 +184,16 @@ jobs:
           MICROSOFT_TENANT_ID: ${{ secrets.MICROSOFT_TENANT_ID }}
           MICROSOFT_CLIENT_ID: ${{ secrets.MICROSOFT_CLIENT_ID }}
           MICROSOFT_CLIENT_SECRET: ${{ secrets.MICROSOFT_CLIENT_SECRET }}
-          MICROSOFT_SITE_ID: ${{ secrets.MICROSOFT_SITE_ID }}
+          MICROSOFT_SITE_ID: ${{ inputs.live_write_site_id || secrets.MICROSOFT_SITE_ID }}
           MICROSOFT_DRIVE_IDS: ${{ secrets.MICROSOFT_DRIVE_IDS }}
           MICROSOFT_LIVE_WRITE: "1"
         run: |
+          for name in MICROSOFT_TENANT_ID MICROSOFT_CLIENT_ID MICROSOFT_CLIENT_SECRET MICROSOFT_SITE_ID; do
+            if [ -z "${!name}" ]; then
+              echo "::error::$name is not set; the live write run needs it"
+              exit 1
+            fi
+          done
           ./gradlew --no-daemon -PintegrationDir=../grpc-integration :grpc-microsoft-service:liveWriteTest --rerun-tasks
       - name: Publish the report
         if: always()
