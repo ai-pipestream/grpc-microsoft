@@ -268,7 +268,10 @@ final class WriteScenarios {
                 new Scenario("list-children", "ListChildren", "ListChildren [test folder]",
                         this::listChildren),
                 new Scenario("update-drive-item", "UpdateDriveItem",
-                        "UpdateDriveItem [rename, description]", this::updateDriveItem),
+                        "UpdateDriveItem [rename]", this::updateDriveItem),
+                new Scenario("update-drive-item-description", "UpdateDriveItem",
+                        "UpdateDriveItem [description on a SharePoint drive]",
+                        this::describeOnASharePointDrive),
                 new Scenario("update-drive-item-stale-etag", "UpdateDriveItem",
                         "UpdateDriveItem [stale etag]", this::updateWithStaleEtag),
                 new Scenario("copy-drive-item", "CopyDriveItem", "CopyDriveItem",
@@ -408,15 +411,29 @@ final class WriteScenarios {
 
     private String updateDriveItem() {
         need(small, "the small upload");
-        String description = "renamed by the live write test";
         DriveItem updated = stub().updateDriveItem(UpdateDriveItemRequest.newBuilder()
                 .setItem(ref(small.getId())).setExpectedEtag(small.getEtag())
-                .setName("renamed.txt").setDescription(description).build()).getItem();
+                .setName("renamed.txt").build()).getItem();
         DriveItem read = getItem(small.getId());
         check(read.getName().equals("renamed.txt"), "name read back as " + read.getName());
         check(!updated.getEtag().equals(small.getEtag()), "the eTag did not change");
-        return "name read back; eTag changed; description "
-                + (read.getDescription().equals(description) ? "stored" : "not stored by this drive");
+        return "name read back; eTag changed";
+    }
+
+    private String describeOnASharePointDrive() {
+        need(small, "the small upload");
+        String before = getItem(small.getId()).getEtag();
+        try {
+            stub().updateDriveItem(UpdateDriveItemRequest.newBuilder().setItem(ref(small.getId()))
+                    .setDescription("must not land").build());
+        } catch (StatusRuntimeException e) {
+            if (e.getStatus().getCode() == io.grpc.Status.Code.FAILED_PRECONDITION) {
+                check(getItem(small.getId()).getEtag().equals(before), "the item changed");
+                return "FAILED_PRECONDITION, item unchanged";
+            }
+            throw e;
+        }
+        throw new AssertionError("a description was accepted on a SharePoint drive");
     }
 
     private String updateWithStaleEtag() {
@@ -661,10 +678,10 @@ final class WriteScenarios {
                                         .setName("Title").setText("retitled in batch")))).build(),
                 MutateRequest.newBuilder().setOpId("drop-item").setDeleteListItem(
                         DeleteListItemRequest.newBuilder().setItem(listItemRef(doomed))).build(),
-                MutateRequest.newBuilder().setOpId("describe").setUpdateDriveItem(
+                MutateRequest.newBuilder().setOpId("rename").setUpdateDriveItem(
                         UpdateDriveItemRequest.newBuilder().setItem(ref(copy.getId()))
-                                .setDescription("described in batch")).build(),
-                MutateRequest.newBuilder().setOpId("drop-copy").addDependsOn("describe")
+                                .setName("renamed-in-batch.txt")).build(),
+                MutateRequest.newBuilder().setOpId("drop-copy").addDependsOn("rename")
                         .setDeleteDriveItem(DeleteDriveItemRequest.newBuilder()
                                 .setItem(ref(copy.getId()))).build());
         Collector<MutateResponse> responses = new Collector<>();

@@ -826,8 +826,10 @@ public final class MicrosoftGrpcService
     @Override
     public void updateDriveItem(UpdateDriveItemRequest request,
             StreamObserver<UpdateDriveItemResponse> observer) {
-        unary(observer, () -> plans.updateDriveItem(request)
-                .run(sessions.resolve(request.getConnectionId()).graph()));
+        unary(observer, () -> {
+            MicrosoftSessions.Session session = sessions.resolve(request.getConnectionId());
+            return plans.updateDriveItem(session, request).run(session.graph());
+        });
     }
 
     @Override

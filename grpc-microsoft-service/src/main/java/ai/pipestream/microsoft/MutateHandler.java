@@ -199,7 +199,7 @@ final class MutateHandler implements StreamObserver<MutateRequest> {
                     MutateResponse.Builder::setCreateFolder);
             case UPDATE_DRIVE_ITEM -> planned(request,
                     request.getUpdateDriveItem().getConnectionId(),
-                    session -> plans.updateDriveItem(request.getUpdateDriveItem()),
+                    session -> plans.updateDriveItem(session, request.getUpdateDriveItem()),
                     MutateResponse.Builder::setUpdateDriveItem);
             case DELETE_DRIVE_ITEM -> planned(request,
                     request.getDeleteDriveItem().getConnectionId(),

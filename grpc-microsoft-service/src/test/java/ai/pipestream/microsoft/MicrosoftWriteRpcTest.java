@@ -489,6 +489,28 @@ class MicrosoftWriteRpcTest {
     }
 
     @Test
+    void aDescriptionIsRefusedOffAPersonalDrive() {
+        fake.stub("GET", "/drives/d1", FakeGraphServer.Stub.json(
+                "{\"id\":\"d1\",\"driveType\":\"documentLibrary\"}"));
+        assertThat(code(() -> stub.updateDriveItem(UpdateDriveItemRequest.newBuilder()
+                .setItem(item("f1")).setDescription("a note").build())))
+                .isEqualTo(Status.Code.FAILED_PRECONDITION);
+        assertThat(fake.requestsTo("/drives/d1/items/f1")).isEmpty();
+    }
+
+    @Test
+    void aDescriptionIsWrittenToAPersonalDrive() throws Exception {
+        fake.stub("GET", "/drives/d1", FakeGraphServer.Stub.json(
+                "{\"id\":\"d1\",\"driveType\":\"personal\"}"));
+        fake.stub("PATCH", "/drives/d1/items/f1", FakeGraphServer.Stub.json(
+                MicrosoftFixtures.fileJson("f1", "a.txt", "d1")));
+        stub.updateDriveItem(UpdateDriveItemRequest.newBuilder().setItem(item("f1"))
+                .setDescription("a note").build());
+        assertThat(body(fake.only("/drives/d1/items/f1")).path("description").asText())
+                .isEqualTo("a note");
+    }
+
+    @Test
     void updateDriveItemPatchesOnlyWhatIsSet() throws Exception {
         fake.stub("/drives/d1/items/f1", MicrosoftFixtures.fileJson("f1", "new.txt", "d1"));
 

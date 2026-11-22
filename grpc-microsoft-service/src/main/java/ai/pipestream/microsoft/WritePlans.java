@@ -110,8 +110,12 @@ final class WritePlans {
                         .setItem(valid(mapper.toDriveItem(reply.body(), driveId))).build());
     }
 
-    Plan<UpdateDriveItemResponse> updateDriveItem(UpdateDriveItemRequest request) {
+    Plan<UpdateDriveItemResponse> updateDriveItem(MicrosoftSessions.Session session,
+            UpdateDriveItemRequest request) throws IOException, InterruptedException {
         DriveItemRef ref = request.getItem();
+        if (request.hasDescription() && !request.getDescription().isEmpty()) {
+            requirePersonalDrive(session, ref.getDriveId());
+        }
         ObjectNode body = GraphClient.object();
         if (request.hasName()) {
             GraphPaths.childByName(ref.getDriveId(), "", "", request.getName());
@@ -145,6 +149,20 @@ final class WritePlans {
                 new GraphClient.Call("PATCH", route, ifMatch(request.getExpectedEtag()), body),
                 reply -> UpdateDriveItemResponse.newBuilder()
                         .setItem(valid(mapper.toDriveItem(reply.body(), ref.getDriveId()))).build());
+    }
+
+    /** Fails with FAILED_PRECONDITION unless the drive is a OneDrive personal drive. */
+    private static void requirePersonalDrive(MicrosoftSessions.Session session, String driveId)
+            throws IOException, InterruptedException {
+        JsonNode drive = session.graph().get(
+                GraphPaths.drive(driveId) + "?$select=id,driveType", Map.of());
+        String type = drive.path("driveType").asText("");
+        if (!"personal".equals(type)) {
+            throw Status.FAILED_PRECONDITION
+                    .withDescription("description is stored on OneDrive personal drives only; drive "
+                            + driveId + " is " + (type.isEmpty() ? "of unknown type" : type))
+                    .asRuntimeException();
+        }
     }
 
     Plan<DeleteDriveItemResponse> deleteDriveItem(DeleteDriveItemRequest request) {
