@@ -83,20 +83,20 @@
             "user" : {
               "@odata.type" : "#microsoft.graph.sharePointIdentity",
               "displayName" : "Identity 6",
-              "email" : "email-1.example.invalid",
+              "email" : "email-1@example.invalid",
               "id" : "00000000-0000-4000-8000-000000000013"
             },
             "siteUser" : {
               "displayName" : "Identity 6",
-              "email" : "email-1.example.invalid",
+              "email" : "email-1@example.invalid",
               "id" : "6",
-              "loginName" : "i:0#.f|membership|email-1.example.invalid"
+              "loginName" : "i:0#.f|membership|email-1@example.invalid"
             }
           },
           "grantedTo" : {
             "user" : {
               "displayName" : "Identity 6",
-              "email" : "email-1.example.invalid",
+              "email" : "email-1@example.invalid",
               "id" : "00000000-0000-4000-8000-000000000013"
             }
           },

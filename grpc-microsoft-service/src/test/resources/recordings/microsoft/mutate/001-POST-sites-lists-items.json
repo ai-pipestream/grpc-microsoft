@@ -17,18 +17,18 @@
   "response" : {
     "status" : 201,
     "headers" : {
-      "etag" : "\"00000000-0000-4000-8000-000000000051,1\"",
+      "etag" : "\"00000000-0000-4000-8000-000000000061,1\"",
       "location" : "https://redacted.example/url/42",
       "content-type" : "application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8"
     },
     "body" : {
       "json" : {
         "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#sites('tenant-1.example%2C00000000-0000-4000-8000-000000000001%2C00000000-0000-4000-8000-000000000002')/lists('00000000-0000-4000-8000-000000000019')/items/$entity",
-        "@odata.etag" : "\"00000000-0000-4000-8000-000000000051,1\"",
-        "createdDateTime" : "2026-11-22T14:18:46Z",
-        "eTag" : "\"00000000-0000-4000-8000-000000000051,1\"",
+        "@odata.etag" : "\"00000000-0000-4000-8000-000000000061,1\"",
+        "createdDateTime" : "2026-11-22T15:00:23Z",
+        "eTag" : "\"00000000-0000-4000-8000-000000000061,1\"",
         "id" : "2",
-        "lastModifiedDateTime" : "2026-11-22T14:18:46Z",
+        "lastModifiedDateTime" : "2026-11-22T15:00:23Z",
         "webUrl" : "https://redacted.example/url/43",
         "createdBy" : {
           "user" : {
@@ -49,17 +49,17 @@
           "siteId" : "tenant-1.example,00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000002"
         },
         "contentType" : {
-          "id" : "0x010067CBCDF04F80F44E8C49A2ED917A6787",
+          "id" : "0x0100D6475C5E56FCCC4C8C797A379439D646",
           "name" : "Item"
         },
         "fields@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#sites('tenant-1.example%2C00000000-0000-4000-8000-000000000001%2C00000000-0000-4000-8000-000000000002')/lists('00000000-0000-4000-8000-000000000019')/items('2')/fields/$entity",
         "fields" : {
-          "@odata.etag" : "\"00000000-0000-4000-8000-000000000051,1\"",
+          "@odata.etag" : "\"00000000-0000-4000-8000-000000000061,1\"",
           "Title" : "to delete",
           "id" : "2",
           "ContentType" : "Item",
-          "Modified" : "2026-11-22T14:18:46Z",
-          "Created" : "2026-11-22T14:18:46Z",
+          "Modified" : "2026-11-22T15:00:23Z",
+          "Created" : "2026-11-22T15:00:23Z",
           "AuthorLookupId" : "1073741822",
           "EditorLookupId" : "1073741822",
           "_UIVersionString" : "1.0",

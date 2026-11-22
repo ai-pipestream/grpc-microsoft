@@ -8,7 +8,7 @@
       "content-type" : "application/octet-stream"
     },
     "body" : {
-      "sha256" : "dfbe314a13d63a5ad7627ffc4336917e78e817d6db82e8cb8b74aeb792263cde",
+      "sha256" : "f7cc4419256345a892b919d6e6431e3f452c401b67140dfed851c53761aa39b4",
       "length" : 1638400
     }
   },
@@ -20,7 +20,7 @@
     "body" : {
       "json" : {
         "@odata.context" : "https://redacted.example/url/8",
-        "expirationDateTime" : "2026-11-22T14:33:29.779Z",
+        "expirationDateTime" : "2026-11-22T15:15:02.769Z",
         "nextExpectedRanges" : [ "3276800-4849786" ]
       }
     }
