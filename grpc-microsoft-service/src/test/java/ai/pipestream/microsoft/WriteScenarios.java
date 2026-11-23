@@ -347,6 +347,8 @@ final class WriteScenarios {
                         this::groupChanges),
                 new Scenario("list-group-transitive-members", "ListGroupTransitiveMembers",
                         "ListGroupTransitiveMembers", this::membersOfAGroup),
+                new Scenario("list-group-owners", "ListGroupOwners", "ListGroupOwners",
+                        this::ownersOfAGroup),
                 new Scenario("list-user-transitive-member-of", "ListUserTransitiveMemberOf",
                         "ListUserTransitiveMemberOf", this::groupsOfAUser),
                 new Scenario("list-site-groups", "ListSiteGroups", "ListSiteGroups",
@@ -1333,6 +1335,15 @@ final class WriteScenarios {
         return members.size() + " member(s), kinds " + memberKinds(members);
     }
 
+    private String ownersOfAGroup() {
+        need(groupId, "a group");
+        List<DirectoryMember> owners = new ArrayList<>();
+        stub().listGroupOwners(ai.pipestream.microsoft.v1.ListGroupOwnersRequest.newBuilder()
+                .setGroupId(groupId).build())
+                .forEachRemaining(response -> owners.add(response.getOwner()));
+        return owners.size() + " owner(s), kinds " + memberKinds(owners);
+    }
+
     private String groupsOfAUser() {
         need(userId, "a user");
         List<DirectoryMember> memberships = new ArrayList<>();
@@ -1497,6 +1508,7 @@ final class WriteScenarios {
         int owned = 0;
         int users = 0;
         int joinable = 0;
+        int admins = 0;
         for (ai.pipestream.microsoft.v1.MicrosoftEntity entity : entities.values()) {
             String owner = switch (entity.getEntityCase()) {
                 case DRIVE -> entity.getDrive().getListId().isEmpty() ? null : entity.getDrive().getAclOwnerId();
@@ -1517,6 +1529,16 @@ final class WriteScenarios {
                         "a group's members are not complete");
                 entity.getSiteGroup().getMembersList().forEach(WriteScenarios::checkPrincipal);
             }
+            if (entity.hasSiteAdmins()) {
+                admins += entity.getSiteAdmins().getAdminsCount();
+                check(entity.getSiteAdmins().getCompleteness()
+                        == ai.pipestream.sync.v1.AclCompleteness.ACL_COMPLETENESS_COMPLETE,
+                        "the site's administrators are not complete");
+                for (ai.pipestream.microsoft.v1.SitePrincipal admin : entity.getSiteAdmins().getAdminsList()) {
+                    checkPrincipal(admin);
+                    check(admin.getSiteAdmin(), "a listed administrator is not marked as one");
+                }
+            }
             if (entity.hasSiteAcl()) {
                 acls++;
                 check(entity.getSiteAcl().getCompleteness()
@@ -1534,6 +1556,9 @@ final class WriteScenarios {
             }
         }
         check(groups > 0, "no site group was emitted");
+        check(entities.containsKey("SITE_ADMINS " + MicrosoftEntityIds.siteAdmins(siteId)),
+                "the site's administrators were not emitted");
+        check(admins > 0, "the site has no administrator");
         for (String acl : List.of(siteAcl, itemAcl, folderAcl)) {
             check(entities.containsKey("SITE_ACL " + acl), "expected role assignments were not emitted");
         }
@@ -1549,7 +1574,8 @@ final class WriteScenarios {
         ai.pipestream.microsoft.v1.MicrosoftEntity file = entities.get("DRIVE_ITEM " + small.getId());
         check(file != null && file.getDriveItem().getAclOwnerId().equals(folderAcl),
                 "a file in the test folder does not point at the folder's role assignments");
-        return groups + " group(s), " + acls + " role assignment set(s), " + owned
+        return groups + " group(s), " + admins + " site administrator(s), " + acls
+                + " role assignment set(s), " + owned
                 + " drives, lists and items with an owner, " + joinable + " of " + users
                 + " user grantee(s) with a user principal name";
     }

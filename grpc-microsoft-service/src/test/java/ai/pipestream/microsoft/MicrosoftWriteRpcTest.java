@@ -752,6 +752,39 @@ class MicrosoftWriteRpcTest {
     }
 
     @Test
+    void ensureColumnsCreatesATermColumnThroughSharePoint() throws Exception {
+        String listRoute = "/sites/" + SITE + "/lists/" + LIST_GUID;
+        fake.stub("/sites/" + SITE, "{\"id\":\"s\",\"webUrl\":\"" + fake.baseUrl()
+                + "/sites/Team\"}");
+        fake.stubOnce(listRoute + "/columns", FakeGraphServer.Stub.json("{\"value\":[]}"));
+        fake.stub("GET", listRoute + "/columns", FakeGraphServer.Stub.json("{\"value\":["
+                + "{\"id\":\"c9\",\"name\":\"Topics\",\"term\":{\"allowMultipleValues\":true}}]}"));
+        fake.stub("/sites/Team/_api/web/fields/getbyinternalnameortitle('TaxKeyword')",
+                "{\"SspId\":\"store-1\"}");
+        String create = "/sites/Team/_api/web/lists(guid'" + LIST_GUID + "')/fields/CreateFieldAsXml";
+        fake.stub("POST", create, FakeGraphServer.Stub.json("{\"InternalName\":\"Topics\"}"));
+
+        ColumnOutcome outcome = stub.ensureColumns(EnsureColumnsRequest.newBuilder()
+                .setScope(ColumnScope.newBuilder()
+                        .setList(ListRef.newBuilder().setSiteId(SITE).setListId(LIST_GUID)))
+                .addColumns(ColumnSpec.newBuilder().setName("Topics")
+                        .setType(ColumnType.COLUMN_TYPE_MULTITERM).setTermSetId("set-1"))
+                .build()).getColumns(0);
+
+        assertThat(outcome.getState()).isEqualTo(EnsureState.ENSURE_STATE_CREATED);
+        assertThat(outcome.getActual().getTerm().getAllowMultipleValues()).isTrue();
+        String value = "<Value xmlns:q1=\"http://www.w3.org/2001/XMLSchema\" p4:type=\"q1:string\""
+                + " xmlns:p4=\"http://www.w3.org/2001/XMLSchema-instance\">";
+        assertThat(body(fake.only(create)).path("parameters").path("SchemaXml").asText()).isEqualTo(
+                "<Field Type=\"TaxonomyFieldTypeMulti\" Mult=\"TRUE\" ShowField=\"Term1033\""
+                        + " Name=\"Topics\" StaticName=\"Topics\" DisplayName=\"Topics\">"
+                        + "<Customization><ArrayOfProperty>"
+                        + "<Property><Name>SspId</Name>" + value + "store-1</Value></Property>"
+                        + "<Property><Name>TermSetId</Name>" + value + "set-1</Value></Property>"
+                        + "</ArrayOfProperty></Customization></Field>");
+    }
+
+    @Test
     void updateListItemFieldsByDriveItemAndDryRun() throws Exception {
         fake.stub("/drives/d1/items/f1/listItem/fields", "{\"Title\":\"T\"}");
         ListItemPatch patch = ListItemPatch.newBuilder()

@@ -354,6 +354,20 @@ public final class MicrosoftGrpcService
     }
 
     @Override
+    public void listGroupOwners(ai.pipestream.microsoft.v1.ListGroupOwnersRequest request,
+            StreamObserver<ai.pipestream.microsoft.v1.ListGroupOwnersResponse> observer) {
+        stream(observer, () -> {
+            MicrosoftSessions.Session session = sessions.resolve(request.getConnectionId());
+            String route = "/groups/" + GraphPaths.segment(request.getGroupId(), "group_id") + "/owners";
+            session.pager().forEach(List.of(route), Map.of(), node -> {
+                observer.onNext(ai.pipestream.microsoft.v1.ListGroupOwnersResponse.newBuilder()
+                        .setOwner(valid(mapper.toMember(node))).build());
+                return true;
+            });
+        });
+    }
+
+    @Override
     public void listUserTransitiveMemberOf(ListUserTransitiveMemberOfRequest request,
             StreamObserver<ListUserTransitiveMemberOfResponse> observer) {
         stream(observer, () -> {
@@ -1277,8 +1291,17 @@ public final class MicrosoftGrpcService
     /** Creates a column with SharePoint's own API and reads it back from Graph. */
     private JsonNode createThroughSharePoint(MicrosoftSessions.Session session, String siteId,
             String listId, String route, ColumnSpec spec) throws IOException, InterruptedException {
-        sharePoint.web(session, siteId).post(SharePointRest.fields(listId) + "/CreateFieldAsXml",
-                ColumnSpecs.toSharePoint(spec));
+        SharePointRest.Web web = sharePoint.web(session, siteId);
+        String termStoreId = spec.getTermStoreId();
+        if (ColumnSpecs.isTerm(spec) && termStoreId.isBlank()) {
+            termStoreId = web.get(SharePointRest.KEYWORDS_TERM_STORE).path("SspId").asText("");
+            if (termStoreId.isBlank()) {
+                throw Status.FAILED_PRECONDITION.withDescription("the site names no term store for "
+                        + "column " + spec.getName() + "; set term_store_id").asRuntimeException();
+            }
+        }
+        web.post(SharePointRest.fields(listId) + "/CreateFieldAsXml",
+                ColumnSpecs.toSharePoint(spec, termStoreId));
         JsonNode[] created = new JsonNode[1];
         session.pager().forEach(List.of(route), Map.of(), node -> {
             if (node.path("name").asText("").equals(spec.getName())) {

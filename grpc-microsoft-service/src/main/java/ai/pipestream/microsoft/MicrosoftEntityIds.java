@@ -37,6 +37,16 @@ public final class MicrosoftEntityIds {
     }
 
     /**
+     * The entity id of the site collection administrators of a site.
+     *
+     * @param siteId the site id
+     * @return {@code site_admins/{site}}
+     */
+    public static String siteAdmins(String siteId) {
+        return "site_admins/" + siteId;
+    }
+
+    /**
      * The entity id of the role assignments of a securable.
      *
      * @param securable the site, list or list item

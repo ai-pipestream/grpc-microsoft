@@ -3,6 +3,7 @@ package ai.pipestream.microsoft;
 import ai.pipestream.microsoft.v1.ListItemRef;
 import ai.pipestream.microsoft.v1.ListRef;
 import ai.pipestream.microsoft.v1.SiteAcl;
+import ai.pipestream.microsoft.v1.SiteAdmins;
 import ai.pipestream.microsoft.v1.SiteGroup;
 import ai.pipestream.microsoft.v1.SiteGroupMembers;
 import ai.pipestream.microsoft.v1.SiteSecurable;
@@ -68,6 +69,21 @@ final class SiteSecurityReader {
             out.add(members.build());
         }
         return out;
+    }
+
+    /** The site collection administrators of the site. */
+    SiteAdmins admins() throws IOException, InterruptedException {
+        SiteAdmins.Builder admins = SiteAdmins.newBuilder().setSiteId(siteId);
+        try {
+            web.forEach("/web/siteusers?$filter=IsSiteAdmin%20eq%20true", node -> {
+                admins.addAdmins(SiteSecurityMapper.toPrincipal(node));
+                return true;
+            });
+            admins.setCompleteness(AclCompleteness.ACL_COMPLETENESS_COMPLETE);
+        } catch (GraphClient.GraphApiException e) {
+            admins.clearAdmins().setCompleteness(AclCompleteness.ACL_COMPLETENESS_UNAVAILABLE);
+        }
+        return admins.build();
     }
 
     /** The role assignments of the site itself. */

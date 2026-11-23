@@ -147,6 +147,7 @@ class MicrosoftLiveCoverageIT {
             Map.entry("ListGroups", "GET /groups"),
             Map.entry("DeltaGroups", "GET /groups/delta"),
             Map.entry("ListGroupTransitiveMembers", "GET /groups/{group-id}/transitiveMembers"),
+            Map.entry("ListGroupOwners", "GET /groups/{group-id}/owners"),
             Map.entry("ListUserTransitiveMemberOf", "GET /users/{user-id}/transitiveMemberOf"),
             Map.entry("Sync", "delta crawl of one drive"));
 
@@ -530,8 +531,13 @@ class MicrosoftLiveCoverageIT {
                 r -> r.getEventCase() == DeltaGroupsResponse.EventCase.RESYNC);
         if (groups == null || groups.isEmpty()) {
             skip("ListGroupTransitiveMembers", "no group was listed");
+            skip("ListGroupOwners", "no group was listed");
         } else {
             String groupId = groups.get(0).getGroup().getId();
+            stream("ListGroupOwners", "ListGroupOwners", LIST_CAP,
+                    s -> s.listGroupOwners(ai.pipestream.microsoft.v1.ListGroupOwnersRequest.newBuilder()
+                            .setGroupId(groupId).build()),
+                    l -> l.size() + " owner(s)");
             stream("ListGroupTransitiveMembers", "ListGroupTransitiveMembers", LIST_CAP,
                     s -> s.listGroupTransitiveMembers(ListGroupTransitiveMembersRequest.newBuilder()
                             .setGroupId(groupId).build()),

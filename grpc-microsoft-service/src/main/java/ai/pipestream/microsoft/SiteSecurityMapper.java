@@ -29,6 +29,9 @@ final class SiteSecurityMapper {
                 .build();
     }
 
+    /** Ends the login name of the claim for a group's owners. */
+    private static final String OWNERS_SUFFIX = "_o";
+
     static SitePrincipal toPrincipal(JsonNode node) {
         String login = node.path("LoginName").asText("");
         SitePrincipalType type = principalType(node.path("PrincipalType").asInt(0));
@@ -42,7 +45,9 @@ final class SiteSecurityMapper {
                 .setSiteAdmin(node.path("IsSiteAdmin").asBoolean(false))
                 .setHidden(node.path("IsHiddenInUI").asBoolean(false));
         if (type == SitePrincipalType.SITE_PRINCIPAL_TYPE_SECURITY_GROUP) {
-            principal.setDirectoryObjectId(directoryObjectId(login));
+            String objectId = directoryObjectId(login);
+            principal.setDirectoryObjectId(objectId)
+                    .setDirectoryGroupOwners(!objectId.isEmpty() && login.endsWith(OWNERS_SUFFIX));
         }
         return principal.build();
     }
@@ -99,8 +104,8 @@ final class SiteSecurityMapper {
      */
     static String directoryObjectId(String loginName) {
         String last = loginName.substring(loginName.lastIndexOf('|') + 1);
-        if (last.endsWith("_o")) {
-            last = last.substring(0, last.length() - 2);
+        if (last.endsWith(OWNERS_SUFFIX)) {
+            last = last.substring(0, last.length() - OWNERS_SUFFIX.length());
         }
         if (last.length() != 36) {
             return "";

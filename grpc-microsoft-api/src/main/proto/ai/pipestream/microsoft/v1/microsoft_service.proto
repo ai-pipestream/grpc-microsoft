@@ -165,6 +165,10 @@ service MicrosoftService {
   // members of its nested groups included, as a stream.
   rpc ListGroupTransitiveMembers(ListGroupTransitiveMembersRequest) returns (stream ListGroupTransitiveMembersResponse);
 
+  // GET /groups/{group-id}/owners. The owners of a group as a stream.
+  // Application permission GroupMember.Read.All.
+  rpc ListGroupOwners(ListGroupOwnersRequest) returns (stream ListGroupOwnersResponse);
+
   // GET /users/{user-id}/transitiveMemberOf. The groups a user belongs to,
   // directly or through nested groups, as a stream.
   rpc ListUserTransitiveMemberOf(ListUserTransitiveMemberOfRequest) returns (stream ListUserTransitiveMemberOfResponse);
@@ -1262,4 +1266,20 @@ message ListTermsRequest {
 message ListTermsResponse {
   // The term.
   Term term = 1;
+}
+
+// Request to list the owners of a group.
+message ListGroupOwnersRequest {
+  // Graph object id of the group.
+  string group_id = 1;
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 2;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// One streamed owner.
+message ListGroupOwnersResponse {
+  // The streamed owner.
+  DirectoryMember owner = 1;
 }

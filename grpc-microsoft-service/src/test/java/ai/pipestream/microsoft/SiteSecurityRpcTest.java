@@ -134,6 +134,8 @@ class SiteSecurityRpcTest {
         assertThat(members.get(0).getSiteAdmin()).isTrue();
         assertThat(members).extracting(SitePrincipal::getDirectoryObjectId).containsExactly("",
                 "0f8fad5b-d9cb-469f-a165-70867728950e", "7c9e6679-7425-40de-944b-e07fc1f90ae7", "");
+        assertThat(members).extracting(SitePrincipal::getDirectoryGroupOwners)
+                .containsExactly(false, false, true, false);
         assertInvalid(() -> drain(stub.listSiteGroupMembers(
                 ListSiteGroupMembersRequest.newBuilder().setSiteId("s1").build())));
     }
@@ -255,6 +257,9 @@ class SiteSecurityRpcTest {
                 {"value":[{"PrincipalId":5,"Member":{"Id":5,"LoginName":"Team Owners","Title":"Team Owners",
                   "PrincipalType":8},"RoleDefinitionBindings":[{"Id":1073741829,"Name":"Full Control",
                   "RoleTypeKind":5}]}]}""");
+        fake.stub(WEB + "/web/siteusers", """
+                {"value":[{"Id":3,"LoginName":"i:0#.f|membership|root@contoso.com","Title":"Root",
+                  "PrincipalType":1,"IsSiteAdmin":true}]}""");
         fake.stub("/sites/s1/drives", """
                 {"value":[{"id":"drive-1","name":"Docs","driveType":"documentLibrary",
                   "sharePointIds":{"listId":"%s"}}]}""".formatted(LIST_ID));
@@ -283,20 +288,25 @@ class SiteSecurityRpcTest {
         String siteAcl = "site_acl/site/s1";
         String folderAcl = "site_acl/list_item/s1/" + LIST_ID + "/1";
         assertThat(entities).extracting(MicrosoftEntity::getEntityId).containsExactly("s1",
-                "site_group/s1/5", siteAcl, folderAcl, "drive-1", "root", "folder-1", "file-1", "file-2");
+                "site_group/s1/5", "site_admins/s1", siteAcl, folderAcl, "drive-1", "root", "folder-1",
+                "file-1", "file-2");
+        assertThat(entities.get(2).getSiteAdmins().getCompleteness())
+                .isEqualTo(AclCompleteness.ACL_COMPLETENESS_COMPLETE);
+        assertThat(entities.get(2).getSiteAdmins().getAdminsList()).extracting(SitePrincipal::getUserPrincipalName)
+                .containsExactly("root@contoso.com");
         SiteGroupMembers group = entities.get(1).getSiteGroup();
         assertThat(group.getCompleteness()).isEqualTo(AclCompleteness.ACL_COMPLETENESS_COMPLETE);
         assertThat(group.getMembersList()).extracting(SitePrincipal::getDirectoryObjectId)
                 .containsExactly("0f8fad5b-d9cb-469f-a165-70867728950e");
-        assertThat(entities.get(2).getSiteAcl().getCompleteness())
+        assertThat(entities.get(3).getSiteAcl().getCompleteness())
                 .isEqualTo(AclCompleteness.ACL_COMPLETENESS_COMPLETE);
-        assertThat(entities.get(2).getSiteAcl().getAssignments(0).getRoles(0).getName())
+        assertThat(entities.get(3).getSiteAcl().getAssignments(0).getRoles(0).getName())
                 .isEqualTo("Full Control");
-        SitePrincipal reader = entities.get(3).getSiteAcl().getAssignments(0).getMember();
+        SitePrincipal reader = entities.get(4).getSiteAcl().getAssignments(0).getMember();
         assertThat(reader.getUserPrincipalName()).isEqualTo("ada@contoso.com");
         assertThat(reader.getEmail()).isEqualTo("ada@contoso.com");
-        assertThat(entities.get(4).getDrive().getAclOwnerId()).isEqualTo(siteAcl);
-        assertThat(entities.subList(5, 9)).extracting(e -> e.getDriveItem().getAclOwnerId())
+        assertThat(entities.get(5).getDrive().getAclOwnerId()).isEqualTo(siteAcl);
+        assertThat(entities.subList(6, 10)).extracting(e -> e.getDriveItem().getAclOwnerId())
                 .containsExactly(siteAcl, folderAcl, folderAcl, siteAcl);
     }
 

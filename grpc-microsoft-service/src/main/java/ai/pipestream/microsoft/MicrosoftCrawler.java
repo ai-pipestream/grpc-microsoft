@@ -232,6 +232,8 @@ public final class MicrosoftCrawler {
                             .setSiteGroup(group).build(), ChangeOperation.CHANGE_OPERATION_UPSERT,
                             passSource, runId);
                 }
+                emit(entity(MicrosoftEntityIds.siteAdmins(site.getId())).setSiteAdmins(reader.admins()).build(),
+                        ChangeOperation.CHANGE_OPERATION_UPSERT, passSource, runId);
                 emitAcl(reader.site(), passSource, runId);
             }
         }

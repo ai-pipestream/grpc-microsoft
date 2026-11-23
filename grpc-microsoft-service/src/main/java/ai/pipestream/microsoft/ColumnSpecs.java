@@ -112,20 +112,36 @@ final class ColumnSpecs {
      * Whether Graph refuses to create the column, so SharePoint's own API creates it.
      *
      * @param spec the column
-     * @return true for a hyperlink column
+     * @return true for a hyperlink or term column
      */
     static boolean needsSharePoint(ColumnSpec spec) {
-        return spec.getType() == ColumnType.COLUMN_TYPE_URL;
+        return spec.getType() == ColumnType.COLUMN_TYPE_URL || isTerm(spec);
     }
 
     /**
-     * The SharePoint {@code CreateFieldAsXml} body for a hyperlink column.
+     * Whether the column holds terms.
      *
      * @param spec the column
+     * @return true for a term or multi term column
+     */
+    static boolean isTerm(ColumnSpec spec) {
+        return spec.getType() == ColumnType.COLUMN_TYPE_TERM
+                || spec.getType() == ColumnType.COLUMN_TYPE_MULTITERM;
+    }
+
+    /**
+     * The SharePoint {@code CreateFieldAsXml} body for a hyperlink or term column.
+     *
+     * @param spec the column
+     * @param termStoreId the term store of a term column; unused for a hyperlink
      * @return the request JSON
      */
-    static ObjectNode toSharePoint(ColumnSpec spec) {
-        StringBuilder xml = new StringBuilder("<Field Type=\"URL\" Format=\"Hyperlink\"");
+    static ObjectNode toSharePoint(ColumnSpec spec, String termStoreId) {
+        boolean multi = spec.getType() == ColumnType.COLUMN_TYPE_MULTITERM;
+        StringBuilder xml = new StringBuilder(!isTerm(spec)
+                ? "<Field Type=\"URL\" Format=\"Hyperlink\""
+                : multi ? "<Field Type=\"TaxonomyFieldTypeMulti\" Mult=\"TRUE\" ShowField=\"Term1033\""
+                        : "<Field Type=\"TaxonomyFieldType\" ShowField=\"Term1033\"");
         attribute(xml, "Name", spec.getName());
         attribute(xml, "StaticName", spec.getName());
         attribute(xml, "DisplayName",
@@ -135,19 +151,37 @@ final class ColumnSpecs {
         attribute(xml, "Indexed", spec.getIndexed() ? "TRUE" : "");
         attribute(xml, "Hidden", spec.getHidden() ? "TRUE" : "");
         attribute(xml, "Required", spec.getRequired() ? "TRUE" : "");
-        xml.append("/>");
+        if (isTerm(spec)) {
+            xml.append("><Customization><ArrayOfProperty>");
+            property(xml, "SspId", termStoreId);
+            property(xml, "TermSetId", spec.getTermSetId());
+            xml.append("</ArrayOfProperty></Customization></Field>");
+        } else {
+            xml.append("/>");
+        }
         ObjectNode body = GraphClient.object();
         // Options 8 keeps Name as the internal name.
         body.putObject("parameters").put("SchemaXml", xml.toString()).put("Options", 8);
         return body;
     }
 
+    private static void property(StringBuilder xml, String name, String value) {
+        xml.append("<Property><Name>").append(name).append("</Name>")
+                .append("<Value xmlns:q1=\"http://www.w3.org/2001/XMLSchema\" p4:type=\"q1:string\"")
+                .append(" xmlns:p4=\"http://www.w3.org/2001/XMLSchema-instance\">")
+                .append(escape(value)).append("</Value></Property>");
+    }
+
+    private static String escape(String value) {
+        return value.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                .replace("\"", "&quot;");
+    }
+
     private static void attribute(StringBuilder xml, String name, String value) {
         if (value.isEmpty()) {
             return;
         }
-        xml.append(' ').append(name).append("=\"").append(value.replace("&", "&amp;")
-                .replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;")).append('"');
+        xml.append(' ').append(name).append("=\"").append(escape(value)).append('"');
     }
 
     /**

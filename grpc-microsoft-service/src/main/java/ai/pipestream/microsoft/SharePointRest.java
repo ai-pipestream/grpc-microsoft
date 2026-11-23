@@ -142,6 +142,10 @@ final class SharePointRest {
         };
     }
 
+    /** The REST path that names the term store of the site's Enterprise Keywords column. */
+    static final String KEYWORDS_TERM_STORE =
+            "/web/fields/getbyinternalnameortitle('TaxKeyword')?$select=SspId";
+
     /**
      * The REST path of the columns of a list or of the site.
      *

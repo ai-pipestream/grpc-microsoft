@@ -58,6 +58,9 @@ message MicrosoftEntity {
     // `site_acl/list/{site id}/{list id}` or
     // `site_acl/list_item/{site id}/{list id}/{item id}`.
     SiteAcl site_acl = 18;
+    // Set when the wrapped entity is the site collection administrators of a
+    // site; `entity_id` is `site_admins/{site id}`.
+    SiteAdmins site_admins = 19;
   }
   // Extensible key-value metadata (extension-metadata map - see convention).
   map<string, string> metadata = 99;
