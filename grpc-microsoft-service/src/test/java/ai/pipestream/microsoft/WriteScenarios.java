@@ -131,9 +131,11 @@ final class WriteScenarios {
      * @param suffix end of the test folder and list names; also seeds the content
      * @param copyPollInterval time between copy progress checks; {@code null} for the default
      * @param blobs every content the scenarios produced, by sha256
+     * @param termSetId the term set that term columns draw from; empty when there is none
+     * @param termIds ids of the terms {@link #TERM_LABELS} of that set, in that order
      */
     record Backend(String siteId, String driveId, String suffix, Duration copyPollInterval,
-            Map<String, byte[]> blobs) {
+            Map<String, byte[]> blobs, String termSetId, List<String> termIds) {
     }
 
     /** How a scenario ended. */
@@ -781,15 +783,24 @@ final class WriteScenarios {
     /** Name of the term group the live tenant keeps for this test. */
     static final String TERM_GROUP = "pipestream-live-test";
 
-    /** The test tenant's term set "Departments" in that group, and two of its terms. */
-    private static final String TERM_SET = "a3d60745-8927-44b1-94ea-2421b4bcbac4";
-    private static final List<ai.pipestream.microsoft.v1.TermValue> TERMS = List.of(
-            ai.pipestream.microsoft.v1.TermValue.newBuilder().setLabel("Engineering")
-                    .setTermId("199d241d-d93f-4188-8169-2dc025e327f9").build(),
-            ai.pipestream.microsoft.v1.TermValue.newBuilder().setLabel("Research")
-                    .setTermId("8b1ff4b6-549e-4af1-aeb4-dea39fd59f8a").build());
+    /** Default labels of the two terms the test writes, in the order of {@link Backend#termIds}. */
+    static final List<String> TERM_LABELS = List.of("Engineering", "Research");
+
+    private List<ai.pipestream.microsoft.v1.TermValue> terms() {
+        if (backend.termSetId().isBlank() || backend.termIds().size() != TERM_LABELS.size()) {
+            throw new Skip("needs a term set and its " + TERM_LABELS.size() + " test terms");
+        }
+        List<ai.pipestream.microsoft.v1.TermValue> terms = new ArrayList<>();
+        for (int i = 0; i < TERM_LABELS.size(); i++) {
+            terms.add(ai.pipestream.microsoft.v1.TermValue.newBuilder()
+                    .setLabel(TERM_LABELS.get(i)).setTermId(backend.termIds().get(i)).build());
+        }
+        return terms;
+    }
 
     private String termStore() {
+        List<ai.pipestream.microsoft.v1.TermValue> terms = terms();
+        String termSet = backend.termSetId();
         ai.pipestream.microsoft.v1.TermStore store;
         try {
             store = stub().getTermStore(ai.pipestream.microsoft.v1.GetTermStoreRequest.newBuilder()
@@ -818,13 +829,13 @@ final class WriteScenarios {
         stub().listTermSets(ai.pipestream.microsoft.v1.ListTermSetsRequest.newBuilder()
                 .setSiteId(siteId).setGroupId(groupId).build())
                 .forEachRemaining(r -> sets.add(r.getSet()));
-        check(sets.stream().anyMatch(set -> set.getId().equals(TERM_SET)),
+        check(sets.stream().anyMatch(set -> set.getId().equals(termSet)),
                 "the test term group does not hold the test term set");
         List<ai.pipestream.microsoft.v1.Term> found = new ArrayList<>();
         stub().listTerms(ai.pipestream.microsoft.v1.ListTermsRequest.newBuilder()
-                .setSiteId(siteId).setSetId(TERM_SET).build())
+                .setSiteId(siteId).setSetId(termSet).build())
                 .forEachRemaining(r -> found.add(r.getTerm()));
-        for (ai.pipestream.microsoft.v1.TermValue wanted : TERMS) {
+        for (ai.pipestream.microsoft.v1.TermValue wanted : terms) {
             check(found.stream().anyMatch(term -> term.getId().equals(wanted.getTermId())
                     && term.getLabelsList().stream().anyMatch(label -> label.getIsDefault()
                             && label.getName().equals(wanted.getLabel()))),
@@ -836,13 +847,14 @@ final class WriteScenarios {
 
     private String updateTermFields() {
         need(itemId, "the list item");
-        ColumnSpec.Builder column = ColumnSpec.newBuilder().setTermSetId(TERM_SET);
+        List<ai.pipestream.microsoft.v1.TermValue> terms = terms();
+        ColumnSpec.Builder column = ColumnSpec.newBuilder().setTermSetId(backend.termSetId());
         List<String> problems = new ArrayList<>();
         Set<String> created = ensureMoreColumns(problems, List.of(
                 column.clone().setName("PsTerm").setType(ColumnType.COLUMN_TYPE_TERM).build(),
                 column.clone().setName("PsTerms").setType(ColumnType.COLUMN_TYPE_MULTITERM).build()));
-        ai.pipestream.microsoft.v1.TermValue first = TERMS.get(0);
-        ai.pipestream.microsoft.v1.TermValue second = TERMS.get(1);
+        ai.pipestream.microsoft.v1.TermValue first = terms.get(0);
+        ai.pipestream.microsoft.v1.TermValue second = terms.get(1);
         if (created.contains("PsTerm")) {
             writeAndRead(problems, FieldValue.newBuilder().setName("PsTerm").setTerm(first),
                     "PsTerm.TermGuid", List.of(first.getTermId()));

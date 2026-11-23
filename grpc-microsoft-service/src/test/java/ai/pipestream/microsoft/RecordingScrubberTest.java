@@ -236,4 +236,11 @@ class RecordingScrubberTest {
         assertThat(scrubber.text("someone.else@contoso.com")).isEqualTo("email-1@example.invalid");
         assertThat(RecordingScrubber.violations(RecordingScrubber.JOIN_PROOF)).isEmpty();
     }
+
+    @Test
+    void xmlSchemaNamespacesStay() {
+        String xml = "<Value xmlns:q1=\"http://www.w3.org/2001/XMLSchema\" p4:type=\"q1:string\">";
+
+        assertThat(scrubber.text(xml)).isEqualTo(xml);
+    }
 }

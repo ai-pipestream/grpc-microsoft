@@ -57,9 +57,11 @@ class MicrosoftWriteReplayTest {
                 : Recordings.JSON.createObjectNode();
         Map<String, byte[]> blobs = new ConcurrentHashMap<>();
         ReplayTransport transport = new ReplayTransport(blobs);
+        List<String> termIds = new ArrayList<>();
+        run.path("termIds").forEach(id -> termIds.add(id.asText()));
         WriteScenarios.Backend backend = new WriteScenarios.Backend(run.path("siteId").asText(),
                 run.path("driveId").asText(), run.path("suffix").asText(), Duration.ofMillis(1),
-                blobs);
+                blobs, run.path("termSetId").asText(), termIds);
         WriteScenarios scenarios = recorded ? start(run, transport, backend)
                 : new WriteScenarios(null, null, null, backend);
 

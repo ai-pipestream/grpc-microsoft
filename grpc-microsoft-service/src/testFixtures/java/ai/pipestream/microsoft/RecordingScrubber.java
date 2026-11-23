@@ -26,6 +26,8 @@ final class RecordingScrubber {
     static final String URL_PREFIX = "https://redacted.example/url/";
     /** A reserved documentation origin; URLs on it are kept. */
     static final String DOCUMENTATION_ORIGIN = "https://example.com";
+    /** Origin of the XML schema namespaces, which name a standard and no tenant. */
+    static final String XML_SCHEMA_ORIGIN = "http://www.w3.org";
     /** A percent-encoded {@code @}. */
     static final String ENCODED_AT = "%40";
 
@@ -174,7 +176,10 @@ final class RecordingScrubber {
                 String value = guidless.substring(i, url);
                 String origin = origin(value);
                 int api = apiStart(value);
-                if (origin.equalsIgnoreCase(DOCUMENTATION_ORIGIN)) {
+                if (origin.equalsIgnoreCase(XML_SCHEMA_ORIGIN)) {
+                    out.append(value);
+                    i = url;
+                } else if (origin.equalsIgnoreCase(DOCUMENTATION_ORIGIN)) {
                     // A reserved documentation address, which the tests write themselves.
                     out.append(origin);
                     i += origin.length();
