@@ -928,7 +928,15 @@ public final class MicrosoftGrpcService
             return;
         }
         Status status;
-        if (cause instanceof GraphClient.GraphApiException e) {
+        if (cause instanceof SyncTableMicrosoftChangeSink.WriteFailedException e) {
+            // The ledger's own code is not passed through: its PERMISSION_DENIED
+            // or NOT_FOUND would read as Graph's answer to the caller.
+            status = (switch (e.ledgerStatus()) {
+                case UNAVAILABLE, DEADLINE_EXCEEDED, RESOURCE_EXHAUSTED, CANCELLED, ABORTED ->
+                        Status.UNAVAILABLE;
+                default -> Status.INTERNAL;
+            }).withDescription(e.getMessage());
+        } else if (cause instanceof GraphClient.GraphApiException e) {
             status = (switch (e.status()) {
                 case 400 -> Status.INVALID_ARGUMENT;
                 case 401 -> Status.UNAUTHENTICATED;
