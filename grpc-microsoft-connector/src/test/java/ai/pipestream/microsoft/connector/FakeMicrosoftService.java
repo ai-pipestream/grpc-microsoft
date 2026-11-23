@@ -15,6 +15,7 @@ import io.grpc.stub.StreamObserver;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /** In-process MicrosoftService for connector tests. */
@@ -29,8 +30,10 @@ final class FakeMicrosoftService extends MicrosoftServiceGrpc.MicrosoftServiceIm
     Status meError;
     final List<MicrosoftChange> changes = new ArrayList<>();
     Status syncError;
+    /** Terminal cursor of every Sync; {@code null} ends the stream without one. */
     String resumeCursor = "cursor-1";
     final AtomicInteger syncCalls = new AtomicInteger();
+    final List<SyncRequest> syncRequests = new CopyOnWriteArrayList<>();
 
     @Override
     public void getMe(GetMeRequest request, StreamObserver<GetMeResponse> observer) {
@@ -45,6 +48,7 @@ final class FakeMicrosoftService extends MicrosoftServiceGrpc.MicrosoftServiceIm
     @Override
     public void sync(SyncRequest request, StreamObserver<SyncResponse> observer) {
         syncCalls.incrementAndGet();
+        syncRequests.add(request);
         if (syncError != null) {
             observer.onError(syncError.asRuntimeException());
             return;
@@ -52,7 +56,9 @@ final class FakeMicrosoftService extends MicrosoftServiceGrpc.MicrosoftServiceIm
         for (MicrosoftChange change : changes) {
             observer.onNext(SyncResponse.newBuilder().setChange(change).build());
         }
-        observer.onNext(SyncResponse.newBuilder().setResumeCursor(resumeCursor).build());
+        if (resumeCursor != null) {
+            observer.onNext(SyncResponse.newBuilder().setResumeCursor(resumeCursor).build());
+        }
         observer.onCompleted();
     }
 
