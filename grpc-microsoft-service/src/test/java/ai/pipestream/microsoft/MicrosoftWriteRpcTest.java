@@ -752,6 +752,30 @@ class MicrosoftWriteRpcTest {
     }
 
     @Test
+    void aTermColumnsNoteColumnIsReadFromSharePointWhenGraphHidesIt() throws Exception {
+        fake.stub(LIST_ROUTE + "/items/7/fields", "{\"@odata.etag\":\"\\\"v2\\\"\"}");
+        fake.stub(LIST_ROUTE + "/columns", "{\"value\":["
+                + "{\"name\":\"Topic\",\"displayName\":\"Topic\"}]}");
+        fake.stub(LIST_ROUTE, "{\"id\":\"" + LIST_GUID + "\",\"sharepointIds\":{\"listId\":\""
+                + LIST_GUID + "\",\"siteUrl\":\"" + fake.baseUrl() + "/sites/Team\"}}");
+        String fields = "/sites/Team/_api/web/lists(guid'" + LIST_GUID + "')/fields";
+        fake.stub(fields + "/getbyinternalnameortitle('Topic')", "{\"TextField\":\"n-1\"}");
+        fake.stub(fields + "(guid'n-1')", "{\"InternalName\":\"Topic_0\"}");
+
+        stub.updateListItemFields(UpdateListItemFieldsRequest.newBuilder()
+                .setPatch(ListItemPatch.newBuilder()
+                        .setTarget(ListItemTarget.newBuilder().setListItem(
+                                ListItemRef.newBuilder().setSiteId(SITE).setListId("l1")
+                                        .setItemId("7")))
+                        .addFields(field("Topic").setTerm(TermValue.newBuilder()
+                                .setTermId("g1").setLabel("Cats"))))
+                .build());
+
+        assertThat(body(fake.only(LIST_ROUTE + "/items/7/fields")).path("Topic_0").asText())
+                .isEqualTo("-1;#Cats|g1");
+    }
+
+    @Test
     void ensureColumnsCreatesATermColumnThroughSharePoint() throws Exception {
         String listRoute = "/sites/" + SITE + "/lists/" + LIST_GUID;
         fake.stub("/sites/" + SITE, "{\"id\":\"s\",\"webUrl\":\"" + fake.baseUrl()

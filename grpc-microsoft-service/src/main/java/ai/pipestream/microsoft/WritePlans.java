@@ -402,12 +402,12 @@ final class WritePlans {
             @Override
             public String termNoteColumn(String termColumn)
                     throws IOException, InterruptedException {
-                return WritePlans.termNoteColumn(session, listRoute, termColumn);
+                return WritePlans.this.termNoteColumn(session, listRoute, termColumn);
             }
         };
     }
 
-    private static ListFieldWriter.Lookups lookups(MicrosoftSessions.Session session,
+    private ListFieldWriter.Lookups lookups(MicrosoftSessions.Session session,
             String listRoute, String siteId) {
         return new ListFieldWriter.Lookups() {
             @Override
@@ -418,7 +418,7 @@ final class WritePlans {
             @Override
             public String termNoteColumn(String termColumn)
                     throws IOException, InterruptedException {
-                return WritePlans.termNoteColumn(session, listRoute, termColumn);
+                return WritePlans.this.termNoteColumn(session, listRoute, termColumn);
             }
         };
     }
@@ -444,7 +444,7 @@ final class WritePlans {
         }
     }
 
-    private static String termNoteColumn(MicrosoftSessions.Session session, String listRoute,
+    private String termNoteColumn(MicrosoftSessions.Session session, String listRoute,
             String termColumn) throws IOException, InterruptedException {
         Map<String, String> displayNames = new java.util.HashMap<>();
         Map<String, String> namesByDisplayName = new java.util.HashMap<>();
@@ -460,12 +460,35 @@ final class WritePlans {
         String displayName = displayNames.get(termColumn);
         String note = displayName == null ? null : namesByDisplayName.get(displayName + "_0");
         if (note == null) {
+            note = termNoteColumnFromSharePoint(session, listRoute, termColumn);
+        }
+        if (note.isBlank()) {
             throw Status.FAILED_PRECONDITION
                     .withDescription("no hidden note column found for term column " + termColumn
                             + "; set term_note_column")
                     .asRuntimeException();
         }
         return note;
+    }
+
+    /** The note column SharePoint names for a term column; empty when it names none. */
+    private String termNoteColumnFromSharePoint(MicrosoftSessions.Session session,
+            String listRoute, String termColumn) throws IOException, InterruptedException {
+        JsonNode ids = session.graph().get(listRoute + "?$select=id,sharepointIds", Map.of())
+                .path("sharepointIds");
+        String webUrl = ids.path("siteUrl").asText("");
+        if (webUrl.isBlank()) {
+            return "";
+        }
+        SharePointRest.Web web = sharePoint.get().webAt(session, webUrl);
+        String fields = SharePointRest.fields(ids.path("listId").asText(""));
+        String noteId = web.get(fields + "/getbyinternalnameortitle('"
+                + GraphPaths.query(termColumn.replace("'", "''")) + "')").path("TextField").asText("");
+        if (noteId.isBlank()) {
+            return "";
+        }
+        return web.get(fields + "(guid'" + GraphPaths.segment(noteId, "note column id")
+                + "')?$select=InternalName").path("InternalName").asText("");
     }
 
     private static <T extends com.google.protobuf.Message> T valid(T message) {
