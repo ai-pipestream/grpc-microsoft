@@ -1,7 +1,7 @@
 {
   "request" : {
     "method" : "POST",
-    "url" : "https://redacted.example/url/3/_api/web/lists(guid'00000000-0000-4000-8000-000000000107')/fields/CreateFieldAsXml",
+    "url" : "https://redacted.example/url/3/_api/web/lists(guid'00000000-0000-4000-8000-000000000116')/fields/CreateFieldAsXml",
     "authorized" : true,
     "headers" : {
       "content-type" : "application/json"
@@ -40,7 +40,7 @@
         "FromBaseType" : false,
         "Group" : "Custom Columns",
         "Hidden" : false,
-        "Id" : "00000000-0000-4000-8000-000000000122",
+        "Id" : "00000000-0000-4000-8000-000000000131",
         "Indexed" : false,
         "IndexStatus" : 0,
         "InternalName" : "PsLink",
@@ -49,8 +49,8 @@
         "PinnedToFiltersPane" : false,
         "ReadOnlyField" : false,
         "Required" : false,
-        "SchemaXml" : "<Field Type=\"URL\" Format=\"Hyperlink\" Name=\"PsLink\" StaticName=\"PsLink\" DisplayName=\"PsLink\" ID=\"{00000000-0000-4000-8000-000000000122}\" SourceID=\"{00000000-0000-4000-8000-000000000107}\" ColName=\"nvarchar18\" RowOrdinal=\"0\" ColName2=\"nvarchar19\" RowOrdinal2=\"0\" />",
-        "Scope" : "/sites/WelcomeToPipestream/pipestreamlivewrite20261122214814e3fbdc0blib",
+        "SchemaXml" : "<Field Type=\"URL\" Format=\"Hyperlink\" Name=\"PsLink\" StaticName=\"PsLink\" DisplayName=\"PsLink\" ID=\"{00000000-0000-4000-8000-000000000131}\" SourceID=\"{00000000-0000-4000-8000-000000000116}\" ColName=\"nvarchar18\" RowOrdinal=\"0\" ColName2=\"nvarchar19\" RowOrdinal2=\"0\" />",
+        "Scope" : "/sites/WelcomeToPipestream/pipestreamlivewrite20261123021645ade803e1lib",
         "Sealed" : false,
         "ShowInFiltersPane" : 0,
         "Sortable" : true,

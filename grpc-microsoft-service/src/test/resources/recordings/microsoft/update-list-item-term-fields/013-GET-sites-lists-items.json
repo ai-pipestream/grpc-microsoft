@@ -1,0 +1,105 @@
+{
+  "request" : {
+    "method" : "GET",
+    "url" : "https://graph.microsoft.com/v1.0/sites/tenant-1.example,00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000002/lists/00000000-0000-4000-8000-000000000019/items/1?$select=id,name,webUrl,description,eTag,createdDateTime,lastModifiedDateTime,createdBy,lastModifiedBy,contentType,sharepointIds,parentReference,deleted&$expand=fields",
+    "authorized" : true,
+    "headers" : { }
+  },
+  "response" : {
+    "status" : 200,
+    "headers" : {
+      "etag" : "\"00000000-0000-4000-8000-000000000049,12\"",
+      "content-type" : "application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8"
+    },
+    "body" : {
+      "json" : {
+        "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#sites('tenant-1.example%2C00000000-0000-4000-8000-000000000001%2C00000000-0000-4000-8000-000000000002')/lists('00000000-0000-4000-8000-000000000019')/items(id,name,webUrl,description,eTag,createdDateTime,lastModifiedDateTime,createdBy,lastModifiedBy,contentType,sharepointIds,parentReference,deleted,fields())/$entity",
+        "@odata.etag" : "\"00000000-0000-4000-8000-000000000049,12\"",
+        "createdDateTime" : "2026-11-23T02:17:05Z",
+        "eTag" : "\"00000000-0000-4000-8000-000000000049,12\"",
+        "id" : "1",
+        "lastModifiedDateTime" : "2026-11-23T02:17:32Z",
+        "webUrl" : "https://redacted.example/url/41",
+        "createdBy" : {
+          "user" : {
+            "displayName" : "Identity 2"
+          }
+        },
+        "lastModifiedBy" : {
+          "application" : {
+            "id" : "00000000-0000-4000-8000-000000000004",
+            "displayName" : "Identity 1"
+          },
+          "user" : {
+            "displayName" : "Identity 2"
+          }
+        },
+        "parentReference" : {
+          "id" : "00000000-0000-4000-8000-000000000050",
+          "siteId" : "tenant-1.example,00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000002"
+        },
+        "contentType" : {
+          "id" : "0x01002C2E0476DBBB4A459924CB8667FAFCEA",
+          "name" : "Item"
+        },
+        "sharepointIds" : {
+          "listId" : "00000000-0000-4000-8000-000000000019",
+          "listItemId" : "1",
+          "listItemUniqueId" : "00000000-0000-4000-8000-000000000049",
+          "siteId" : "00000000-0000-4000-8000-000000000001",
+          "siteUrl" : "https://redacted.example/url/3",
+          "tenantId" : "00000000-0000-4000-8000-000000000007",
+          "webId" : "00000000-0000-4000-8000-000000000002"
+        },
+        "fields@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#sites('tenant-1.example%2C00000000-0000-4000-8000-000000000001%2C00000000-0000-4000-8000-000000000002')/lists('00000000-0000-4000-8000-000000000019')/items('1')/fields/$entity",
+        "fields" : {
+          "@odata.etag" : "\"00000000-0000-4000-8000-000000000049,12\"",
+          "Title" : "live write",
+          "PsText" : "hello",
+          "PsNumber" : 4.5,
+          "PsFlag" : true,
+          "PsChoice" : "B",
+          "PsWhen" : "2024-01-15T12:00:00Z",
+          "PsMulti" : [ "A", "C" ],
+          "PsMoney" : 12.5,
+          "PsLink" : {
+            "Description" : "A page",
+            "Url" : "https://example.com/page"
+          },
+          "PsLookupLookupId" : "1",
+          "PsLookups" : [ {
+            "LookupId" : 1,
+            "LookupValue" : "Lookup value 1"
+          } ],
+          "PsOwnerLookupId" : "6",
+          "PsPersonLookupId" : "6",
+          "PsPeople" : [ {
+            "LookupId" : 6,
+            "LookupValue" : "Lookup value 2",
+            "Email" : "email-1@example.invalid"
+          } ],
+          "PsTerms" : [ ],
+          "id" : "1",
+          "ContentType" : "Item",
+          "Modified" : "2026-11-23T02:17:32Z",
+          "Created" : "2026-11-23T02:17:05Z",
+          "AuthorLookupId" : "1073741822",
+          "EditorLookupId" : "1073741822",
+          "_UIVersionString" : "12.0",
+          "Attachments" : false,
+          "Edit" : "",
+          "LinkTitleNoMenu" : "live write",
+          "LinkTitle" : "live write",
+          "ItemChildCount" : "0",
+          "FolderChildCount" : "0",
+          "_ComplianceFlags" : "",
+          "_ComplianceTag" : "",
+          "_ComplianceTagWrittenTime" : "",
+          "_ComplianceTagUserId" : "",
+          "AppAuthorLookupId" : "4",
+          "AppEditorLookupId" : "4"
+        }
+      }
+    }
+  }
+}
