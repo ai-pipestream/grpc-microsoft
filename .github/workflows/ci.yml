@@ -260,7 +260,7 @@ jobs:
           ./gradlew --no-daemon -PintegrationDir=../grpc-integration :grpc-microsoft-service:liveCoverageTest --rerun-tasks > "$RUNNER_TEMP/coverage.log" 2>&1 || status=$?
           report=grpc-microsoft-service/build/live-coverage.md
           if [ -f "$report" ]; then
-            grep -E '^- (Calls|Directory|Entra join):' "$report" || true
+            grep -E '^- (Calls|Directory|Entra join|Term store routes):' "$report" || true
             awk -F ' \\| ' '/^## RPCs/ { on = 1; next } /^## / { on = 0 } on && /^\| / { print $1 " | " $2 }' "$report"
           else
             echo "::error::no coverage report was written"

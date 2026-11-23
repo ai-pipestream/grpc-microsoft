@@ -167,6 +167,75 @@ class MicrosoftLiveCoverageIT {
     private final Map<String, String> discovered = new LinkedHashMap<>();
     private final List<String> deltaLines = new ArrayList<>();
     private String directoryLine = "";
+    private String termStoreLine = "";
+
+    /** Which term store routes answer the app; statuses and error codes only. */
+    private String termStoreRoutes(String siteId) {
+        StringBuilder line = new StringBuilder("- Term store routes:");
+        try {
+            GraphAuth auth = new GraphAuth(config.authConfig());
+            String graph = GraphLinks.stripTrailingSlashes(config.graphBaseUrl());
+            String graphRoot = graph.substring(0, graph.lastIndexOf('/'));
+            String graphToken = MicrosoftSessions.tokenSupplier(auth).get();
+            java.net.http.HttpClient http = java.net.http.HttpClient.newHttpClient();
+            String site = "/sites/" + GraphPaths.site(siteId);
+            String webUrl = new com.fasterxml.jackson.databind.ObjectMapper().readTree(
+                    fetch(http, graph + site + "?$select=webUrl", graphToken).body()).path("webUrl").asText("");
+            Map<String, String> graphRoutes = new java.util.LinkedHashMap<>();
+            graphRoutes.put("graph v1.0 site store", graph + site + "/termStore");
+            graphRoutes.put("graph v1.0 site groups", graph + site + "/termStore/groups");
+            graphRoutes.put("graph beta site groups", graphRoot + "/beta" + site + "/termStore/groups");
+            graphRoutes.put("graph beta tenant groups", graphRoot + "/beta/termStore/groups");
+            for (Map.Entry<String, String> route : graphRoutes.entrySet()) {
+                line.append(' ').append(route.getKey()).append(" = ")
+                        .append(outcome(fetch(http, route.getValue(), graphToken))).append(';');
+            }
+            if (!webUrl.isEmpty() && notBlank(config.clientCertificatePem())) {
+                URI web = URI.create(webUrl);
+                String host = web.getScheme() + "://" + web.getAuthority();
+                String spToken = MicrosoftSessions.tokenSupplier(auth, host + "/.default").get();
+                Map<String, String> spRoutes = new java.util.LinkedHashMap<>();
+                spRoutes.put("sharepoint web v2.1 store", webUrl + "/_api/v2.1/termStore");
+                spRoutes.put("sharepoint web v2.1 groups", webUrl + "/_api/v2.1/termStore/groups");
+                spRoutes.put("sharepoint root v2.1 groups", host + "/_api/v2.1/termStore/groups");
+                spRoutes.put("sharepoint web v2.1 site groups",
+                        webUrl + "/_api/v2.1" + site + "/termStore/groups");
+                spRoutes.put("sharepoint root v2.1 site groups",
+                        host + "/_api/v2.1" + site + "/termStore/groups");
+                spRoutes.put("sharepoint web v2.0 groups", webUrl + "/_api/v2.0/termStore/groups");
+                spRoutes.put("sharepoint hidden taxonomy list",
+                        webUrl + "/_api/web/lists/getbytitle('TaxonomyHiddenList')?$select=Id");
+                for (Map.Entry<String, String> route : spRoutes.entrySet()) {
+                    line.append(' ').append(route.getKey()).append(" = ")
+                            .append(outcome(fetch(http, route.getValue(), spToken))).append(';');
+                }
+            }
+        } catch (IOException | RuntimeException e) {
+            line.append(" probe failed: ").append(e.getClass().getSimpleName());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+        return line.toString();
+    }
+
+    private static java.net.http.HttpResponse<String> fetch(java.net.http.HttpClient http, String url,
+            String token) throws IOException, InterruptedException {
+        return http.send(java.net.http.HttpRequest.newBuilder(URI.create(url))
+                .header("authorization", "Bearer " + token).header("accept", "application/json")
+                .GET().build(), java.net.http.HttpResponse.BodyHandlers.ofString());
+    }
+
+    private static String outcome(java.net.http.HttpResponse<String> response) {
+        String code = "";
+        try {
+            code = new com.fasterxml.jackson.databind.ObjectMapper().readTree(response.body())
+                    .path("error").path("code").asText("");
+        } catch (IOException e) {
+            code = "";
+        }
+        return response.statusCode() + (code.isEmpty() ? "" : " " + code);
+    }
+
     private final List<String> syncLines = new ArrayList<>();
     /** Credential values to scrub: the client secret and every access / refresh token issued. */
     private final Set<String> secrets = ConcurrentHashMap.newKeySet();
@@ -508,6 +577,7 @@ class MicrosoftLiveCoverageIT {
                 r -> "unique " + r.getHasUniqueRoleAssignments());
 
         // --------------------------------------------------- term store --
+        termStoreLine = termStoreRoutes(chosenSite);
         unary("GetTermStore", "GetTermStore",
                 s -> s.getTermStore(ai.pipestream.microsoft.v1.GetTermStoreRequest.newBuilder()
                         .setSiteId(chosenSite).build()),
@@ -1332,6 +1402,9 @@ class MicrosoftLiveCoverageIT {
         long failures = rows.stream().filter(Row::failure).count();
         Map<String, Integer> outcomes = new TreeMap<>();
         rows.forEach(row -> outcomes.merge(row.outcome(), 1, Integer::sum));
+        if (!termStoreLine.isEmpty()) {
+            md.append(termStoreLine).append('\n');
+        }
         if (!directoryLine.isEmpty()) {
             md.append(directoryLine).append('\n');
         }
