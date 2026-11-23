@@ -134,10 +134,10 @@ class MicrosoftLiveCoverageIT {
             Map.entry("DeltaListItems", "GET /sites/{site-id}/lists/{list-id}/items/delta"),
             Map.entry("ListColumns", "GET /sites/{site-id}[/lists/{id}|/contentTypes/{id}]/columns"),
             Map.entry("ListPermissions", "GET .../permissions"),
-            Map.entry("GetTermStore", "GET {web}/_api/v2.1/termStore"),
-            Map.entry("ListTermGroups", "GET {web}/_api/v2.1/termStore/groups"),
-            Map.entry("ListTermSets", "GET {web}/_api/v2.1/termStore/groups/{id}/sets"),
-            Map.entry("ListTerms", "GET {web}/_api/v2.1/termStore/sets/{id}/children"),
+            Map.entry("GetTermStore", "GET /sites/{site-id}/termStore"),
+            Map.entry("ListTermGroups", "GET /sites/{site-id}/termStore/groups"),
+            Map.entry("ListTermSets", "GET /sites/{site-id}/termStore/groups/{id}/sets"),
+            Map.entry("ListTerms", "GET /sites/{site-id}/termStore/sets/{id}/children"),
             Map.entry("ListSiteGroups", "GET {web}/_api/web/sitegroups"),
             Map.entry("ListSiteGroupMembers", "GET {web}/_api/web/sitegroups/getbyid({id})/users"),
             Map.entry("ListSiteRoleAssignments", "GET {web}/_api/{securable}/roleassignments"),
@@ -182,34 +182,31 @@ class MicrosoftLiveCoverageIT {
             String webUrl = new com.fasterxml.jackson.databind.ObjectMapper().readTree(
                     fetch(http, graph + site + "?$select=webUrl", graphToken).body()).path("webUrl").asText("");
             Map<String, String> graphRoutes = new java.util.LinkedHashMap<>();
-            graphRoutes.put("graph v1.0 site store", graph + site + "/termStore");
-            graphRoutes.put("graph v1.0 site groups", graph + site + "/termStore/groups");
-            graphRoutes.put("graph beta site groups", graphRoot + "/beta" + site + "/termStore/groups");
-            graphRoutes.put("graph beta tenant groups", graphRoot + "/beta/termStore/groups");
+            graphRoutes.put("site store", graph + site + "/termStore");
+            graphRoutes.put("site store, id only", graph + site + "/termStore?$select=id");
+            graphRoutes.put("site stores", graph + site + "/termStores");
+            graphRoutes.put("tenant store", graph + "/termStore");
+            graphRoutes.put("site store, beta", graphRoot + "/beta" + site + "/termStore");
+            graphRoutes.put("site groups", graph + site + "/termStore/groups");
             for (Map.Entry<String, String> route : graphRoutes.entrySet()) {
                 line.append(' ').append(route.getKey()).append(" = ")
                         .append(outcome(fetch(http, route.getValue(), graphToken))).append(';');
             }
-            if (!webUrl.isEmpty() && notBlank(config.clientCertificatePem())) {
-                URI web = URI.create(webUrl);
-                String host = web.getScheme() + "://" + web.getAuthority();
-                String spToken = MicrosoftSessions.tokenSupplier(auth, host + "/.default").get();
-                Map<String, String> spRoutes = new java.util.LinkedHashMap<>();
-                spRoutes.put("sharepoint web v2.1 store", webUrl + "/_api/v2.1/termStore");
-                spRoutes.put("sharepoint web v2.1 groups", webUrl + "/_api/v2.1/termStore/groups");
-                spRoutes.put("sharepoint root v2.1 groups", host + "/_api/v2.1/termStore/groups");
-                spRoutes.put("sharepoint web v2.1 site groups",
-                        webUrl + "/_api/v2.1" + site + "/termStore/groups");
-                spRoutes.put("sharepoint root v2.1 site groups",
-                        host + "/_api/v2.1" + site + "/termStore/groups");
-                spRoutes.put("sharepoint web v2.0 groups", webUrl + "/_api/v2.0/termStore/groups");
-                spRoutes.put("sharepoint hidden taxonomy list",
-                        webUrl + "/_api/web/lists/getbytitle('TaxonomyHiddenList')?$select=Id");
-                for (Map.Entry<String, String> route : spRoutes.entrySet()) {
-                    line.append(' ').append(route.getKey()).append(" = ")
-                            .append(outcome(fetch(http, route.getValue(), spToken))).append(';');
+            com.fasterxml.jackson.databind.JsonNode groups = new com.fasterxml.jackson.databind.ObjectMapper()
+                    .readTree(fetch(http, graph + site + "/termStore/groups", graphToken).body()).path("value");
+            int named = 0;
+            Map<String, Integer> scopes = new java.util.TreeMap<>();
+            for (com.fasterxml.jackson.databind.JsonNode group : groups) {
+                scopes.merge(group.path("scope").asText("?"), 1, Integer::sum);
+                if (group.path("displayName").asText("").equals(WriteScenarios.TERM_GROUP)) {
+                    named++;
+                    line.append(" test group sets = ").append(outcome(fetch(http, graph + site
+                            + "/termStore/groups/" + group.path("id").asText("") + "/sets", graphToken)))
+                            .append(';');
                 }
             }
+            line.append(' ').append(groups.size()).append(" group(s), scopes ").append(scopes)
+                    .append(", named like the test group ").append(named).append(';');
         } catch (IOException | RuntimeException e) {
             line.append(" probe failed: ").append(e.getClass().getSimpleName());
         } catch (InterruptedException e) {

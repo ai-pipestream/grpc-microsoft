@@ -34,7 +34,7 @@ import org.junit.jupiter.api.Test;
 
 class TermStoreRpcTest {
 
-    private static final String STORE = "/sites/Team/_api/v2.1/termStore";
+    private static final String STORE = "/sites/s1/termStore";
 
     private FakeGraphServer fake;
     private Server server;
@@ -50,12 +50,10 @@ class TermStoreRpcTest {
                 .graphBaseUrl(fake.baseUrl()).authority(fake.baseUrl()).build();
         MicrosoftGrpcService service = new MicrosoftGrpcService(config,
                 new GraphFiles(new GraphClient(fake.baseUrl(), () -> "graph-token")), 0);
-        service.sharePointTokens((session, resource) -> () -> "sharepoint-token");
         String name = InProcessServerBuilder.generateName();
         server = InProcessServerBuilder.forName(name).executor(executor).addService(service).build().start();
         channel = InProcessChannelBuilder.forName(name).build();
         stub = MicrosoftServiceGrpc.newBlockingStub(channel);
-        fake.stub("/sites/s1", "{\"id\":\"s1\",\"webUrl\":\"" + fake.baseUrl() + "/sites/Team\"}");
     }
 
     @AfterEach
@@ -77,7 +75,7 @@ class TermStoreRpcTest {
     }
 
     @Test
-    void theStoreIsReadFromTheSitesOwnApi() {
+    void theStoreIsReadFromTheSite() {
         fake.stub(STORE, """
                 {"id":"store-1","defaultLanguageTag":"en-US","languageTags":["en-US","de-DE"]}""");
 
@@ -86,7 +84,7 @@ class TermStoreRpcTest {
 
         assertThat(store).isEqualTo(TermStore.newBuilder().setId("store-1")
                 .setDefaultLanguageTag("en-US").addLanguageTags("en-US").addLanguageTags("de-DE").build());
-        assertThat(fake.only(STORE).authorization()).isEqualTo("Bearer sharepoint-token");
+        assertThat(fake.only(STORE).authorization()).isEqualTo("Bearer graph-token");
     }
 
     @Test

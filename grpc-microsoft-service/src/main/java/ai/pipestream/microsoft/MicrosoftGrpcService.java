@@ -872,14 +872,17 @@ public final class MicrosoftGrpcService
         this.sharePoint = new SharePointRest(tokens);
     }
 
+    private static String termStore(String siteId) {
+        return "/sites/" + GraphPaths.site(siteId) + "/termStore";
+    }
+
     @Override
     public void getTermStore(ai.pipestream.microsoft.v1.GetTermStoreRequest request,
             StreamObserver<ai.pipestream.microsoft.v1.GetTermStoreResponse> observer) {
         unary(observer, () -> {
             MicrosoftSessions.Session session = sessions.resolve(request.getConnectionId());
             return ai.pipestream.microsoft.v1.GetTermStoreResponse.newBuilder()
-                    .setStore(TermStoreMapper.toStore(sharePoint.web(session, request.getSiteId())
-                            .getV2(SharePointRest.TERM_STORE)))
+                    .setStore(TermStoreMapper.toStore(session.graph().get(termStore(request.getSiteId()))))
                     .build();
         });
     }
@@ -889,12 +892,11 @@ public final class MicrosoftGrpcService
             StreamObserver<ai.pipestream.microsoft.v1.ListTermGroupsResponse> observer) {
         stream(observer, () -> {
             MicrosoftSessions.Session session = sessions.resolve(request.getConnectionId());
-            sharePoint.web(session, request.getSiteId()).forEachV2(SharePointRest.TERM_STORE + "/groups",
-                    node -> {
-                        observer.onNext(ai.pipestream.microsoft.v1.ListTermGroupsResponse.newBuilder()
-                                .setGroup(TermStoreMapper.toGroup(node)).build());
-                        return true;
-                    });
+            session.pager().forEach(List.of(termStore(request.getSiteId()) + "/groups"), Map.of(), node -> {
+                observer.onNext(ai.pipestream.microsoft.v1.ListTermGroupsResponse.newBuilder()
+                        .setGroup(TermStoreMapper.toGroup(node)).build());
+                return true;
+            });
         });
     }
 
@@ -903,9 +905,9 @@ public final class MicrosoftGrpcService
             StreamObserver<ai.pipestream.microsoft.v1.ListTermSetsResponse> observer) {
         stream(observer, () -> {
             MicrosoftSessions.Session session = sessions.resolve(request.getConnectionId());
-            String path = SharePointRest.TERM_STORE + "/groups/"
+            String path = termStore(request.getSiteId()) + "/groups/"
                     + GraphPaths.segment(request.getGroupId(), "group_id") + "/sets";
-            sharePoint.web(session, request.getSiteId()).forEachV2(path, node -> {
+            session.pager().forEach(List.of(path), Map.of(), node -> {
                 observer.onNext(ai.pipestream.microsoft.v1.ListTermSetsResponse.newBuilder()
                         .setSet(TermStoreMapper.toSet(node, request.getGroupId())).build());
                 return true;
@@ -918,12 +920,12 @@ public final class MicrosoftGrpcService
             StreamObserver<ai.pipestream.microsoft.v1.ListTermsResponse> observer) {
         stream(observer, () -> {
             MicrosoftSessions.Session session = sessions.resolve(request.getConnectionId());
-            String set = SharePointRest.TERM_STORE + "/sets/"
+            String set = termStore(request.getSiteId()) + "/sets/"
                     + GraphPaths.segment(request.getSetId(), "set_id");
             String path = request.getParentTermId().isBlank() ? set + "/children"
                     : set + "/terms/" + GraphPaths.segment(request.getParentTermId(), "parent_term_id")
                             + "/children";
-            sharePoint.web(session, request.getSiteId()).forEachV2(path, node -> {
+            session.pager().forEach(List.of(path), Map.of(), node -> {
                 observer.onNext(ai.pipestream.microsoft.v1.ListTermsResponse.newBuilder()
                         .setTerm(TermStoreMapper.toTerm(node, request.getSetId(),
                                 request.getParentTermId())).build());

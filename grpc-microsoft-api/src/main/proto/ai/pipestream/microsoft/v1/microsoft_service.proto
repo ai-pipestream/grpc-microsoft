@@ -176,22 +176,20 @@ service MicrosoftService {
 
   // --- Term store ---
 
-  // The term store of a site. Needs a certificate credential.
-  // SharePoint REST: GET {web}/_api/v2.1/termStore.
+  // The term store of a site. GET /sites/{site-id}/termStore.
   rpc GetTermStore(GetTermStoreRequest) returns (GetTermStoreResponse);
 
-  // The term groups of a site's term store, as a stream. Needs a certificate
-  // credential. SharePoint REST: GET {web}/_api/v2.1/termStore/groups.
+  // The term groups of a site's term store, as a stream.
+  // GET /sites/{site-id}/termStore/groups.
   rpc ListTermGroups(ListTermGroupsRequest) returns (stream ListTermGroupsResponse);
 
-  // The term sets of one term group, as a stream. Needs a certificate
-  // credential. SharePoint REST: GET {web}/_api/v2.1/termStore/groups/{id}/sets.
+  // The term sets of one term group, as a stream.
+  // GET /sites/{site-id}/termStore/groups/{group-id}/sets.
   rpc ListTermSets(ListTermSetsRequest) returns (stream ListTermSetsResponse);
 
   // The terms directly under a term set or under one of its terms, as a
-  // stream. Needs a certificate credential. SharePoint REST:
-  // GET {web}/_api/v2.1/termStore/sets/{id}/children and
-  // GET {web}/_api/v2.1/termStore/sets/{id}/terms/{id}/children.
+  // stream. GET /sites/{site-id}/termStore/sets/{set-id}/children and
+  // GET /sites/{site-id}/termStore/sets/{set-id}/terms/{term-id}/children.
   rpc ListTerms(ListTermsRequest) returns (stream ListTermsResponse);
 
   // --- SharePoint site security ---
