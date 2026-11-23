@@ -134,9 +134,10 @@ final class ColumnSpecs {
      *
      * @param spec the column
      * @param termStoreId the term store of a term column; unused for a hyperlink
+     * @param noteColumnId id of the hidden note column of a term column; unused for a hyperlink
      * @return the request JSON
      */
-    static ObjectNode toSharePoint(ColumnSpec spec, String termStoreId) {
+    static ObjectNode toSharePoint(ColumnSpec spec, String termStoreId, String noteColumnId) {
         boolean multi = spec.getType() == ColumnType.COLUMN_TYPE_MULTITERM;
         StringBuilder xml = new StringBuilder(!isTerm(spec)
                 ? "<Field Type=\"URL\" Format=\"Hyperlink\""
@@ -155,10 +156,34 @@ final class ColumnSpecs {
             xml.append("><Customization><ArrayOfProperty>");
             property(xml, "SspId", termStoreId);
             property(xml, "TermSetId", spec.getTermSetId());
+            property(xml, "TextField", "{" + noteColumnId + "}");
             xml.append("</ArrayOfProperty></Customization></Field>");
         } else {
             xml.append("/>");
         }
+        return createField(xml);
+    }
+
+    /**
+     * The SharePoint {@code CreateFieldAsXml} body for the hidden note column that holds
+     * a term column's values.
+     *
+     * @param spec the term column
+     * @return the request JSON
+     */
+    static ObjectNode toSharePointTermNote(ColumnSpec spec) {
+        StringBuilder xml = new StringBuilder("<Field Type=\"Note\" Hidden=\"TRUE\""
+                + " CanToggleHidden=\"TRUE\" ShowInViewForms=\"FALSE\"");
+        attribute(xml, "Name", spec.getName() + "_0");
+        attribute(xml, "StaticName", spec.getName() + "_0");
+        attribute(xml, "DisplayName",
+                (spec.getDisplayName().isBlank() ? spec.getName() : spec.getDisplayName()) + "_0");
+        attribute(xml, "Group", spec.getColumnGroup());
+        xml.append("/>");
+        return createField(xml);
+    }
+
+    private static ObjectNode createField(StringBuilder xml) {
         ObjectNode body = GraphClient.object();
         // Options 8 keeps Name as the internal name.
         body.putObject("parameters").put("SchemaXml", xml.toString()).put("Options", 8);

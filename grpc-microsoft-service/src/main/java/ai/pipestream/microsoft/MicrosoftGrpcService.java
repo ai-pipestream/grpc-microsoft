@@ -1292,16 +1292,21 @@ public final class MicrosoftGrpcService
     private JsonNode createThroughSharePoint(MicrosoftSessions.Session session, String siteId,
             String listId, String route, ColumnSpec spec) throws IOException, InterruptedException {
         SharePointRest.Web web = sharePoint.web(session, siteId);
+        String create = SharePointRest.fields(listId) + "/CreateFieldAsXml";
         String termStoreId = spec.getTermStoreId();
-        if (ColumnSpecs.isTerm(spec) && termStoreId.isBlank()) {
-            termStoreId = web.get(SharePointRest.KEYWORDS_TERM_STORE).path("SspId").asText("");
+        String noteColumnId = "";
+        if (ColumnSpecs.isTerm(spec)) {
+            if (termStoreId.isBlank()) {
+                termStoreId = web.get(SharePointRest.KEYWORDS_TERM_STORE).path("SspId").asText("");
+            }
             if (termStoreId.isBlank()) {
                 throw Status.FAILED_PRECONDITION.withDescription("the site names no term store for "
                         + "column " + spec.getName() + "; set term_store_id").asRuntimeException();
             }
+            noteColumnId = web.post(create, ColumnSpecs.toSharePointTermNote(spec))
+                    .path("Id").asText("");
         }
-        web.post(SharePointRest.fields(listId) + "/CreateFieldAsXml",
-                ColumnSpecs.toSharePoint(spec, termStoreId));
+        web.post(create, ColumnSpecs.toSharePoint(spec, termStoreId, noteColumnId));
         JsonNode[] created = new JsonNode[1];
         session.pager().forEach(List.of(route), Map.of(), node -> {
             if (node.path("name").asText("").equals(spec.getName())) {

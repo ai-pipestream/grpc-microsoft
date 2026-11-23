@@ -762,7 +762,7 @@ class MicrosoftWriteRpcTest {
         fake.stub("/sites/Team/_api/web/fields/getbyinternalnameortitle('TaxKeyword')",
                 "{\"SspId\":\"store-1\"}");
         String create = "/sites/Team/_api/web/lists(guid'" + LIST_GUID + "')/fields/CreateFieldAsXml";
-        fake.stub("POST", create, FakeGraphServer.Stub.json("{\"InternalName\":\"Topics\"}"));
+        fake.stub("POST", create, FakeGraphServer.Stub.json("{\"Id\":\"note-1\"}"));
 
         ColumnOutcome outcome = stub.ensureColumns(EnsureColumnsRequest.newBuilder()
                 .setScope(ColumnScope.newBuilder()
@@ -775,12 +775,18 @@ class MicrosoftWriteRpcTest {
         assertThat(outcome.getActual().getTerm().getAllowMultipleValues()).isTrue();
         String value = "<Value xmlns:q1=\"http://www.w3.org/2001/XMLSchema\" p4:type=\"q1:string\""
                 + " xmlns:p4=\"http://www.w3.org/2001/XMLSchema-instance\">";
-        assertThat(body(fake.only(create)).path("parameters").path("SchemaXml").asText()).isEqualTo(
+        List<FakeGraphServer.RecordedRequest> sent = fake.requestsTo(create);
+        assertThat(body(sent.get(0)).path("parameters").path("SchemaXml").asText()).isEqualTo(
+                "<Field Type=\"Note\" Hidden=\"TRUE\" CanToggleHidden=\"TRUE\""
+                        + " ShowInViewForms=\"FALSE\" Name=\"Topics_0\" StaticName=\"Topics_0\""
+                        + " DisplayName=\"Topics_0\"/>");
+        assertThat(body(sent.get(1)).path("parameters").path("SchemaXml").asText()).isEqualTo(
                 "<Field Type=\"TaxonomyFieldTypeMulti\" Mult=\"TRUE\" ShowField=\"Term1033\""
                         + " Name=\"Topics\" StaticName=\"Topics\" DisplayName=\"Topics\">"
                         + "<Customization><ArrayOfProperty>"
                         + "<Property><Name>SspId</Name>" + value + "store-1</Value></Property>"
                         + "<Property><Name>TermSetId</Name>" + value + "set-1</Value></Property>"
+                        + "<Property><Name>TextField</Name>" + value + "{note-1}</Value></Property>"
                         + "</ArrayOfProperty></Customization></Field>");
     }
 
