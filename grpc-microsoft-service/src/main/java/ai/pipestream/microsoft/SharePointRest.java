@@ -33,6 +33,11 @@ final class SharePointRest {
 
     private static final Map<String, String> ACCEPT = Map.of("accept", "application/json;odata=nometadata");
 
+    private static final Map<String, String> ACCEPT_JSON = Map.of("accept", "application/json");
+
+    /** Path of the site's term store, relative to {@code {web}/_api}. */
+    static final String TERM_STORE = "/v2.1/termStore";
+
     private final Tokens tokens;
     private final Map<String, Supplier<String>> cached = new ConcurrentHashMap<>();
 
@@ -67,6 +72,26 @@ final class SharePointRest {
         /** POST JSON and return the answer's body. */
         JsonNode post(String path, JsonNode body) throws IOException, InterruptedException {
             return client.execute(new GraphClient.Call("POST", path, ACCEPT, body)).body();
+        }
+
+        /** GET one object of the Graph-shaped API under {@code /v2.1}. */
+        JsonNode getV2(String path) throws IOException, InterruptedException {
+            return client.get(path, ACCEPT_JSON);
+        }
+
+        /** GET a collection of the Graph-shaped API under {@code /v2.1}, following {@code @odata.nextLink}. */
+        void forEachV2(String path, GraphPager.Visitor visitor) throws IOException, InterruptedException {
+            String next = path;
+            while (next != null) {
+                JsonNode page = client.get(next, ACCEPT_JSON);
+                for (JsonNode item : page.path("value")) {
+                    if (!visitor.visit(item)) {
+                        return;
+                    }
+                }
+                String link = page.path("@odata.nextLink").asText("");
+                next = link.isEmpty() ? null : link;
+            }
         }
 
         /** GET a collection, following {@code odata.nextLink}. */

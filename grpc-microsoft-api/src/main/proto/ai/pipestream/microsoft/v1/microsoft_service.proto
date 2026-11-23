@@ -10,6 +10,7 @@ import "ai/pipestream/microsoft/v1/list.proto";
 import "ai/pipestream/microsoft/v1/permission.proto";
 import "ai/pipestream/microsoft/v1/site.proto";
 import "ai/pipestream/microsoft/v1/site_security.proto";
+import "ai/pipestream/microsoft/v1/term_store.proto";
 import "ai/pipestream/microsoft/v1/write.proto";
 
 option java_multiple_files = true;
@@ -172,6 +173,26 @@ service MicrosoftService {
   // optionally the members added to or removed from them, since a delta
   // link. Application permission GroupMember.Read.All.
   rpc DeltaGroups(DeltaGroupsRequest) returns (stream DeltaGroupsResponse);
+
+  // --- Term store ---
+
+  // The term store of a site. Needs a certificate credential.
+  // SharePoint REST: GET {web}/_api/v2.1/termStore.
+  rpc GetTermStore(GetTermStoreRequest) returns (GetTermStoreResponse);
+
+  // The term groups of a site's term store, as a stream. Needs a certificate
+  // credential. SharePoint REST: GET {web}/_api/v2.1/termStore/groups.
+  rpc ListTermGroups(ListTermGroupsRequest) returns (stream ListTermGroupsResponse);
+
+  // The term sets of one term group, as a stream. Needs a certificate
+  // credential. SharePoint REST: GET {web}/_api/v2.1/termStore/groups/{id}/sets.
+  rpc ListTermSets(ListTermSetsRequest) returns (stream ListTermSetsResponse);
+
+  // The terms directly under a term set or under one of its terms, as a
+  // stream. Needs a certificate credential. SharePoint REST:
+  // GET {web}/_api/v2.1/termStore/sets/{id}/children and
+  // GET {web}/_api/v2.1/termStore/sets/{id}/terms/{id}/children.
+  rpc ListTerms(ListTermsRequest) returns (stream ListTermsResponse);
 
   // --- SharePoint site security ---
 
@@ -1169,4 +1190,75 @@ message GetSiteRoleInheritanceResponse {
   bool has_unique_role_assignments = 1;
   // Extensible key-value metadata (extension-metadata map - see convention).
   map<string, string> metadata = 99;
+}
+
+// Request for the term store of a site.
+message GetTermStoreRequest {
+  // Site id.
+  string site_id = 1;
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 2;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// The term store of a site.
+message GetTermStoreResponse {
+  // The term store.
+  TermStore store = 1;
+}
+
+// Request to list the term groups of a site's term store.
+message ListTermGroupsRequest {
+  // Site id.
+  string site_id = 1;
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 2;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// One term group.
+message ListTermGroupsResponse {
+  // The group.
+  TermGroup group = 1;
+}
+
+// Request to list the term sets of one term group.
+message ListTermSetsRequest {
+  // Site id.
+  string site_id = 1;
+  // Id of the term group.
+  string group_id = 2;
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 3;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// One term set.
+message ListTermSetsResponse {
+  // The term set.
+  TermSet set = 1;
+}
+
+// Request to list the terms directly under a term set or a term.
+message ListTermsRequest {
+  // Site id.
+  string site_id = 1;
+  // Id of the term set.
+  string set_id = 2;
+  // Id of the term whose children to list. Empty = the terms at the root of
+  // the set.
+  string parent_term_id = 3;
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 4;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// One term.
+message ListTermsResponse {
+  // The term.
+  Term term = 1;
 }

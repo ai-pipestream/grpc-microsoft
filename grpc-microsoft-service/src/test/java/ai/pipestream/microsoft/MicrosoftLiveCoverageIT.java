@@ -134,6 +134,10 @@ class MicrosoftLiveCoverageIT {
             Map.entry("DeltaListItems", "GET /sites/{site-id}/lists/{list-id}/items/delta"),
             Map.entry("ListColumns", "GET /sites/{site-id}[/lists/{id}|/contentTypes/{id}]/columns"),
             Map.entry("ListPermissions", "GET .../permissions"),
+            Map.entry("GetTermStore", "GET {web}/_api/v2.1/termStore"),
+            Map.entry("ListTermGroups", "GET {web}/_api/v2.1/termStore/groups"),
+            Map.entry("ListTermSets", "GET {web}/_api/v2.1/termStore/groups/{id}/sets"),
+            Map.entry("ListTerms", "GET {web}/_api/v2.1/termStore/sets/{id}/children"),
             Map.entry("ListSiteGroups", "GET {web}/_api/web/sitegroups"),
             Map.entry("ListSiteGroupMembers", "GET {web}/_api/web/sitegroups/getbyid({id})/users"),
             Map.entry("ListSiteRoleAssignments", "GET {web}/_api/{securable}/roleassignments"),
@@ -502,6 +506,40 @@ class MicrosoftLiveCoverageIT {
                 s -> s.getSiteRoleInheritance(GetSiteRoleInheritanceRequest.newBuilder()
                         .setSecurable(siteSecurable).build()),
                 r -> "unique " + r.getHasUniqueRoleAssignments());
+
+        // --------------------------------------------------- term store --
+        unary("GetTermStore", "GetTermStore",
+                s -> s.getTermStore(ai.pipestream.microsoft.v1.GetTermStoreRequest.newBuilder()
+                        .setSiteId(chosenSite).build()),
+                r -> r.getStore().getLanguageTagsCount() + " language(s)");
+        List<ai.pipestream.microsoft.v1.ListTermGroupsResponse> termGroups = stream("ListTermGroups",
+                "ListTermGroups", LIST_CAP,
+                s -> s.listTermGroups(ai.pipestream.microsoft.v1.ListTermGroupsRequest.newBuilder()
+                        .setSiteId(chosenSite).build()),
+                l -> l.size() + " group(s), scopes " + l.stream()
+                        .map(r -> r.getGroup().getScope().name()).distinct().sorted().toList());
+        String termGroup = termGroups == null ? "" : termGroups.stream()
+                .filter(r -> r.getGroup().getDisplayName().equals(WriteScenarios.TERM_GROUP))
+                .map(r -> r.getGroup().getId()).findFirst().orElse("");
+        if (termGroup.isEmpty()) {
+            skip("ListTermSets", "no test term group was listed");
+            skip("ListTerms", "no test term group was listed");
+        } else {
+            List<ai.pipestream.microsoft.v1.ListTermSetsResponse> termSets = stream("ListTermSets",
+                    "ListTermSets", LIST_CAP,
+                    s -> s.listTermSets(ai.pipestream.microsoft.v1.ListTermSetsRequest.newBuilder()
+                            .setSiteId(chosenSite).setGroupId(termGroup).build()),
+                    l -> l.size() + " set(s)");
+            if (termSets == null || termSets.isEmpty()) {
+                skip("ListTerms", "no term set was listed");
+            } else {
+                String termSet = termSets.get(0).getSet().getId();
+                stream("ListTerms", "ListTerms", LIST_CAP,
+                        s -> s.listTerms(ai.pipestream.microsoft.v1.ListTermsRequest.newBuilder()
+                                .setSiteId(chosenSite).setSetId(termSet).build()),
+                        l -> l.size() + " term(s)");
+            }
+        }
 
         // -------------------------------------------------------- sync --
         if (syncDrive != null) {
