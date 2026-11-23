@@ -94,7 +94,7 @@ public final class MicrosoftCrawler {
         public Options withSince(SyncCursor since) {
             return new Options(driveIds, siteIds, folderPath, includeContent, maxInlineBytes,
                     listColumns, permissions, retentionLabel, publication, includeLists,
-                    listItemDriveItem, listItemPermissions, preferences, includeSystem, since);
+                    listItemDriveItem, listItemPermissions, preferences, includeSystem, security, since);
         }
 
         /**

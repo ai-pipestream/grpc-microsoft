@@ -173,6 +173,19 @@ class MicrosoftCrawlerTest {
                 .isEqualTo("$select=id,parentReference");
     }
 
+    @Test
+    void withSinceKeepsEveryOtherOption() {
+        MicrosoftCrawler.Options security = new MicrosoftCrawler.Options(List.of("d"), List.of("s"),
+                "/f", true, 7, true, true, true, true, true, true, true,
+                DeltaPreferences.getDefaultInstance(), true, true, SyncCursor.getDefaultInstance());
+        SyncCursor since = SyncCursor.newBuilder().putDriveDeltaLinks("d", "link").build();
+
+        MicrosoftCrawler.Options resumed = security.withSince(since);
+
+        assertThat(resumed.since()).isEqualTo(since);
+        assertThat(resumed.withSince(security.since())).isEqualTo(security);
+    }
+
     private MicrosoftCrawler.Options options(SyncCursor since, DeltaPreferences prefs) {
         return new MicrosoftCrawler.Options(List.of(), List.of(), "", false, 0, true, false, false,
                 false, false, false, false, prefs, false, false, since);
