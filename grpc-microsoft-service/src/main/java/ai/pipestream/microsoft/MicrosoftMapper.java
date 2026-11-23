@@ -21,6 +21,11 @@ import ai.pipestream.microsoft.v1.FileHashes;
 import ai.pipestream.microsoft.v1.FileSystemInfo;
 import ai.pipestream.microsoft.v1.GeoCoordinates;
 import ai.pipestream.microsoft.v1.GeolocationColumn;
+import ai.pipestream.microsoft.v1.DirectoryMember;
+import ai.pipestream.microsoft.v1.DirectoryObject;
+import ai.pipestream.microsoft.v1.GraphGroup;
+import ai.pipestream.microsoft.v1.GroupChange;
+import ai.pipestream.microsoft.v1.GroupMemberChange;
 import ai.pipestream.microsoft.v1.GraphUser;
 import ai.pipestream.microsoft.v1.HyperlinkOrPictureColumn;
 import ai.pipestream.microsoft.v1.Identity;
@@ -116,7 +121,74 @@ public final class MicrosoftMapper {
         if (node.path("accountEnabled").isBoolean()) {
             b.setAccountEnabled(node.path("accountEnabled").booleanValue());
         }
+        node.path("proxyAddresses").forEach(address -> b.addProxyAddresses(address.asText()));
+        node.path("otherMails").forEach(address -> b.addOtherMails(address.asText()));
         return b.build();
+    }
+
+    /**
+     * Maps a Graph group JSON object to the domain proto.
+     *
+     * @param node the API object
+     * @return the proto; missing fields stay unset
+     */
+    public GraphGroup toGroup(JsonNode node) {
+        GraphGroup.Builder b = GraphGroup.newBuilder()
+                .setId(text(node, "id"))
+                .setDisplayName(text(node, "displayName"))
+                .setDescription(text(node, "description"))
+                .setMail(text(node, "mail"))
+                .setMailNickname(text(node, "mailNickname"))
+                .setVisibility(text(node, "visibility"))
+                .setSecurityIdentifier(text(node, "securityIdentifier"));
+        if (node.path("mailEnabled").isBoolean()) {
+            b.setMailEnabled(node.path("mailEnabled").booleanValue());
+        }
+        if (node.path("securityEnabled").isBoolean()) {
+            b.setSecurityEnabled(node.path("securityEnabled").booleanValue());
+        }
+        node.path("groupTypes").forEach(type -> b.addGroupTypes(type.asText()));
+        return b.build();
+    }
+
+    /**
+     * Maps one object of a group delta to a change: the group, whether it was
+     * removed, and its {@code members@delta} entries.
+     *
+     * @param node the API object
+     * @return the proto
+     */
+    public GroupChange toGroupChange(JsonNode node) {
+        GroupChange.Builder change = GroupChange.newBuilder().setGroup(toGroup(node))
+                .setRemoved(node.has("@removed"));
+        String prefix = "#microsoft.graph.";
+        for (JsonNode member : node.path("members@delta")) {
+            String type = text(member, "@odata.type");
+            change.addMemberChanges(GroupMemberChange.newBuilder()
+                    .setId(text(member, "id"))
+                    .setType(type.startsWith(prefix) ? type.substring(prefix.length()) : type)
+                    .setRemoved(member.has("@removed")));
+        }
+        return change.build();
+    }
+
+    /**
+     * Maps a Graph directory object to a member: a user, a group, or another object by its type.
+     *
+     * @param node the API object, with its {@code @odata.type}
+     * @return the proto
+     */
+    public DirectoryMember toMember(JsonNode node) {
+        String type = text(node, "@odata.type");
+        String prefix = "#microsoft.graph.";
+        String bare = type.startsWith(prefix) ? type.substring(prefix.length()) : type;
+        return switch (bare) {
+            case "user" -> DirectoryMember.newBuilder().setUser(toUser(node)).build();
+            case "group" -> DirectoryMember.newBuilder().setGroup(toGroup(node)).build();
+            default -> DirectoryMember.newBuilder().setOther(DirectoryObject.newBuilder()
+                    .setId(text(node, "id")).setType(bare)
+                    .setDisplayName(text(node, "displayName"))).build();
+        };
     }
 
     // ------------------------------------------------------------------ sites

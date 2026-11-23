@@ -1,0 +1,19 @@
+{
+  "request" : {
+    "method" : "GET",
+    "url" : "https://redacted.example/url/3/_api/web/sitegroups/getbyid(10)/users",
+    "authorized" : true,
+    "headers" : { }
+  },
+  "response" : {
+    "status" : 200,
+    "headers" : {
+      "content-type" : "application/json;odata=nometadata;streaming=true;charset=utf-8"
+    },
+    "body" : {
+      "json" : {
+        "value" : [ ]
+      }
+    }
+  }
+}

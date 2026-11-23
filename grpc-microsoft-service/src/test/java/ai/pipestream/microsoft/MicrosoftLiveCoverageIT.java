@@ -99,7 +99,11 @@ class MicrosoftLiveCoverageIT {
     /** Calls that need more than Sites.Read.All + Files.Read.All upstream. */
     private static final Map<String, String> LABEL_NOTES = Map.of(
             "ListPermissions [site]", "needs Sites.FullControl.All",
-            "ListPermissions [list item]", "may need Sites.FullControl.All");
+            "ListPermissions [list item]", "may need Sites.FullControl.All",
+            "ListUsers", "needs User.Read.All",
+            "ListGroups", "needs GroupMember.Read.All",
+            "ListGroupTransitiveMembers", "needs GroupMember.Read.All",
+            "ListUserTransitiveMemberOf", "needs User.Read.All and GroupMember.Read.All");
 
     /** Office Open XML / legacy Office extensions: SharePoint rewrites their properties on download. */
     private static final Set<String> OFFICE_EXTENSIONS = Set.of(
@@ -130,6 +134,21 @@ class MicrosoftLiveCoverageIT {
             Map.entry("DeltaListItems", "GET /sites/{site-id}/lists/{list-id}/items/delta"),
             Map.entry("ListColumns", "GET /sites/{site-id}[/lists/{id}|/contentTypes/{id}]/columns"),
             Map.entry("ListPermissions", "GET .../permissions"),
+            Map.entry("GetTermStore", "GET /sites/{site-id}/termStore"),
+            Map.entry("ListTermGroups", "GET /sites/{site-id}/termStore/groups"),
+            Map.entry("ListTermSets", "GET /sites/{site-id}/termStore/groups/{id}/sets"),
+            Map.entry("ListTerms", "GET /sites/{site-id}/termStore/sets/{id}/children"),
+            Map.entry("ListSiteGroups", "GET {web}/_api/web/sitegroups"),
+            Map.entry("ListSiteGroupMembers", "GET {web}/_api/web/sitegroups/getbyid({id})/users"),
+            Map.entry("ListSiteRoleAssignments", "GET {web}/_api/{securable}/roleassignments"),
+            Map.entry("GetSiteRoleInheritance", "GET {web}/_api/{securable}?$select=HasUniqueRoleAssignments"),
+            Map.entry("SetSiteRoleInheritance", "POST {web}/_api/{securable}/breakroleinheritance"),
+            Map.entry("ListUsers", "GET /users"),
+            Map.entry("ListGroups", "GET /groups"),
+            Map.entry("DeltaGroups", "GET /groups/delta"),
+            Map.entry("ListGroupTransitiveMembers", "GET /groups/{group-id}/transitiveMembers"),
+            Map.entry("ListGroupOwners", "GET /groups/{group-id}/owners"),
+            Map.entry("ListUserTransitiveMemberOf", "GET /users/{user-id}/transitiveMemberOf"),
             Map.entry("Sync", "delta crawl of one drive"));
 
     private record Row(String rpc, String label, String outcome, String detail, boolean failure) {
@@ -148,6 +167,73 @@ class MicrosoftLiveCoverageIT {
     private final List<Row> rows = new ArrayList<>();
     private final Map<String, String> discovered = new LinkedHashMap<>();
     private final List<String> deltaLines = new ArrayList<>();
+    private String directoryLine = "";
+    private String termStoreLine = "";
+
+    /** Which term store routes answer the app; statuses and error codes only. */
+    private String termStoreRoutes(String siteId) {
+        StringBuilder line = new StringBuilder("- Term store routes:");
+        try {
+            GraphAuth auth = new GraphAuth(config.authConfig());
+            String graph = GraphLinks.stripTrailingSlashes(config.graphBaseUrl());
+            String graphRoot = graph.substring(0, graph.lastIndexOf('/'));
+            String graphToken = MicrosoftSessions.tokenSupplier(auth).get();
+            java.net.http.HttpClient http = java.net.http.HttpClient.newHttpClient();
+            String site = "/sites/" + GraphPaths.site(siteId);
+            String webUrl = new com.fasterxml.jackson.databind.ObjectMapper().readTree(
+                    fetch(http, graph + site + "?$select=webUrl", graphToken).body()).path("webUrl").asText("");
+            Map<String, String> graphRoutes = new java.util.LinkedHashMap<>();
+            graphRoutes.put("site store", graph + site + "/termStore");
+            graphRoutes.put("site store, id only", graph + site + "/termStore?$select=id");
+            graphRoutes.put("site stores", graph + site + "/termStores");
+            graphRoutes.put("tenant store", graph + "/termStore");
+            graphRoutes.put("site store, beta", graphRoot + "/beta" + site + "/termStore");
+            graphRoutes.put("site groups", graph + site + "/termStore/groups");
+            for (Map.Entry<String, String> route : graphRoutes.entrySet()) {
+                line.append(' ').append(route.getKey()).append(" = ")
+                        .append(outcome(fetch(http, route.getValue(), graphToken))).append(';');
+            }
+            com.fasterxml.jackson.databind.JsonNode groups = new com.fasterxml.jackson.databind.ObjectMapper()
+                    .readTree(fetch(http, graph + site + "/termStore/groups", graphToken).body()).path("value");
+            int named = 0;
+            Map<String, Integer> scopes = new java.util.TreeMap<>();
+            for (com.fasterxml.jackson.databind.JsonNode group : groups) {
+                scopes.merge(group.path("scope").asText("?"), 1, Integer::sum);
+                if (group.path("displayName").asText("").equals(WriteScenarios.TERM_GROUP)) {
+                    named++;
+                    line.append(" test group sets = ").append(outcome(fetch(http, graph + site
+                            + "/termStore/groups/" + group.path("id").asText("") + "/sets", graphToken)))
+                            .append(';');
+                }
+            }
+            line.append(' ').append(groups.size()).append(" group(s), scopes ").append(scopes)
+                    .append(", named like the test group ").append(named).append(';');
+        } catch (IOException | RuntimeException e) {
+            line.append(" probe failed: ").append(e.getClass().getSimpleName());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+        return line.toString();
+    }
+
+    private static java.net.http.HttpResponse<String> fetch(java.net.http.HttpClient http, String url,
+            String token) throws IOException, InterruptedException {
+        return http.send(java.net.http.HttpRequest.newBuilder(URI.create(url))
+                .header("authorization", "Bearer " + token).header("accept", "application/json")
+                .GET().build(), java.net.http.HttpResponse.BodyHandlers.ofString());
+    }
+
+    private static String outcome(java.net.http.HttpResponse<String> response) {
+        String code = "";
+        try {
+            code = new com.fasterxml.jackson.databind.ObjectMapper().readTree(response.body())
+                    .path("error").path("code").asText("");
+        } catch (IOException e) {
+            code = "";
+        }
+        return response.statusCode() + (code.isEmpty() ? "" : " " + code);
+    }
+
     private final List<String> syncLines = new ArrayList<>();
     /** Credential values to scrub: the client secret and every access / refresh token issued. */
     private final Set<String> secrets = ConcurrentHashMap.newKeySet();
@@ -176,7 +262,9 @@ class MicrosoftLiveCoverageIT {
      */
     List<String> run(MicrosoftConnectorConfig config, Path out) throws Exception {
         this.config = config;
-        secrets.add(config.clientSecret());
+        if (notBlank(config.clientSecret())) {
+            secrets.add(config.clientSecret());
+        }
         GraphAuth auth = new GraphAuth(config.authConfig());
         AtomicReference<GraphAuth.Token> token = new AtomicReference<>(issue(auth));
         GraphClient client = new GraphClient(config.graphBaseUrl(), () -> {
@@ -207,6 +295,8 @@ class MicrosoftLiveCoverageIT {
         try {
             stub = MicrosoftServiceGrpc.newBlockingStub(channel);
             exercise();
+            WRITE_RPCS.forEach(rpc -> rows.add(new Row(rpc, rpc, "SKIPPED",
+                    "write rpc; not run against the live tenant", false)));
         } finally {
             channel.shutdownNow();
             server.shutdownNow();
@@ -261,6 +351,13 @@ class MicrosoftLiveCoverageIT {
                         .setClientId(config.clientId()).setClientSecret(config.clientSecret())
                         .setLimit(1).build()),
                 MicrosoftLiveCoverageIT::probeDetail);
+        if (notBlank(config.clientCertificatePem())) {
+            unary("ProbeConnection", "ProbeConnection [inline certificate, no secret]",
+                    s -> s.probeConnection(ProbeConnectionRequest.newBuilder().setTenantId(config.tenantId())
+                            .setClientId(config.clientId())
+                            .setClientCertificatePem(config.clientCertificatePem()).setLimit(1).build()),
+                    MicrosoftLiveCoverageIT::probeDetail);
+        }
         unary("GetMe", "GetMe [app-only token]",
                 s -> s.getMe(GetMeRequest.getDefaultInstance()),
                 r -> "user " + r.getUser().getId());
@@ -392,10 +489,167 @@ class MicrosoftLiveCoverageIT {
                         .setTarget(PermissionTarget.newBuilder().setSiteId(chosenSite)).build()),
                 l -> join(l, r -> r.getPermission().getId()));
 
+        // --------------------------------------------------- directory --
+        List<ListUsersResponse> users = stream("ListUsers", "ListUsers", LIST_CAP,
+                s -> s.listUsers(ListUsersRequest.getDefaultInstance()),
+                l -> l.size() + " user(s)");
+        if (users != null) {
+            directoryLine = "- Directory: " + users.size() + " user(s), "
+                    + users.stream().filter(r -> !r.getUser().getMail().isEmpty()).count()
+                    + " with mail; mail domains " + domainKinds(users, r -> r.getUser().getMail())
+                    + "; sign-in name domains " + domainKinds(users, r -> r.getUser().getUserPrincipalName());
+            String join = System.getenv("JOIN_PROOF_EMAIL");
+            if (notBlank(join)) {
+                // Says only whether the address is there, never the address.
+                String wanted = join.trim();
+                String domain = wanted.substring(wanted.indexOf('@') + 1);
+                long mail = users.stream().filter(r -> r.getUser().getMail().equalsIgnoreCase(wanted)).count();
+                long signIn = users.stream()
+                        .filter(r -> r.getUser().getUserPrincipalName().equalsIgnoreCase(wanted)).count();
+                long sameDomain = users.stream().filter(r -> endsWithDomain(r.getUser().getMail(), domain)
+                        || endsWithDomain(r.getUser().getUserPrincipalName(), domain)).count();
+                long alias = users.stream().filter(r -> r.getUser().getProxyAddressesList().stream()
+                        .anyMatch(address -> address.substring(address.indexOf(':') + 1)
+                                .equalsIgnoreCase(wanted))).count();
+                long other = users.stream().filter(r -> r.getUser().getOtherMailsList().stream()
+                        .anyMatch(address -> address.equalsIgnoreCase(wanted))).count();
+                long aliases = users.stream().mapToLong(r -> r.getUser().getProxyAddressesCount()).sum();
+                long others = users.stream().mapToLong(r -> r.getUser().getOtherMailsCount()).sum();
+                directoryLine += "\n- Entra join: " + (mail + signIn + alias + other > 0 ? "match" : "no match")
+                        + " (mail " + mail + ", sign-in name " + signIn + ", proxy address " + alias
+                        + " of " + aliases + ", other mail " + other + " of " + others
+                        + ", users on the same domain " + sameDomain + ")";
+            }
+        }
+        List<ListGroupsResponse> groups = stream("ListGroups", "ListGroups", LIST_CAP,
+                s -> s.listGroups(ListGroupsRequest.getDefaultInstance()),
+                l -> l.size() + " group(s)");
+        delta("DeltaGroups", "tenant", LIST_CAP,
+                link -> s -> s.deltaGroups(DeltaGroupsRequest.newBuilder().setDeltaLink(link)
+                        .setIncludeMembers(true).build()),
+                r -> r.getEventCase() == DeltaGroupsResponse.EventCase.DELTA_LINK ? r.getDeltaLink() : null,
+                r -> r.getEventCase() == DeltaGroupsResponse.EventCase.RESYNC);
+        if (groups == null || groups.isEmpty()) {
+            skip("ListGroupTransitiveMembers", "no group was listed");
+            skip("ListGroupOwners", "no group was listed");
+        } else {
+            String groupId = groups.get(0).getGroup().getId();
+            stream("ListGroupOwners", "ListGroupOwners", LIST_CAP,
+                    s -> s.listGroupOwners(ai.pipestream.microsoft.v1.ListGroupOwnersRequest.newBuilder()
+                            .setGroupId(groupId).build()),
+                    l -> l.size() + " owner(s)");
+            stream("ListGroupTransitiveMembers", "ListGroupTransitiveMembers", LIST_CAP,
+                    s -> s.listGroupTransitiveMembers(ListGroupTransitiveMembersRequest.newBuilder()
+                            .setGroupId(groupId).build()),
+                    l -> l.size() + " member(s)");
+        }
+        if (users == null || users.isEmpty()) {
+            skip("ListUserTransitiveMemberOf", "no user was listed");
+        } else {
+            String userId = users.get(0).getUser().getId();
+            stream("ListUserTransitiveMemberOf", "ListUserTransitiveMemberOf", LIST_CAP,
+                    s -> s.listUserTransitiveMemberOf(ListUserTransitiveMemberOfRequest.newBuilder()
+                            .setUserId(userId).build()),
+                    l -> l.size() + " membership(s)");
+        }
+
+        // ------------------------------------------------ site security --
+        List<ListSiteGroupsResponse> siteGroups = stream("ListSiteGroups", "ListSiteGroups", LIST_CAP,
+                s -> s.listSiteGroups(ListSiteGroupsRequest.newBuilder().setSiteId(chosenSite).build()),
+                l -> l.size() + " group(s)");
+        if (siteGroups == null || siteGroups.isEmpty()) {
+            skip("ListSiteGroupMembers", "no site group was listed");
+        } else {
+            int groupId = siteGroups.get(0).getGroup().getId();
+            stream("ListSiteGroupMembers", "ListSiteGroupMembers", LIST_CAP,
+                    s -> s.listSiteGroupMembers(ListSiteGroupMembersRequest.newBuilder()
+                            .setSiteId(chosenSite).setGroupId(groupId).build()),
+                    l -> l.size() + " member(s), kinds " + l.stream()
+                            .map(r -> r.getMember().getPrincipalType().name()).distinct().sorted().toList());
+        }
+        SiteSecurable siteSecurable = SiteSecurable.newBuilder().setSiteId(chosenSite).build();
+        stream("ListSiteRoleAssignments", "ListSiteRoleAssignments [site]", LIST_CAP,
+                s -> s.listSiteRoleAssignments(ListSiteRoleAssignmentsRequest.newBuilder()
+                        .setSecurable(siteSecurable).build()),
+                l -> l.size() + " assignment(s), levels " + l.stream()
+                        .flatMap(r -> r.getAssignment().getRolesList().stream())
+                        .map(role -> role.getName()).distinct().sorted().toList());
+        unary("GetSiteRoleInheritance", "GetSiteRoleInheritance [site]",
+                s -> s.getSiteRoleInheritance(GetSiteRoleInheritanceRequest.newBuilder()
+                        .setSecurable(siteSecurable).build()),
+                r -> "unique " + r.getHasUniqueRoleAssignments());
+
+        // --------------------------------------------------- term store --
+        termStoreLine = termStoreRoutes(chosenSite);
+        unary("GetTermStore", "GetTermStore",
+                s -> s.getTermStore(ai.pipestream.microsoft.v1.GetTermStoreRequest.newBuilder()
+                        .setSiteId(chosenSite).build()),
+                r -> r.getStore().getLanguageTagsCount() + " language(s)");
+        List<ai.pipestream.microsoft.v1.ListTermGroupsResponse> termGroups = stream("ListTermGroups",
+                "ListTermGroups", LIST_CAP,
+                s -> s.listTermGroups(ai.pipestream.microsoft.v1.ListTermGroupsRequest.newBuilder()
+                        .setSiteId(chosenSite).build()),
+                l -> l.size() + " group(s), scopes " + l.stream()
+                        .map(r -> r.getGroup().getScope().name()).distinct().sorted().toList());
+        String termGroup = termGroups == null ? "" : termGroups.stream()
+                .filter(r -> r.getGroup().getDisplayName().equals(WriteScenarios.TERM_GROUP))
+                .map(r -> r.getGroup().getId()).findFirst().orElse("");
+        if (termGroup.isEmpty()) {
+            skip("ListTermSets", "no test term group was listed");
+            skip("ListTerms", "no test term group was listed");
+        } else {
+            List<ai.pipestream.microsoft.v1.ListTermSetsResponse> termSets = stream("ListTermSets",
+                    "ListTermSets", LIST_CAP,
+                    s -> s.listTermSets(ai.pipestream.microsoft.v1.ListTermSetsRequest.newBuilder()
+                            .setSiteId(chosenSite).setGroupId(termGroup).build()),
+                    l -> l.size() + " set(s)");
+            if (termSets == null || termSets.isEmpty()) {
+                skip("ListTerms", "no term set was listed");
+            } else {
+                String termSet = termSets.get(0).getSet().getId();
+                stream("ListTerms", "ListTerms", LIST_CAP,
+                        s -> s.listTerms(ai.pipestream.microsoft.v1.ListTermsRequest.newBuilder()
+                                .setSiteId(chosenSite).setSetId(termSet).build()),
+                        l -> l.size() + " term(s)");
+            }
+        }
+
         // -------------------------------------------------------- sync --
         if (syncDrive != null) {
             sync(syncDrive);
         }
+    }
+
+    /** Consumer mail providers; any other domain is counted without being named. */
+    private static final Set<String> PUBLIC_MAIL = Set.of("gmail.com", "googlemail.com", "outlook.com",
+            "hotmail.com", "live.com", "yahoo.com", "icloud.com");
+
+    /** How many addresses sit on each kind of domain; no tenant domain is named. */
+    private static boolean endsWithDomain(String address, String domain) {
+        return address.toLowerCase(java.util.Locale.ROOT).endsWith("@" + domain.toLowerCase(java.util.Locale.ROOT));
+    }
+
+    private static Map<String, Integer> domainKinds(List<ListUsersResponse> users,
+            Function<ListUsersResponse, String> address) {
+        Map<String, Integer> kinds = new TreeMap<>();
+        Set<String> own = new java.util.TreeSet<>();
+        for (ListUsersResponse user : users) {
+            String value = address.apply(user);
+            int at = value.lastIndexOf('@');
+            if (at < 0) {
+                continue;
+            }
+            String domain = value.substring(at + 1).toLowerCase(java.util.Locale.ROOT);
+            String kind = PUBLIC_MAIL.contains(domain) ? domain
+                    : domain.endsWith(".onmicrosoft.com") ? "the tenant's onmicrosoft.com domain"
+                    : "a custom domain";
+            if (!PUBLIC_MAIL.contains(domain)) {
+                own.add(domain);
+            }
+            kinds.merge(kind, 1, Integer::sum);
+        }
+        kinds.put("distinct non-public domains", own.size());
+        return kinds;
     }
 
     private static String probeDetail(ProbeConnectionResponse r) {
@@ -728,6 +982,16 @@ class MicrosoftLiveCoverageIT {
                 s -> s.listPermissions(ListPermissionsRequest.newBuilder().setTarget(PermissionTarget.newBuilder()
                         .setList(ListRef.newBuilder().setSiteId(siteId).setListId(listId))).build()),
                 l -> join(l, r -> r.getPermission().getId()));
+        SiteSecurable listSecurable = SiteSecurable.newBuilder()
+                .setList(ListRef.newBuilder().setSiteId(siteId).setListId(listId)).build();
+        stream("ListSiteRoleAssignments", "ListSiteRoleAssignments [list]", LIST_CAP,
+                s -> s.listSiteRoleAssignments(ListSiteRoleAssignmentsRequest.newBuilder()
+                        .setSecurable(listSecurable).build()),
+                l -> l.size() + " assignment(s)");
+        unary("GetSiteRoleInheritance", "GetSiteRoleInheritance [list]",
+                s -> s.getSiteRoleInheritance(GetSiteRoleInheritanceRequest.newBuilder()
+                        .setSecurable(listSecurable).build()),
+                r -> "unique " + r.getHasUniqueRoleAssignments());
         if (item == null) {
             skip("GetListItem", "no item in the first " + Math.min(ordered.size(), LIST_ITEM_PROBES) + " list(s)");
             skip("ListPermissions", "ListPermissions [list item]", "no list item found");
@@ -1089,6 +1353,13 @@ class MicrosoftLiveCoverageIT {
         return digits == 3 ? value : 0;
     }
 
+    /** Write rpcs, which this read-only run does not call. */
+    private static final List<String> WRITE_RPCS = List.of(
+            "UploadItem", "CreateFolder", "UpdateDriveItem", "DeleteDriveItem",
+            "RestoreDriveItemVersion", "CopyDriveItem", "CreateListItem",
+            "UpdateListItemFields", "DeleteListItem", "EnsureColumns", "EnsureList", "Mutate",
+            "SetSiteRoleInheritance");
+
     private void skip(String rpc, String reason) {
         skip(rpc, rpc, reason);
     }
@@ -1134,6 +1405,12 @@ class MicrosoftLiveCoverageIT {
         long failures = rows.stream().filter(Row::failure).count();
         Map<String, Integer> outcomes = new TreeMap<>();
         rows.forEach(row -> outcomes.merge(row.outcome(), 1, Integer::sum));
+        if (!termStoreLine.isEmpty()) {
+            md.append(termStoreLine).append('\n');
+        }
+        if (!directoryLine.isEmpty()) {
+            md.append(directoryLine).append('\n');
+        }
         md.append("- Calls: ").append(rows.size()).append(", outcomes ").append(outcomes)
                 .append(", failures ").append(failures).append("\n\n");
 

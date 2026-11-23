@@ -1,0 +1,48 @@
+{
+  "request" : {
+    "method" : "POST",
+    "url" : "https://graph.microsoft.com/v1.0/sites/tenant-1.example,00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000002/lists/00000000-0000-4000-8000-000000000022/columns",
+    "authorized" : true,
+    "headers" : {
+      "content-type" : "application/json"
+    },
+    "body" : {
+      "json" : {
+        "name" : "PsMulti",
+        "displayName" : "PsMulti",
+        "choice" : {
+          "allowTextEntry" : false,
+          "displayAs" : "checkBoxes",
+          "choices" : [ "A", "B", "C" ]
+        }
+      }
+    }
+  },
+  "response" : {
+    "status" : 201,
+    "headers" : {
+      "location" : "https://redacted.example/url/62",
+      "content-type" : "application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8"
+    },
+    "body" : {
+      "json" : {
+        "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#sites('tenant-1.example%2C00000000-0000-4000-8000-000000000001%2C00000000-0000-4000-8000-000000000002')/lists('00000000-0000-4000-8000-000000000022')/columns/$entity",
+        "columnGroup" : "Custom Columns",
+        "description" : "",
+        "displayName" : "PsMulti",
+        "enforceUniqueValues" : false,
+        "hidden" : false,
+        "id" : "00000000-0000-4000-8000-000000000083",
+        "indexed" : false,
+        "name" : "PsMulti",
+        "readOnly" : false,
+        "required" : false,
+        "choice" : {
+          "allowTextEntry" : false,
+          "choices" : [ "A", "B", "C" ],
+          "displayAs" : "checkBoxes"
+        }
+      }
+    }
+  }
+}

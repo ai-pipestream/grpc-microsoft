@@ -203,7 +203,8 @@ A = application (client credentials) token, D = delegated token.
 | Workbook, OneNote, termStore, sitePages, `site.items`, `externalColumns`, long-running `operations` | Out of the document-repository scope. |
 | `documentSetVersions`, `contentType.documentSet` / `documentTemplate` / `order`, `columnPositions`, `baseTypes` | Document-set and authoring metadata; not needed to index items. |
 | Sensitivity labels (`extractSensitivityLabels`, `assignSensitivityLabel`) | POST actions that run label extraction server-side per file (metered); the label is also exposed through list columns (`_ComplianceTag` / sensitivity columns). Candidate for a later additive rpc. |
-| Group membership expansion (`/groups/{id}/transitiveMembers`, `/users/{id}/transitiveMemberOf`) | Directory, not SharePoint. Needed by a trimming layer, but it belongs to the connector/identity design, not this vendor proxy. Note: SharePoint site-group membership is not available through Graph at all (SharePoint REST only). See open question 4. |
+| SharePoint site-group membership | On the surface through the SharePoint REST API of the site, which needs a certificate credential: `ListSiteGroups`, `ListSiteGroupMembers`, `ListSiteRoleAssignments` (site, list or list item, each with its principal and permission levels) and `GetSiteRoleInheritance`. Entra group expansion: `ListUsers`, `ListGroups`, `DeltaGroups` (group and membership changes since a delta link), `ListGroupTransitiveMembers`, `ListUserTransitiveMemberOf` (application `User.Read.All`, `GroupMember.Read.All`). A directory group among the members carries its Entra object id in `SitePrincipal.directory_object_id`. |
+| Per-site application grants (`POST` / `PATCH` / `DELETE /sites/{id}/permissions`) | Not on `MicrosoftService`. `MicrosoftAdminService` (module `grpc-microsoft-admin`) has `ListSiteAppGrants`, `EnsureSiteAppGrant` and `RevokeSiteAppGrant`; it runs with its own identity, the only one that holds `Sites.FullControl.All`. |
 | Write operations (upload, create link, invite, check-in/out, copy, move, delete, restore, `PATCH listItem/fields`) | Read proxy. `GraphFiles` has upload helpers for the OKF publisher, but they are not on the gRPC surface and this proposal does not add them. |
 | Deprecated `permission.grantedTo` / `grantedToIdentities` | Superseded by V2; the server maps old responses into the V2 fields. |
 | `@odata.nextLink`, `@odata.count`, `@odata.deltaLink` as message fields | Transport. Lists stream; the delta link is the typed terminal event of delta streams and the `MicrosoftSnapshot.cursor` of Sync. |
@@ -330,11 +331,10 @@ A = application (client credentials) token, D = delegated token.
    wire-identical and Java-identical but `buf breaking` (FILE) would flag it.
    OK to switch `buf.yaml` `breaking.use` to `WIRE_JSON`, or keep everything
    in `common.proto`?
-4. **Group expansion for trimming.** Should the Microsoft proxy expose
-   `/groups/{id}/transitiveMembers` and `/users/{id}/transitiveMemberOf`
-   (directory routes, app-only `GroupMember.Read.All`), or does ACL expansion
-   live with the connector / identity layer? SharePoint site-group membership
-   is not available through Graph in any case.
+4. **Group expansion for trimming.** Decided 2026-11-22: the proxy exposes
+   `/groups/{id}/transitiveMembers` and `/users/{id}/transitiveMemberOf`.
+   SharePoint site-group membership is read through SharePoint REST
+   (`ListSiteGroups`, `ListSiteGroupMembers`).
 5. **`Sync` scope for lists.** `include_lists` sweeps non-library lists via
    list-items delta. Should library lists also be emitted as `ListItem`
    changes (duplicating `DriveItem`), or only as drive items (current

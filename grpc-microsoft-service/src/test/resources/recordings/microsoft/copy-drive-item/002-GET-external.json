@@ -1,0 +1,22 @@
+{
+  "request" : {
+    "method" : "GET",
+    "url" : "https://redacted.example/url/21",
+    "authorized" : false,
+    "headers" : { }
+  },
+  "response" : {
+    "status" : 200,
+    "headers" : {
+      "content-type" : "application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8"
+    },
+    "body" : {
+      "json" : {
+        "@odata.context" : "https://redacted.example/url/22",
+        "percentageComplete" : 100.0,
+        "resourceId" : "item-0006",
+        "status" : "completed"
+      }
+    }
+  }
+}

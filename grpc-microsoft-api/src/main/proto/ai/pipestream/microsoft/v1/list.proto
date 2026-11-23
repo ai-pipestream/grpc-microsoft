@@ -68,6 +68,9 @@ message SharePointList {
   string drive_id = 15;
   // Parent reference (site).
   ItemReference parent_reference = 16;
+  // Entity id of the `site_acl` record whose role assignments apply to this
+  // list; set by a sync that reads security, empty otherwise.
+  string acl_owner_id = 17;
   // Extensible key-value metadata (extension-metadata map - see convention).
   map<string, string> metadata = 99;
 }
@@ -112,6 +115,9 @@ message ListItem {
   ItemReference parent_reference = 17;
   // Permissions on the item; populated when the request asked for them.
   repeated Permission permissions = 18;
+  // Entity id of the `site_acl` record whose role assignments apply to this
+  // item; set by a sync that reads security, empty otherwise.
+  string acl_owner_id = 19;
   // Extensible key-value metadata (extension-metadata map - see convention).
   map<string, string> metadata = 99;
 }

@@ -1,0 +1,74 @@
+{
+  "request" : {
+    "method" : "PUT",
+    "url" : "https://graph.microsoft.com/v1.0/drives/b!drive-0001/items/item-0001:/small.txt:/content?@microsoft.graph.conflictBehavior=fail",
+    "authorized" : true,
+    "headers" : {
+      "content-type" : "application/octet-stream"
+    },
+    "body" : {
+      "sha256" : "d1ffccd33b70d844380565cb7816c97f415b533c3591755080ed88233fda61e2",
+      "length" : 58
+    }
+  },
+  "response" : {
+    "status" : 201,
+    "headers" : {
+      "content-type" : "application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8"
+    },
+    "body" : {
+      "json" : {
+        "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#drives('b%21drive-0001')/items/$entity",
+        "@microsoft.graph.downloadUrl" : "https://redacted.example/url/4",
+        "createdDateTime" : "2026-11-23T02:26:33Z",
+        "eTag" : "\"{00000000-0000-4000-8000-000000000011},1\"",
+        "id" : "item-0003",
+        "lastModifiedDateTime" : "2026-11-23T02:26:33Z",
+        "name" : "small.txt",
+        "webUrl" : "https://redacted.example/url/5",
+        "cTag" : "\"c:{00000000-0000-4000-8000-000000000011},1\"",
+        "isAuthoritative" : false,
+        "size" : 58,
+        "createdBy" : {
+          "application" : {
+            "id" : "00000000-0000-4000-8000-000000000007",
+            "displayName" : "Identity 1"
+          },
+          "user" : {
+            "displayName" : "Identity 2"
+          }
+        },
+        "lastModifiedBy" : {
+          "application" : {
+            "id" : "00000000-0000-4000-8000-000000000007",
+            "displayName" : "Identity 1"
+          },
+          "user" : {
+            "displayName" : "Identity 2"
+          }
+        },
+        "parentReference" : {
+          "driveType" : "documentLibrary",
+          "driveId" : "b!drive-0001",
+          "id" : "item-0001",
+          "name" : "pipestream-live-write-20261123-022631-a8adaf87",
+          "path" : "/drives/b!drive-0001/root:/pipestream-live-write-20261123-022631-a8adaf87",
+          "siteId" : "00000000-0000-4000-8000-000000000001"
+        },
+        "file" : {
+          "mimeType" : "text/plain",
+          "hashes" : {
+            "quickXorHash" : "GZVNTYSPbO8pWfwNXQW+kfTeRHc="
+          }
+        },
+        "fileSystemInfo" : {
+          "createdDateTime" : "2026-11-23T02:26:33Z",
+          "lastModifiedDateTime" : "2026-11-23T02:26:33Z"
+        },
+        "shared" : {
+          "scope" : "users"
+        }
+      }
+    }
+  }
+}

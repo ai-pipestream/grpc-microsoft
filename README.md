@@ -33,6 +33,7 @@ Group `ai.pipestream.microsoft`, version `0.1.0-SNAPSHOT`.
 | `grpc-microsoft-connector` | 30303 | Microsoft Copilot / GCA adapter that forwards crawls to MicrosoftService. |
 | `grpc-microsoft-mcp` | | `microsoft_*` tools for the combined `grpc-mcp` server (`McpToolProvider`). `run` starts that server with these tools. |
 | `grpc-microsoft-connect` | | Kafka Connect source (`MicrosoftSourceConnector`) and its plugin zip. |
+| `grpc-microsoft-admin` | 9097 | `MicrosoftAdminService`: lists, ensures and revokes the per-site grants of applications that hold `Sites.Selected`. The only part that runs with `Sites.FullControl.All`; deployed on its own. |
 
 ## Building
 
@@ -79,6 +80,23 @@ MICROSOFT_GRPC_PORT=9096
 RPCs: `GetMe`, `ListSites`, `ListDrives`, `ListChildren` (stream), `GetItem`,
 `DownloadItem`, `Sync` (stream). Handlers run on virtual threads.
 
+Write RPCs (need `Sites.ReadWrite.All` / `Files.ReadWrite.All` or a
+`Sites.Selected` write grant): `UploadItem` (bidi stream; upload sessions
+for large files, resumable), `CreateFolder`, `UpdateDriveItem`,
+`DeleteDriveItem`, `RestoreDriveItemVersion`, `CopyDriveItem` (stream),
+`CreateListItem`, `UpdateListItemFields`, `DeleteListItem`,
+`EnsureColumns`, `EnsureList`, and `Mutate` (bidi stream; packs writes
+into Graph `$batch` requests). Updates and deletes take `expected_etag`
+(sent as `If-Match`); a mismatch is `ABORTED`.
+
+`Sync` with `include_security` also reads SharePoint's own security: each
+site's groups with their members (`site_group`), the role assignments of the
+site and of every list and item that has its own (`site_acl`), and on every
+drive, list and item the id of the `site_acl` that applies to it
+(`acl_owner_id`). `SetSiteRoleInheritance` makes a list or list item stop
+inheriting, or inherit again. Both need the certificate credential and the
+site grant `fullcontrol`.
+
 Point the proxy at a running sync-table (from grpc-integration) to record
 crawl / update / delete rows:
 
@@ -106,6 +124,54 @@ read-only and do not set these.
 OKF_SPO_DRIVE_ID=b!...
 OKF_SPO_FOLDER_PATH=/Knowledge/okf-run
 ```
+
+## Permissions
+
+What each group of rpcs needs, as proven against a real tenant on 2026-11-22.
+All are application permissions with admin consent.
+
+| rpcs | Needs | Proven with |
+|---|---|---|
+| Everything scoped to a site: `GetSite`, drives, items, downloads, lists, list items, columns, item / list / list-item `ListPermissions`, the delta rpcs, `Sync`, and every write rpc | Graph `Sites.Selected` plus a grant on the site | site grant `manage` |
+| `ListSites`, `ListAllSites`, `DeltaSites` | Graph `Sites.Read.All` (tenant-wide) | refused with `Sites.Selected` alone |
+| `ListUsers`, `ListGroups`, `DeltaGroups`, `ListGroupTransitiveMembers`, `ListUserTransitiveMemberOf` | Graph `User.Read.All` and `GroupMember.Read.All` | those two |
+| `ListSiteGroups`, `GetSiteRoleInheritance` | SharePoint `Sites.Selected` plus a grant on the site, certificate credential | site grant `manage` |
+| `ListSiteGroupMembers`, `ListSiteRoleAssignments` | SharePoint `Sites.Selected` plus site grant `fullcontrol`, certificate credential (refused with `manage`) | site grant `fullcontrol`; also SharePoint `Sites.FullControl.All` |
+| `ListPermissions` on a site | Graph `Sites.FullControl.All` | that |
+| `MicrosoftAdminService` | Graph `Sites.FullControl.All` | that (grant created, changed and revoked) |
+
+## Site grants (admin service)
+
+The connector app holds `Sites.Selected` and sees only the sites it was
+granted. `MicrosoftAdminService` (module `grpc-microsoft-admin`) hands out
+those grants and is the only process that signs in with an identity holding
+`Sites.FullControl.All`. Run it only when grants need to change.
+
+| rpc | What it does | Graph |
+|---|---|---|
+| `ListSiteAppGrants` | Applications granted on a site, with their roles | `GET /sites/{id}/permissions`, `GET /sites/{id}/permissions/{id}` |
+| `EnsureSiteAppGrant` | Gives an application exactly one role on a site (create, change, or leave alone); `dry_run` reports what would change | `POST` / `PATCH /sites/{id}/permissions` |
+| `RevokeSiteAppGrant` | Removes an application's grants on a site | `DELETE /sites/{id}/permissions/{id}` |
+
+| Variable | Required |
+|---|---|
+| `MICROSOFT_TENANT_ID` | yes |
+| `MICROSOFT_ADMIN_CLIENT_ID` | yes |
+| `MICROSOFT_ADMIN_CLIENT_CERT_PEM` | yes, unless the secret is set |
+| `MICROSOFT_ADMIN_CLIENT_SECRET` | yes, unless the certificate is set |
+| `MICROSOFT_ADMIN_GRPC_PORT` | no (default 9097) |
+
+```
+./gradlew :grpc-microsoft-admin:run
+```
+
+`./gradlew :grpc-microsoft-admin:liveAdminTest` runs the admin scenarios
+against a real tenant (also needs `MICROSOFT_SITE_ID` and `MICROSOFT_CLIENT_ID`)
+and records the scrubbed Graph exchanges under
+`grpc-microsoft-admin/src/test/resources/recordings/admin`. The default `test`
+task replays them with no network. Reading grants and the dry runs change
+nothing; the create, change and revoke scenario runs only with
+`MICROSOFT_ADMIN_LIVE_CHANGE=1`.
 
 ## Copilot connector (GCA)
 
@@ -235,6 +301,19 @@ login. `/me` does not exist on an app-only token, so the probe is
 registration with application permissions `Sites.Read.All` and
 `Files.Read.All` (admin consent), then a client secret.
 
+The live write test is opt-in. It calls every write RPC inside one new
+folder (`pipestream-live-write-<timestamp>-<random>` at the drive root)
+and one new list of the same name, removes both at the end, writes
+`build/live-write.md`, and records the scrubbed Graph exchanges that the
+default tests replay (see
+`grpc-microsoft-service/src/test/resources/recordings/README.md`). It needs write permission on the site and skips
+unless `MICROSOFT_SITE_ID` and `MICROSOFT_LIVE_WRITE=1` are set next to
+the credentials:
+
+```
+MICROSOFT_LIVE_WRITE=1 ./gradlew :grpc-microsoft-service:liveWriteTest
+```
+
 ### GitHub Actions secrets
 
 After they are set, `live-microsoft` runs on same-repo PRs and pushes
@@ -244,9 +323,14 @@ After they are set, `live-microsoft` runs on same-repo PRs and pushes
 |---|---|
 | `MICROSOFT_TENANT_ID` | yes |
 | `MICROSOFT_CLIENT_ID` | yes |
-| `MICROSOFT_CLIENT_SECRET` | yes |
+| `MICROSOFT_CLIENT_SECRET` | yes, unless the certificate is set |
+| `MICROSOFT_CLIENT_CERT_PEM` | no (private key and certificate PEM; used instead of the secret when set) |
 | `MICROSOFT_SITE_ID` | no (first `ListSites` hit is used for drives) |
 | `MICROSOFT_DRIVE_IDS` | no |
+
+A catalog connection (`connection_id`) and an inline `ProbeConnection` carry
+the same choice: `client_secret`, or `client_certificate_pem` to sign in with
+a certificate. SharePoint site security reads need the certificate.
 
 Do not paste tokens into issues, PR text, or agent chat.
 
@@ -255,6 +339,7 @@ Do not paste tokens into issues, PR text, or agent chat.
 ```
 docker build -t grpc-microsoft -f Dockerfile.microsoft .
 docker build -t grpc-microsoft-connector -f Dockerfile.connector .
+docker build -t grpc-microsoft-admin -f Dockerfile.admin .
 # build against a local core checkout instead of the published snapshots:
 docker build --build-context integration=../grpc-integration -t grpc-microsoft -f Dockerfile.microsoft .
 ```

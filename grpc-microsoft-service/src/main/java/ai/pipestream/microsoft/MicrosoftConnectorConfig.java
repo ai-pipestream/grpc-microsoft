@@ -15,7 +15,7 @@ import java.util.Objects;
  * @param clientId application (client) id ({@code MICROSOFT_CLIENT_ID});
  *        required
  * @param clientSecret client secret ({@code MICROSOFT_CLIENT_SECRET});
- *        required, redacted everywhere
+ *        required unless a certificate is set, redacted everywhere
  * @param siteId SharePoint site id ({@code MICROSOFT_SITE_ID}); empty skips
  *        site-scoped listing
  * @param driveIds drive ids to crawl ({@code MICROSOFT_DRIVE_IDS},
@@ -26,6 +26,9 @@ import java.util.Objects;
  *        default {@code https://graph.microsoft.com/v1.0})
  * @param authority Entra authority host ({@code MICROSOFT_AUTHORITY},
  *        default {@code https://login.microsoftonline.com})
+ * @param clientCertificatePem private key and certificate in PEM
+ *        ({@code MICROSOFT_CLIENT_CERT_PEM}); empty = sign in with the secret.
+ *        Redacted everywhere.
  */
 public record MicrosoftConnectorConfig(
         String tenantId,
@@ -35,7 +38,8 @@ public record MicrosoftConnectorConfig(
         List<String> driveIds,
         String folderPath,
         String graphBaseUrl,
-        String authority) {
+        String authority,
+        String clientCertificatePem) {
 
     /** Environment variable for the Microsoft Entra tenant id. */
     public static final String ENV_TENANT_ID = "MICROSOFT_TENANT_ID";
@@ -53,10 +57,12 @@ public record MicrosoftConnectorConfig(
     public static final String ENV_GRAPH_BASE_URL = "MICROSOFT_GRAPH_BASE_URL";
     /** Environment variable for the Entra authority host. */
     public static final String ENV_AUTHORITY = "MICROSOFT_AUTHORITY";
+    /** Environment variable for the certificate credential (private key and certificate PEM). */
+    public static final String ENV_CLIENT_CERT_PEM = "MICROSOFT_CLIENT_CERT_PEM";
 
     /**
-     * Trims and defaults fields. {@code tenantId}, {@code clientId}, and
-     * {@code clientSecret} are required; blank {@code siteId} stays empty; a
+     * Trims and defaults fields. {@code tenantId}, {@code clientId}, and one of
+     * {@code clientSecret} or {@code clientCertificatePem} are required; blank {@code siteId} stays empty; a
      * null drive list becomes empty; blank {@code folderPath} becomes
      * {@code "/"}; blank Graph and authority URLs take the public-cloud
      * defaults.
@@ -70,8 +76,12 @@ public record MicrosoftConnectorConfig(
             throw new IllegalArgumentException(ENV_CLIENT_ID + " is required");
         }
         clientId = clientId.trim();
-        if (clientSecret == null || clientSecret.isBlank()) {
-            throw new IllegalArgumentException(ENV_CLIENT_SECRET + " is required");
+        if (clientCertificatePem == null || clientCertificatePem.isBlank()) {
+            clientCertificatePem = "";
+        }
+        if ((clientSecret == null || clientSecret.isBlank()) && clientCertificatePem.isEmpty()) {
+            throw new IllegalArgumentException(
+                    ENV_CLIENT_SECRET + " or " + ENV_CLIENT_CERT_PEM + " is required");
         }
         if (siteId == null) {
             siteId = "";
@@ -108,10 +118,11 @@ public record MicrosoftConnectorConfig(
     /**
      * The Entra client-credentials config derived from this record.
      *
-     * @return authority, tenant, client id, and client secret
+     * @return authority, tenant, client id, client secret and certificate
      */
     public GraphAuth.Config authConfig() {
-        return new GraphAuth.Config(authority, tenantId, clientId, clientSecret);
+        return new GraphAuth.Config(authority, tenantId, clientId, clientSecret,
+                clientCertificatePem.isEmpty() ? null : ClientCertificate.fromPem(clientCertificatePem));
     }
 
     /**
@@ -141,6 +152,7 @@ public record MicrosoftConnectorConfig(
                 .folderPath(env.get(ENV_FOLDER_PATH))
                 .graphBaseUrl(env.get(ENV_GRAPH_BASE_URL))
                 .authority(env.get(ENV_AUTHORITY))
+                .clientCertificatePem(env.get(ENV_CLIENT_CERT_PEM))
                 .build();
     }
 
@@ -182,7 +194,8 @@ public record MicrosoftConnectorConfig(
                 + ", driveIds=" + driveIds
                 + ", folderPath=" + folderPath
                 + ", graphBaseUrl=" + graphBaseUrl
-                + ", authority=" + authority + "}";
+                + ", authority=" + authority
+                + ", clientCertificatePem=" + (clientCertificatePem.isEmpty() ? "" : "***") + "}";
     }
 
     /** Test-friendly builder; every field the record validates is optional here. */
@@ -195,6 +208,7 @@ public record MicrosoftConnectorConfig(
         private String folderPath = "/";
         private String graphBaseUrl = "https://graph.microsoft.com/v1.0";
         private String authority = "https://login.microsoftonline.com";
+        private String clientCertificatePem = "";
 
         private Builder() {
         }
@@ -288,6 +302,17 @@ public record MicrosoftConnectorConfig(
         }
 
         /**
+         * Sets the certificate credential.
+         *
+         * @param clientCertificatePem private key and certificate in PEM
+         * @return this builder
+         */
+        public Builder clientCertificatePem(String clientCertificatePem) {
+            this.clientCertificatePem = clientCertificatePem;
+            return this;
+        }
+
+        /**
          * Builds a config; the record compact constructor validates required
          * fields.
          *
@@ -295,7 +320,7 @@ public record MicrosoftConnectorConfig(
          */
         public MicrosoftConnectorConfig build() {
             return new MicrosoftConnectorConfig(tenantId, clientId, clientSecret, siteId, driveIds,
-                    folderPath, graphBaseUrl, authority);
+                    folderPath, graphBaseUrl, authority, clientCertificatePem);
         }
     }
 }

@@ -35,7 +35,10 @@ class MicrosoftConnectorConfigTest {
         assertThatThrownBy(() -> valid().clientId(null).build())
                 .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> valid().clientSecret(" ").build())
-                .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("MICROSOFT_CLIENT_SECRET or MICROSOFT_CLIENT_CERT_PEM");
+        assertThat(valid().clientSecret(null).clientCertificatePem("pem").build().clientCertificatePem())
+                .isEqualTo("pem");
     }
 
     @Test

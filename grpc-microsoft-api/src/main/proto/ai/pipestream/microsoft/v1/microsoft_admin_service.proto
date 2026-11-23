@@ -1,0 +1,134 @@
+syntax = "proto3";
+
+package ai.pipestream.microsoft.v1;
+
+option java_multiple_files = true;
+option java_package = "ai.pipestream.microsoft.v1";
+option java_outer_classname = "MicrosoftAdminServiceProto";
+
+// ============================================================================
+// MICROSOFT ADMIN SERVICE - which applications may reach which SharePoint
+// site. The connector itself runs with Sites.Selected and sees only the sites
+// it was granted; this service hands out those grants. It is the only part
+// that runs with Sites.FullControl.All, and it is deployed on its own.
+// ============================================================================
+
+// Manages the per-site grants of applications that hold Sites.Selected.
+service MicrosoftAdminService {
+  // Lists the applications granted access to a site, with their roles.
+  // Graph: GET /sites/{id}/permissions, then GET /sites/{id}/permissions/{id}.
+  rpc ListSiteAppGrants(ListSiteAppGrantsRequest) returns (stream ListSiteAppGrantsResponse);
+
+  // Makes sure an application has exactly one role on a site: creates the
+  // grant, changes its role, or leaves a matching grant alone.
+  // Graph: POST /sites/{id}/permissions or PATCH /sites/{id}/permissions/{id}.
+  rpc EnsureSiteAppGrant(EnsureSiteAppGrantRequest) returns (EnsureSiteAppGrantResponse);
+
+  // Removes every grant an application has on a site.
+  // Graph: DELETE /sites/{id}/permissions/{id}.
+  rpc RevokeSiteAppGrant(RevokeSiteAppGrantRequest) returns (RevokeSiteAppGrantResponse);
+}
+
+// What an application may do on a site.
+enum SiteAppRole {
+  // Zero value.
+  SITE_APP_ROLE_UNSPECIFIED = 0;
+  // Read items (Graph "read").
+  SITE_APP_ROLE_READ = 1;
+  // Read and write items (Graph "write").
+  SITE_APP_ROLE_WRITE = 2;
+  // Read and write items and lists (Graph "manage").
+  SITE_APP_ROLE_MANAGE = 3;
+  // Full control of the site (Graph "fullcontrol").
+  SITE_APP_ROLE_FULL_CONTROL = 4;
+  // Owner (Graph "owner", the older name of full control).
+  SITE_APP_ROLE_OWNER = 5;
+}
+
+// One application's grant on one site.
+message SiteAppGrant {
+  // Id of the site permission.
+  string id = 1;
+  // Graph site id.
+  string site_id = 2;
+  // Application (client) id of the grantee.
+  string app_id = 3;
+  // Display name of the grantee as stored on the grant.
+  string app_display_name = 4;
+  // Roles of the grant.
+  repeated SiteAppRole roles = 5;
+  // Roles Graph reported that SiteAppRole has no value for (verbatim).
+  repeated string other_roles = 6;
+}
+
+// Request for ListSiteAppGrants.
+message ListSiteAppGrantsRequest {
+  // Graph site id.
+  string site_id = 1;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// One streamed grant.
+message ListSiteAppGrantsResponse {
+  // The grant.
+  SiteAppGrant grant = 1;
+}
+
+// How EnsureSiteAppGrant left the grant.
+enum SiteAppGrantState {
+  // Zero value.
+  SITE_APP_GRANT_STATE_UNSPECIFIED = 0;
+  // Created by this call.
+  SITE_APP_GRANT_STATE_CREATED = 1;
+  // Already present with the wanted role; left alone.
+  SITE_APP_GRANT_STATE_EXISTS = 2;
+  // Present with another role; changed by this call.
+  SITE_APP_GRANT_STATE_UPDATED = 3;
+  // Dry run: would be created.
+  SITE_APP_GRANT_STATE_WOULD_CREATE = 4;
+  // Dry run: would be changed.
+  SITE_APP_GRANT_STATE_WOULD_UPDATE = 5;
+}
+
+// Request for EnsureSiteAppGrant.
+message EnsureSiteAppGrantRequest {
+  // Graph site id.
+  string site_id = 1;
+  // Application (client) id of the grantee.
+  string app_id = 2;
+  // Display name to store on a new grant; empty = the application id.
+  string app_display_name = 3;
+  // The one role the application should have.
+  SiteAppRole role = 4;
+  // Report what would change without changing it.
+  bool dry_run = 5;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// Result of EnsureSiteAppGrant.
+message EnsureSiteAppGrantResponse {
+  // What happened.
+  SiteAppGrantState state = 1;
+  // The grant as it is now; on a dry run, as it was (unset when there was none).
+  SiteAppGrant grant = 2;
+  // UPDATED or WOULD_UPDATE: the roles the grant had before.
+  repeated SiteAppRole previous_roles = 3;
+}
+
+// Request for RevokeSiteAppGrant.
+message RevokeSiteAppGrantRequest {
+  // Graph site id.
+  string site_id = 1;
+  // Application (client) id of the grantee.
+  string app_id = 2;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// Result of RevokeSiteAppGrant.
+message RevokeSiteAppGrantResponse {
+  // How many grants were removed; 0 when the application had none.
+  int32 revoked = 1;
+}

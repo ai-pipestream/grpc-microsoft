@@ -1,0 +1,119 @@
+{
+  "request" : {
+    "method" : "POST",
+    "url" : "https://graph.microsoft.com/v1.0/$batch",
+    "authorized" : true,
+    "headers" : {
+      "content-type" : "application/json"
+    },
+    "body" : {
+      "json" : {
+        "requests" : [ {
+          "id" : "0",
+          "method" : "POST",
+          "url" : "/drives/b!drive-0001/items/item-0001/children",
+          "body" : {
+            "name" : "batch-b",
+            "folder" : { }
+          },
+          "headers" : {
+            "Content-Type" : "application/json"
+          }
+        }, {
+          "id" : "1",
+          "method" : "DELETE",
+          "url" : "/drives/b!drive-0001/items/item-0006"
+        } ]
+      }
+    }
+  },
+  "response" : {
+    "status" : 200,
+    "headers" : {
+      "content-type" : "application/json"
+    },
+    "body" : {
+      "json" : {
+        "responses" : [ {
+          "id" : "1",
+          "status" : 204,
+          "headers" : {
+            "Cache-Control" : "no-store, no-cache",
+            "SPLogId" : "00000000-0000-4000-8000-000000000107"
+          },
+          "body" : null
+        }, {
+          "id" : "0",
+          "status" : 201,
+          "headers" : {
+            "Location" : "https://redacted.example/url/77",
+            "Cache-Control" : "no-store, no-cache",
+            "SPLogId" : "00000000-0000-4000-8000-000000000108",
+            "SPRequestDuration" : "193",
+            "OData-Version" : "4.0",
+            "Content-Type" : "application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8",
+            "ETag" : "\"{00000000-0000-4000-8000-000000000109},1\""
+          },
+          "body" : {
+            "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#drives('b%21drive-0001')/items('item-0001')/children/$entity",
+            "@odata.etag" : "\"{00000000-0000-4000-8000-000000000109},1\"",
+            "eTag" : "\"{00000000-0000-4000-8000-000000000109},1\"",
+            "lastModifiedDateTime" : "2026-11-23T02:27:08Z",
+            "createdDateTime" : "2026-11-23T02:27:08Z",
+            "id" : "item-0009",
+            "name" : "batch-b",
+            "size" : 0,
+            "webUrl" : "https://redacted.example/url/78",
+            "commentSettings" : {
+              "commentingDisabled" : {
+                "isDisabled" : false
+              }
+            },
+            "createdBy" : {
+              "application" : {
+                "displayName" : "Identity 1",
+                "id" : "00000000-0000-4000-8000-000000000007"
+              },
+              "user" : {
+                "displayName" : "Identity 2"
+              }
+            },
+            "lastModifiedBy" : {
+              "application" : {
+                "displayName" : "Identity 1",
+                "id" : "00000000-0000-4000-8000-000000000007"
+              },
+              "user" : {
+                "displayName" : "Identity 2"
+              }
+            },
+            "parentReference" : {
+              "driveId" : "b!drive-0001",
+              "driveType" : "documentLibrary",
+              "id" : "item-0001",
+              "path" : "/drives/b!drive-0001/root:/pipestream-live-write-20261123-022631-a8adaf87",
+              "sharepointIds" : {
+                "listId" : "00000000-0000-4000-8000-000000000008",
+                "listItemUniqueId" : "00000000-0000-4000-8000-000000000006",
+                "siteId" : "00000000-0000-4000-8000-000000000001",
+                "siteUrl" : "https://redacted.example/url/3",
+                "tenantId" : "00000000-0000-4000-8000-000000000010",
+                "webId" : "00000000-0000-4000-8000-000000000002"
+              }
+            },
+            "fileSystemInfo" : {
+              "createdDateTime" : "2026-11-23T02:27:08Z",
+              "lastModifiedDateTime" : "2026-11-23T02:27:08Z"
+            },
+            "folder" : {
+              "childCount" : 0
+            },
+            "shared" : {
+              "scope" : "unknown"
+            }
+          }
+        } ]
+      }
+    }
+  }
+}

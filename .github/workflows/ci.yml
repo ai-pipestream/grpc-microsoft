@@ -10,6 +10,42 @@ on:
         description: Fail unless the read-only Microsoft live smoke actually passes
         type: boolean
         default: false
+      run_live_write:
+        description: Run the live write test against the test site (writes, then cleans up)
+        type: boolean
+        default: false
+      live_write_site_id:
+        description: Graph site id the live write test may write to (falls back to the MICROSOFT_SITE_ID secret)
+        type: string
+        default: ""
+      run_live_coverage:
+        description: Call every read rpc against the test site and print each call's outcome (read-only)
+        type: boolean
+        default: false
+      live_coverage_admin:
+        description: Run the read-only coverage with the admin app's certificate instead of the test app
+        type: boolean
+        default: false
+      run_live_admin:
+        description: Read the test site's app grants with the admin app and dry-run an ensure (changes nothing)
+        type: boolean
+        default: false
+      live_admin_change:
+        description: With run_live_admin, also grant, change and revoke a grant for the admin app itself on the test site
+        type: boolean
+        default: false
+      live_admin_set_role:
+        description: With run_live_admin, set the test app's role on the test site (read, write, manage or full_control)
+        type: string
+        default: ""
+      import_recordings_run_id:
+        description: Commit the recordings artifact of this run id to the branch as replay data
+        type: string
+        default: ""
+      import_admin_recordings_run_id:
+        description: Commit the admin-recordings artifact of this run id to the branch as replay data
+        type: string
+        default: ""
 
 # The shared core (ai-pipestream/grpc-integration) is checked out next to
 # this repo and included as a Gradle composite build (-PintegrationDir), so
@@ -56,6 +92,37 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          path: grpc-microsoft
+      - id: core
+        name: Pick the grpc-integration ref (same branch if it exists, else main)
+        env:
+          BRANCH: ${{ github.head_ref || github.ref_name }}
+        run: |
+          if git ls-remote --exit-code --heads https://github.com/ai-pipestream/grpc-integration "$BRANCH" >/dev/null; then
+            echo "ref=$BRANCH" >> "$GITHUB_OUTPUT"
+          else
+            echo "ref=$INTEGRATION_REF" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v5
+        with:
+          repository: ai-pipestream/grpc-integration
+          ref: ${{ steps.core.outputs.ref }}
+          path: grpc-integration
+      # The Microsoft protos import the shared core's protos, so lint runs
+      # in a workspace holding both modules (the core passes the same lint).
+      - name: Write the lint workspace
+        run: |
+          cat > buf.yaml <<'YAML'
+          version: v2
+          modules:
+            - path: grpc-microsoft/grpc-microsoft-api/src/main/proto
+            - path: grpc-integration/grpc-sync-api/src/main/proto
+          lint:
+            use:
+              - STANDARD
+              - COMMENTS
+          YAML
       - uses: bufbuild/buf-setup-action@v1
         with:
           version: "1.54.0"
@@ -149,3 +216,337 @@ jobs:
           with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as summary:
               summary.write(f"Microsoft live smoke: PASSED ({len(cases)} executed tests, none skipped).\n")
           PYTHON
+
+  # Manual only, read-only: every read rpc against the test site. The log of a
+  # public repository gets each call's label and outcome, never its detail.
+  live-microsoft-coverage:
+    if: github.event_name == 'workflow_dispatch' && inputs.run_live_coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          path: grpc-microsoft
+      - id: core
+        name: Pick the grpc-integration ref (same branch if it exists, else main)
+        env:
+          BRANCH: ${{ github.head_ref || github.ref_name }}
+        run: |
+          if git ls-remote --exit-code --heads https://github.com/ai-pipestream/grpc-integration "$BRANCH" >/dev/null; then
+            echo "ref=$BRANCH" >> "$GITHUB_OUTPUT"
+          else
+            echo "ref=$INTEGRATION_REF" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v5
+        with:
+          repository: ai-pipestream/grpc-integration
+          ref: ${{ steps.core.outputs.ref }}
+          path: grpc-integration
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "25"
+      - name: Live Microsoft Graph coverage run
+        working-directory: grpc-microsoft
+        env:
+          MICROSOFT_TENANT_ID: ${{ secrets.MICROSOFT_TENANT_ID }}
+          MICROSOFT_CLIENT_ID: ${{ inputs.live_coverage_admin && secrets.MICROSOFT_ADMIN_CLIENT_ID || secrets.MICROSOFT_CLIENT_ID }}
+          MICROSOFT_CLIENT_SECRET: ${{ inputs.live_coverage_admin && secrets.MICROSOFT_ADMIN_CLIENT_SECRET || secrets.MICROSOFT_CLIENT_SECRET }}
+          MICROSOFT_CLIENT_CERT_PEM: ${{ inputs.live_coverage_admin && secrets.MICROSOFT_ADMIN_CLIENT_CERT_PEM || secrets.MICROSOFT_CLIENT_CERT_PEM }}
+          MICROSOFT_SITE_ID: ${{ inputs.live_write_site_id || env.LIVE_SITE_ID }}
+          MICROSOFT_DRIVE_IDS: ${{ secrets.MICROSOFT_DRIVE_IDS }}
+          JOIN_PROOF_EMAIL: ${{ secrets.JOIN_PROOF_EMAIL }}
+        run: |
+          status=0
+          ./gradlew --no-daemon -PintegrationDir=../grpc-integration :grpc-microsoft-service:liveCoverageTest --rerun-tasks > "$RUNNER_TEMP/coverage.log" 2>&1 || status=$?
+          report=grpc-microsoft-service/build/live-coverage.md
+          if [ -f "$report" ]; then
+            grep -E '^- (Calls|Directory|Entra join|Term store routes):' "$report" || true
+            awk -F ' \\| ' '/^## RPCs/ { on = 1; next } /^## / { on = 0 } on && /^\| / { print $1 " | " $2 }' "$report"
+          else
+            echo "::error::no coverage report was written"
+            grep -E '^(BUILD|FAILURE|> Task|e: |.*error:)' "$RUNNER_TEMP/coverage.log" | tail -n 30 || true
+          fi
+          exit "$status"
+
+  # Manual only: the admin service reads the test site's grants and dry-runs an
+  # ensure. It changes grants only when live_admin_change or live_admin_set_role is set.
+  live-microsoft-admin:
+    if: github.event_name == 'workflow_dispatch' && inputs.run_live_admin
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          path: grpc-microsoft
+      - id: core
+        name: Pick the grpc-integration ref (same branch if it exists, else main)
+        env:
+          BRANCH: ${{ github.head_ref || github.ref_name }}
+        run: |
+          if git ls-remote --exit-code --heads https://github.com/ai-pipestream/grpc-integration "$BRANCH" >/dev/null; then
+            echo "ref=$BRANCH" >> "$GITHUB_OUTPUT"
+          else
+            echo "ref=$INTEGRATION_REF" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v5
+        with:
+          repository: ai-pipestream/grpc-integration
+          ref: ${{ steps.core.outputs.ref }}
+          path: grpc-integration
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "25"
+      - name: Live admin service read and dry run
+        working-directory: grpc-microsoft
+        env:
+          MICROSOFT_TENANT_ID: ${{ secrets.MICROSOFT_TENANT_ID }}
+          MICROSOFT_ADMIN_CLIENT_ID: ${{ secrets.MICROSOFT_ADMIN_CLIENT_ID }}
+          MICROSOFT_ADMIN_CLIENT_CERT_PEM: ${{ secrets.MICROSOFT_ADMIN_CLIENT_CERT_PEM }}
+          MICROSOFT_CLIENT_ID: ${{ secrets.MICROSOFT_CLIENT_ID }}
+          MICROSOFT_SITE_ID: ${{ env.LIVE_SITE_ID }}
+          MICROSOFT_ADMIN_LIVE_CHANGE: ${{ inputs.live_admin_change && '1' || '' }}
+          MICROSOFT_ADMIN_LIVE_SET_ROLE: ${{ inputs.live_admin_set_role }}
+        run: |
+          for name in MICROSOFT_TENANT_ID MICROSOFT_ADMIN_CLIENT_ID MICROSOFT_ADMIN_CLIENT_CERT_PEM MICROSOFT_CLIENT_ID; do
+            if [ -z "${!name}" ]; then
+              echo "::error::$name is not set; the live admin run needs it"
+              exit 1
+            fi
+          done
+          status=0
+          ./gradlew --no-daemon -PintegrationDir=../grpc-integration :grpc-microsoft-admin:liveAdminTest --rerun-tasks > "$RUNNER_TEMP/admin.log" 2>&1 || status=$?
+          grep -F '[MicrosoftAdminLiveIT]' "$RUNNER_TEMP/admin.log" || true
+          grep -E '^(BUILD|FAILURE)' "$RUNNER_TEMP/admin.log" || true
+          exit "$status"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: admin-recordings
+          path: grpc-microsoft/grpc-microsoft-admin/src/test/resources/recordings/admin/
+          if-no-files-found: ignore
+
+  # Manual only: writes to the test site, then deletes what it created.
+  live-microsoft-write:
+    if: github.event_name == 'workflow_dispatch' && inputs.run_live_write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          path: grpc-microsoft
+      - id: core
+        name: Pick the grpc-integration ref (same branch if it exists, else main)
+        env:
+          BRANCH: ${{ github.head_ref || github.ref_name }}
+        run: |
+          if git ls-remote --exit-code --heads https://github.com/ai-pipestream/grpc-integration "$BRANCH" >/dev/null; then
+            echo "ref=$BRANCH" >> "$GITHUB_OUTPUT"
+          else
+            echo "ref=$INTEGRATION_REF" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v5
+        with:
+          repository: ai-pipestream/grpc-integration
+          ref: ${{ steps.core.outputs.ref }}
+          path: grpc-integration
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "25"
+      - name: Live Microsoft Graph write test
+        working-directory: grpc-microsoft
+        env:
+          MICROSOFT_TENANT_ID: ${{ secrets.MICROSOFT_TENANT_ID }}
+          MICROSOFT_CLIENT_ID: ${{ secrets.MICROSOFT_CLIENT_ID }}
+          MICROSOFT_CLIENT_SECRET: ${{ secrets.MICROSOFT_CLIENT_SECRET }}
+          MICROSOFT_CLIENT_CERT_PEM: ${{ secrets.MICROSOFT_CLIENT_CERT_PEM }}
+          MICROSOFT_SITE_ID: ${{ inputs.live_write_site_id || env.LIVE_SITE_ID }}
+          MICROSOFT_DRIVE_IDS: ${{ secrets.MICROSOFT_DRIVE_IDS }}
+          MICROSOFT_LIVE_WRITE: "1"
+          JOIN_PROOF_EMAIL: ${{ secrets.JOIN_PROOF_EMAIL }}
+        run: |
+          for name in MICROSOFT_TENANT_ID MICROSOFT_CLIENT_ID MICROSOFT_CLIENT_SECRET MICROSOFT_SITE_ID; do
+            if [ -z "${!name}" ]; then
+              echo "::error::$name is not set; the live write run needs it"
+              exit 1
+            fi
+          done
+          ./gradlew --no-daemon -PintegrationDir=../grpc-integration :grpc-microsoft-service:liveWriteTest --rerun-tasks
+      - name: Publish the report
+        if: always()
+        working-directory: grpc-microsoft
+        run: |
+          if [ -f grpc-microsoft-service/build/live-write.md ]; then
+            cat grpc-microsoft-service/build/live-write.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: live-write
+          path: |
+            grpc-microsoft/grpc-microsoft-service/build/live-write.md
+            grpc-microsoft/grpc-microsoft-service/build/test-results/liveWriteTest/
+          if-no-files-found: ignore
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: recordings
+          path: grpc-microsoft/grpc-microsoft-service/src/test/resources/recordings/microsoft/
+          if-no-files-found: ignore
+
+  # Copies the recordings a live write run uploaded into the branch, after a
+  # leak check and the recordings hygiene test. Only ever started by hand.
+  import-microsoft-recordings:
+    if: github.event_name == 'workflow_dispatch' && inputs.import_recordings_run_id != ''
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          path: grpc-microsoft
+      - id: core
+        name: Pick the grpc-integration ref (same branch if it exists, else main)
+        env:
+          BRANCH: ${{ github.head_ref || github.ref_name }}
+        run: |
+          if git ls-remote --exit-code --heads https://github.com/ai-pipestream/grpc-integration "$BRANCH" >/dev/null; then
+            echo "ref=$BRANCH" >> "$GITHUB_OUTPUT"
+          else
+            echo "ref=$INTEGRATION_REF" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v5
+        with:
+          repository: ai-pipestream/grpc-integration
+          ref: ${{ steps.core.outputs.ref }}
+          path: grpc-integration
+      - name: Drop the previous recordings
+        run: rm -rf grpc-microsoft/grpc-microsoft-service/src/test/resources/recordings/microsoft
+      - uses: actions/download-artifact@v4
+        with:
+          name: recordings
+          run-id: ${{ inputs.import_recordings_run_id }}
+          github-token: ${{ github.token }}
+          path: grpc-microsoft/grpc-microsoft-service/src/test/resources/recordings/microsoft/
+      - name: Leak check
+        working-directory: grpc-microsoft/grpc-microsoft-service/src/test/resources/recordings/microsoft
+        run: |
+          echo "files: $(find . -type f | wc -l)"
+          fail=0
+          check() {
+            n=$(grep -rIlE -e "$2" . | wc -l)
+            echo "$1: $n files"
+            if [ "$n" -gt 0 ]; then grep -rIlE -e "$2" . | head -20; fail=1; fi
+          }
+          check "jwt" 'eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}'
+          check "bearer credential" 'Bearer [A-Za-z0-9._-]{16,}'
+          check "client secret field" 'client_secret'
+          check "tenant host" 'pipestreamai'
+          # OData annotation keys such as fields@odata.context have the shape of an address.
+          n=$(grep -rIhoE '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}' . | grep -vE '@(odata|microsoft\.graph)\.[A-Za-z.]+$' | grep -vcE '@example\.(invalid|com|org)$' || true)
+          echo "email address: $n matches outside the placeholder domains"
+          if [ "$n" -gt 0 ]; then fail=1; fi
+          exit $fail
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "25"
+      - name: Hygiene test on the imported recordings
+        working-directory: grpc-microsoft
+        run: |
+          ./gradlew --no-daemon -PintegrationDir=../grpc-integration :grpc-microsoft-service:test \
+            --tests '*RecordingsHygieneTest'
+      - name: Commit the recordings
+        working-directory: grpc-microsoft
+        env:
+          BRANCH: ${{ github.ref_name }}
+          RUN_ID: ${{ inputs.import_recordings_run_id }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add grpc-microsoft-service/src/test/resources/recordings
+          if git diff --cached --quiet; then
+            echo "Nothing to commit"
+            exit 0
+          fi
+          git commit -m "Add recorded Graph write exchanges from live run ${RUN_ID}"
+          git push origin "HEAD:${BRANCH}"
+
+  # Copies the recordings a live admin run uploaded into the branch, after a
+  # leak check and the recordings hygiene test. Only ever started by hand.
+  import-microsoft-admin-recordings:
+    if: github.event_name == 'workflow_dispatch' && inputs.import_admin_recordings_run_id != ''
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          path: grpc-microsoft
+      - id: core
+        name: Pick the grpc-integration ref (same branch if it exists, else main)
+        env:
+          BRANCH: ${{ github.head_ref || github.ref_name }}
+        run: |
+          if git ls-remote --exit-code --heads https://github.com/ai-pipestream/grpc-integration "$BRANCH" >/dev/null; then
+            echo "ref=$BRANCH" >> "$GITHUB_OUTPUT"
+          else
+            echo "ref=$INTEGRATION_REF" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v5
+        with:
+          repository: ai-pipestream/grpc-integration
+          ref: ${{ steps.core.outputs.ref }}
+          path: grpc-integration
+      - name: Drop the previous recordings
+        run: rm -rf grpc-microsoft/grpc-microsoft-admin/src/test/resources/recordings/admin
+      - uses: actions/download-artifact@v4
+        with:
+          name: admin-recordings
+          run-id: ${{ inputs.import_admin_recordings_run_id }}
+          github-token: ${{ github.token }}
+          path: grpc-microsoft/grpc-microsoft-admin/src/test/resources/recordings/admin/
+      - name: Leak check
+        working-directory: grpc-microsoft/grpc-microsoft-admin/src/test/resources/recordings/admin
+        run: |
+          echo "files: $(find . -type f | wc -l)"
+          fail=0
+          check() {
+            n=$(grep -rIlE -e "$2" . | wc -l)
+            echo "$1: $n files"
+            if [ "$n" -gt 0 ]; then grep -rIlE -e "$2" . | head -20; fail=1; fi
+          }
+          check "jwt" 'eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}'
+          check "bearer credential" 'Bearer [A-Za-z0-9._-]{16,}'
+          check "client secret field" 'client_secret'
+          check "tenant host" 'pipestreamai'
+          check "encoded grantee" 'aTowaS50fG1zLnNwLmV4dH'
+          # OData annotation keys such as fields@odata.context have the shape of an address.
+          n=$(grep -rIhoE '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}' . | grep -vE '@(odata|microsoft\.graph)\.[A-Za-z.]+$' | grep -vcE '@example\.(invalid|com|org)$' || true)
+          echo "email address: $n matches outside the placeholder domains"
+          if [ "$n" -gt 0 ]; then fail=1; fi
+          exit $fail
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "25"
+      - name: Replay and hygiene tests on the imported recordings
+        working-directory: grpc-microsoft
+        run: |
+          ./gradlew --no-daemon -PintegrationDir=../grpc-integration :grpc-microsoft-admin:test \
+            --tests '*MicrosoftAdminReplayTest'
+      - name: Commit the recordings
+        working-directory: grpc-microsoft
+        env:
+          BRANCH: ${{ github.ref_name }}
+          RUN_ID: ${{ inputs.import_admin_recordings_run_id }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add grpc-microsoft-admin/src/test/resources/recordings
+          if git diff --cached --quiet; then
+            echo "Nothing to commit"
+            exit 0
+          fi
+          git commit -m "Add recorded admin service exchanges from live run ${RUN_ID}"
+          git push origin "HEAD:${BRANCH}"
