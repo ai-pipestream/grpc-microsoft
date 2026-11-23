@@ -26,6 +26,11 @@ public final class MicrosoftSourceConnector extends ChangeSourceConnector {
     public static final String FOLDER_PATH = "microsoft.folder.path";
     /** Config key for a Microsoft Graph base URL override. */
     public static final String GRAPH_BASE_URL = "microsoft.graph.base.url";
+    /**
+     * Config key for an Entra authority host override (direct mode), for a
+     * national cloud whose Graph root {@link #GRAPH_BASE_URL} names.
+     */
+    public static final String AUTHORITY = "microsoft.authority";
 
     /** Creates a Microsoft Graph Kafka Connect source connector. */
     public MicrosoftSourceConnector() {
@@ -48,7 +53,9 @@ public final class MicrosoftSourceConnector extends ChangeSourceConnector {
                 .define(FOLDER_PATH, ConfigDef.Type.STRING, "/", ConfigDef.Importance.MEDIUM,
                         "Folder to start from")
                 .define(GRAPH_BASE_URL, ConfigDef.Type.STRING, "", ConfigDef.Importance.LOW,
-                        "Graph base URL override");
+                        "Graph base URL override")
+                .define(AUTHORITY, ConfigDef.Type.STRING, "", ConfigDef.Importance.LOW,
+                        "Entra authority host override (direct mode)");
     }
 
     @Override

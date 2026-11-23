@@ -133,6 +133,16 @@ Custom configuration JSON (GCA does not interpret this string):
 a `host:port` or `grpc://host:port` datasource URL is treated as the
 MicrosoftService target.
 
+Crawl checkpoints: `customMarkerData` is only ever a `Sync` resume cursor,
+or empty. Every checkpoint written while a crawl runs repeats the cursor
+the request carried, and the last one carries the cursor the pass ended
+with. An incremental crawl hands the stored cursor back as
+`SyncRequest.since_cursor`, so it is a delta pass: only what changed since
+that cursor, with each delete as a `DeletedItem`. With no stored cursor it
+is a full enumeration, which reports no deletes. A full crawl never sends a
+cursor. A `Sync` stream that ends without its terminal resume cursor was
+cut short: the crawl ends with `DatasourceError` and no new checkpoint.
+
 ```
 MICROSOFT_GRPC_TARGET=localhost:9096
 CONNECTOR_GRPC_PORT=30303
@@ -180,6 +190,20 @@ already-running proxy (one credential surface).
   }
 }
 ```
+
+The Connect offset is the pass's resume cursor (an encoded `SyncCursor`),
+in both modes. Each poll resumes from it, so after the first full
+enumeration a poll publishes only what changed, deletes included
+(`CHANGE_OPERATION_DELETE`). A `Sync` stream that ends without its resume
+cursor fails the poll, and nothing of it is committed. An offset written by
+a version that stored the poll's wall-clock time is read as "no cursor":
+the next pass is one full enumeration, logged at WARNING.
+
+Direct mode (no `grpc.target`) takes `microsoft.tenant.id`,
+`microsoft.client.id`, `microsoft.client.secret`, and optionally
+`microsoft.site.id`, `microsoft.drive.ids`, `microsoft.folder.path`,
+`microsoft.graph.base.url` and `microsoft.authority` (the Entra authority
+host, for a national cloud whose Graph root the base URL names).
 
 ## Proto lint (Buf)
 
