@@ -86,6 +86,18 @@ public final class MicrosoftCrawler {
         }
 
         /**
+         * These options for a pass that resumes from {@code since}.
+         *
+         * @param since the previous pass's cursor; empty = full enumeration
+         * @return a copy with {@code since} replaced
+         */
+        public Options withSince(SyncCursor since) {
+            return new Options(driveIds, siteIds, folderPath, includeContent, maxInlineBytes,
+                    listColumns, permissions, retentionLabel, publication, includeLists,
+                    listItemDriveItem, listItemPermissions, preferences, includeSystem, since);
+        }
+
+        /**
          * The first-revision defaults: list columns on, nothing else, no content.
          *
          * @param config the connection's scope (drive allowlist, folder path)

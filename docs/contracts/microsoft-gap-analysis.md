@@ -627,8 +627,6 @@ behaviour.
 - Subscriptions (cut by the review).
 - Per-connection `ConnectionOutput` binding. Every connection writes to the
   process-wide output and OKF sinks; the sync table is per connection.
-- `grpc-connect`'s `MicrosoftSourceTask` does not yet pass `since_cursor`,
-  so connect-driven runs are always full sweeps.
 - `Sync` emits permissions inline on drive items and list items, not as
   standalone `PERMISSION` entities.
 - A run that mixes `DELTA` and `CRAWL` sweeps (one drive restarted by a 410)

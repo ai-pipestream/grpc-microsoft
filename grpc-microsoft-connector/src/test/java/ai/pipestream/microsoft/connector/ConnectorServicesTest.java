@@ -10,11 +10,15 @@ import microsoft.graph.connectors.contracts.grpc.ConnectionManagementServiceGrpc
 import microsoft.graph.connectors.contracts.grpc.ConnectorCrawlerServiceGrpc;
 import microsoft.graph.connectors.contracts.grpc.ConnectorInfoServiceGrpc;
 import microsoft.graph.connectors.contracts.grpc.ConnectorOAuthServiceGrpc;
+import microsoft.graph.connectors.contracts.grpc.CrawlCheckpoint;
+import microsoft.graph.connectors.contracts.grpc.CrawlStreamBit;
 import microsoft.graph.connectors.contracts.grpc.CustomConfiguration;
 import microsoft.graph.connectors.contracts.grpc.GetBasicConnectorInfoRequest;
 import microsoft.graph.connectors.contracts.grpc.GetCrawlStreamRequest;
 import microsoft.graph.connectors.contracts.grpc.GetDataSourceSchemaRequest;
+import microsoft.graph.connectors.contracts.grpc.GetIncrementalCrawlStreamRequest;
 import microsoft.graph.connectors.contracts.grpc.HealthCheckRequest;
+import microsoft.graph.connectors.contracts.grpc.IncrementalCrawlStreamBit;
 import microsoft.graph.connectors.contracts.grpc.OperationResult;
 import microsoft.graph.connectors.contracts.grpc.RefreshAccessTokenRequest;
 import microsoft.graph.connectors.contracts.grpc.ValidateAuthenticationRequest;
@@ -145,6 +149,108 @@ class ConnectorServicesTest {
         assertThat(bits.get(bits.size() - 1).getCrawlProgressMarker().getCustomMarkerData())
                 .isEqualTo("cursor-1");
         assertThat(bits).allMatch(bit -> bit.getStatus().getResult() == OperationResult.Success);
+    }
+
+    @Test
+    void incrementalCrawlResumesFromTheStoredCursor() {
+        microsoft.resumeCursor = "cursor-2";
+
+        List<IncrementalCrawlStreamBit> bits = incremental(
+                GetIncrementalCrawlStreamRequest.newBuilder()
+                        .setCustomConfiguration(config())
+                        .setCrawlProgressMarker(CrawlCheckpoint.newBuilder()
+                                .setCustomMarkerData("cursor-1"))
+                        .build());
+
+        // The stored cursor goes back to Sync, so the pass is a delta pass
+        // and carries the deletes since the last one.
+        assertThat(microsoft.syncRequests).hasSize(1);
+        assertThat(microsoft.syncRequests.get(0).getSinceCursor()).isEqualTo("cursor-1");
+        assertThat(bits).allMatch(bit -> bit.getStatus().getResult() == OperationResult.Success);
+        // A checkpoint written before the pass ends still names the cursor
+        // the pass started from: a crawl resumed from it replays this pass.
+        assertThat(bits.subList(0, bits.size() - 1))
+                .isNotEmpty()
+                .allMatch(IncrementalCrawlStreamBit::hasCrawlItem)
+                .extracting(bit -> bit.getCrawlProgressMarker().getCustomMarkerData())
+                .containsOnly("cursor-1");
+        assertThat(bits.get(bits.size() - 1).getCrawlProgressMarker().getCustomMarkerData())
+                .isEqualTo("cursor-2");
+    }
+
+    @Test
+    void incrementalCrawlWithoutACursorIsAFullEnumeration() {
+        List<IncrementalCrawlStreamBit> bits = incremental(
+                GetIncrementalCrawlStreamRequest.newBuilder()
+                        .setCustomConfiguration(config())
+                        .setPreviousCrawlStartTimeInUtc(
+                                com.google.protobuf.Timestamp.newBuilder().setSeconds(1_700_000_000))
+                        .build());
+
+        assertThat(microsoft.syncRequests.get(0).getSinceCursor()).isEmpty();
+        // The previous crawl's start time is not a resume cursor and is
+        // never stored as one.
+        assertThat(bits.subList(0, bits.size() - 1))
+                .extracting(bit -> bit.getCrawlProgressMarker().getCustomMarkerData())
+                .containsOnly("");
+        assertThat(bits.get(bits.size() - 1).getCrawlProgressMarker().getCustomMarkerData())
+                .isEqualTo("cursor-1");
+    }
+
+    @Test
+    void fullCrawlEnumeratesEverythingAndKeepsTheStoredCursorUntilItEnds() {
+        microsoft.resumeCursor = "cursor-2";
+        List<CrawlStreamBit> bits = new ArrayList<>();
+        crawler.getCrawlStream(GetCrawlStreamRequest.newBuilder()
+                .setCustomConfiguration(config())
+                .setCrawlProgressMarker(CrawlCheckpoint.newBuilder()
+                        .setCustomMarkerData("cursor-1"))
+                .build()).forEachRemaining(bits::add);
+
+        // A full crawl never asks for a delta pass.
+        assertThat(microsoft.syncRequests.get(0).getSinceCursor()).isEmpty();
+        assertThat(bits.subList(0, bits.size() - 1))
+                .isNotEmpty()
+                .extracting(bit -> bit.getCrawlProgressMarker().getCustomMarkerData())
+                .containsOnly("cursor-1");
+        assertThat(bits.get(bits.size() - 1).getCrawlProgressMarker().getCustomMarkerData())
+                .isEqualTo("cursor-2");
+    }
+
+    @Test
+    void aSyncStreamWithoutItsResumeCursorFailsTheCrawl() {
+        microsoft.resumeCursor = null;
+
+        List<IncrementalCrawlStreamBit> incremental = incremental(
+                GetIncrementalCrawlStreamRequest.newBuilder()
+                        .setCustomConfiguration(config())
+                        .setCrawlProgressMarker(CrawlCheckpoint.newBuilder()
+                                .setCustomMarkerData("cursor-1"))
+                        .build());
+        IncrementalCrawlStreamBit lastIncremental = incremental.get(incremental.size() - 1);
+        assertThat(lastIncremental.getStatus().getResult())
+                .isEqualTo(OperationResult.DatasourceError);
+        assertThat(lastIncremental.getStatus().getStatusMessage()).contains("resume cursor");
+        // No bit of the truncated pass moves the stored cursor.
+        assertThat(incremental)
+                .filteredOn(IncrementalCrawlStreamBit::hasCrawlProgressMarker)
+                .extracting(bit -> bit.getCrawlProgressMarker().getCustomMarkerData())
+                .containsOnly("cursor-1");
+
+        List<CrawlStreamBit> full = new ArrayList<>();
+        crawler.getCrawlStream(GetCrawlStreamRequest.newBuilder()
+                .setCustomConfiguration(config())
+                .build()).forEachRemaining(full::add);
+        assertThat(full.get(full.size() - 1).getStatus().getResult())
+                .isEqualTo(OperationResult.DatasourceError);
+        assertThat(full.get(full.size() - 1).getStatus().getStatusMessage())
+                .contains("resume cursor");
+    }
+
+    private List<IncrementalCrawlStreamBit> incremental(GetIncrementalCrawlStreamRequest request) {
+        List<IncrementalCrawlStreamBit> bits = new ArrayList<>();
+        crawler.getIncrementalCrawlStream(request).forEachRemaining(bits::add);
+        return bits;
     }
 
     @Test
