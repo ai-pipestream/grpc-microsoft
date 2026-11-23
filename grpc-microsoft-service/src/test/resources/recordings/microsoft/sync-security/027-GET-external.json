@@ -1,7 +1,7 @@
 {
   "request" : {
     "method" : "GET",
-    "url" : "https://redacted.example/url/3/_api/web/lists(guid'00000000-0000-4000-8000-000000000019')/items?$select=Id,HasUniqueRoleAssignments,FileRef,FileDirRef&$top=1000",
+    "url" : "https://redacted.example/url/3/_api/web/lists(guid'00000000-0000-4000-8000-000000000022')/items?$select=Id,HasUniqueRoleAssignments,FileRef,FileDirRef&$top=1000",
     "authorized" : true,
     "headers" : { }
   },
@@ -16,8 +16,8 @@
           "HasUniqueRoleAssignments" : true,
           "Id" : 1,
           "ID" : 1,
-          "FileRef" : "/sites/WelcomeToPipestream/Lists/pipestreamlivewrite20261123021645ade803e1/1_.000",
-          "FileDirRef" : "/sites/WelcomeToPipestream/Lists/pipestreamlivewrite20261123021645ade803e1"
+          "FileRef" : "/sites/WelcomeToPipestream/Lists/pipestreamlivewrite20261123022631a8adaf87/1_.000",
+          "FileDirRef" : "/sites/WelcomeToPipestream/Lists/pipestreamlivewrite20261123022631a8adaf87"
         } ]
       }
     }

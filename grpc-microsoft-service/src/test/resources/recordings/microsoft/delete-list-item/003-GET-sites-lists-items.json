@@ -1,7 +1,7 @@
 {
   "request" : {
     "method" : "GET",
-    "url" : "https://graph.microsoft.com/v1.0/sites/tenant-1.example,00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000002/lists/00000000-0000-4000-8000-000000000019/items/1?$select=id,name,webUrl,description,eTag,createdDateTime,lastModifiedDateTime,createdBy,lastModifiedBy,contentType,sharepointIds,parentReference,deleted&$expand=fields",
+    "url" : "https://graph.microsoft.com/v1.0/sites/tenant-1.example,00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000002/lists/00000000-0000-4000-8000-000000000022/items/1?$select=id,name,webUrl,description,eTag,createdDateTime,lastModifiedDateTime,createdBy,lastModifiedBy,contentType,sharepointIds,parentReference,deleted&$expand=fields",
     "authorized" : true,
     "headers" : { }
   },
@@ -16,7 +16,7 @@
           "code" : "itemNotFound",
           "message" : "The specified list item was not found",
           "innerError" : {
-            "date" : "2026-11-23T02:17:46",
+            "date" : "2026-11-23T02:27:12",
             "request-id" : "00000000-0000-4000-8000-000000000133",
             "client-request-id" : "00000000-0000-4000-8000-000000000133"
           }

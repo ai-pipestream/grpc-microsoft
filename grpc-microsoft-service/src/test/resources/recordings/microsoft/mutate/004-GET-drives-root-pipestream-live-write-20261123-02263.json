@@ -1,7 +1,7 @@
 {
   "request" : {
     "method" : "GET",
-    "url" : "https://graph.microsoft.com/v1.0/drives/b!drive-0001/root:/pipestream-live-write-20261123-021645-ade803e1/batch-b:?$select=id,name,eTag,cTag,createdBy,createdDateTime,lastModifiedBy,lastModifiedDateTime,parentReference,webUrl,webDavUrl,description,size,file,folder,fileSystemInfo,deleted,root,package,remoteItem,shared,specialFolder,image,photo,video,audio,location,malware,sharepointIds,pendingOperations,@microsoft.graph.downloadUrl",
+    "url" : "https://graph.microsoft.com/v1.0/drives/b!drive-0001/root:/pipestream-live-write-20261123-022631-a8adaf87/batch-b:?$select=id,name,eTag,cTag,createdBy,createdDateTime,lastModifiedBy,lastModifiedDateTime,parentReference,webUrl,webDavUrl,description,size,file,folder,fileSystemInfo,deleted,root,package,remoteItem,shared,specialFolder,image,photo,video,audio,location,malware,sharepointIds,pendingOperations,@microsoft.graph.downloadUrl",
     "authorized" : true,
     "headers" : { }
   },
@@ -16,46 +16,46 @@
         "@odata.etag" : "\"{00000000-0000-4000-8000-000000000109},2\"",
         "createdBy" : {
           "application" : {
-            "id" : "00000000-0000-4000-8000-000000000004",
+            "id" : "00000000-0000-4000-8000-000000000007",
             "displayName" : "Identity 1"
           },
           "user" : {
             "displayName" : "Identity 2"
           }
         },
-        "createdDateTime" : "2026-11-23T02:17:40Z",
+        "createdDateTime" : "2026-11-23T02:27:08Z",
         "eTag" : "\"{00000000-0000-4000-8000-000000000109},2\"",
         "id" : "item-0009",
         "lastModifiedBy" : {
           "application" : {
-            "id" : "00000000-0000-4000-8000-000000000004",
+            "id" : "00000000-0000-4000-8000-000000000007",
             "displayName" : "Identity 1"
           },
           "user" : {
             "displayName" : "Identity 2"
           }
         },
-        "lastModifiedDateTime" : "2026-11-23T02:17:40Z",
+        "lastModifiedDateTime" : "2026-11-23T02:27:08Z",
         "name" : "batch-b",
         "parentReference" : {
           "driveType" : "documentLibrary",
           "driveId" : "b!drive-0001",
           "id" : "item-0001",
-          "name" : "pipestream-live-write-20261123-021645-ade803e1",
-          "path" : "/drives/b!drive-0001/root:/pipestream-live-write-20261123-021645-ade803e1",
+          "name" : "pipestream-live-write-20261123-022631-a8adaf87",
+          "path" : "/drives/b!drive-0001/root:/pipestream-live-write-20261123-022631-a8adaf87",
           "sharepointIds" : {
-            "listId" : "00000000-0000-4000-8000-000000000005",
-            "listItemUniqueId" : "00000000-0000-4000-8000-000000000003",
+            "listId" : "00000000-0000-4000-8000-000000000008",
+            "listItemUniqueId" : "00000000-0000-4000-8000-000000000006",
             "siteId" : "00000000-0000-4000-8000-000000000001",
             "siteUrl" : "https://redacted.example/url/3",
             "webId" : "00000000-0000-4000-8000-000000000002"
           },
           "siteId" : "00000000-0000-4000-8000-000000000001"
         },
-        "webUrl" : "https://redacted.example/url/80",
+        "webUrl" : "https://redacted.example/url/78",
         "fileSystemInfo" : {
-          "createdDateTime" : "2026-11-23T02:17:40Z",
-          "lastModifiedDateTime" : "2026-11-23T02:17:40Z"
+          "createdDateTime" : "2026-11-23T02:27:08Z",
+          "lastModifiedDateTime" : "2026-11-23T02:27:08Z"
         },
         "folder" : {
           "childCount" : 0
@@ -64,16 +64,16 @@
           "scope" : "users"
         },
         "sharepointIds" : {
-          "listId" : "00000000-0000-4000-8000-000000000005",
-          "listItemId" : "208",
+          "listId" : "00000000-0000-4000-8000-000000000008",
+          "listItemId" : "216",
           "listItemUniqueId" : "00000000-0000-4000-8000-000000000109",
           "siteId" : "00000000-0000-4000-8000-000000000001",
           "siteUrl" : "https://redacted.example/url/3",
-          "tenantId" : "00000000-0000-4000-8000-000000000007",
+          "tenantId" : "00000000-0000-4000-8000-000000000010",
           "webId" : "00000000-0000-4000-8000-000000000002"
         },
         "size" : 0,
-        "webDavUrl" : "https://redacted.example/url/80"
+        "webDavUrl" : "https://redacted.example/url/78"
       }
     }
   }

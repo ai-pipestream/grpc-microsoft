@@ -4,7 +4,7 @@
     "url" : "https://graph.microsoft.com/v1.0/drives/b!drive-0001/items/item-0003",
     "authorized" : true,
     "headers" : {
-      "if-match" : "\"{00000000-0000-4000-8000-000000000008},1\"",
+      "if-match" : "\"{00000000-0000-4000-8000-000000000011},1\"",
       "content-type" : "application/json"
     },
     "body" : {
@@ -24,9 +24,9 @@
           "code" : "resourceModified",
           "message" : "The resource has changed since the caller last read it; usually an eTag mismatch",
           "innerError" : {
-            "date" : "2026-11-23T02:16:58",
-            "request-id" : "00000000-0000-4000-8000-000000000014",
-            "client-request-id" : "00000000-0000-4000-8000-000000000014"
+            "date" : "2026-11-23T02:26:42",
+            "request-id" : "00000000-0000-4000-8000-000000000017",
+            "client-request-id" : "00000000-0000-4000-8000-000000000017"
           }
         }
       }

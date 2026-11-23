@@ -1,7 +1,7 @@
 {
   "request" : {
     "method" : "GET",
-    "url" : "https://graph.microsoft.com/v1.0/sites/tenant-1.example,00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000002/lists/00000000-0000-4000-8000-000000000019/items/1/permissions",
+    "url" : "https://graph.microsoft.com/v1.0/sites/tenant-1.example,00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000002/lists/00000000-0000-4000-8000-000000000022/items/1/permissions",
     "authorized" : true,
     "headers" : { }
   },
@@ -12,7 +12,7 @@
     },
     "body" : {
       "json" : {
-        "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#sites('tenant-1.example%2C00000000-0000-4000-8000-000000000001%2C00000000-0000-4000-8000-000000000002')/lists('00000000-0000-4000-8000-000000000019')/items('1')/permissions",
+        "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#sites('tenant-1.example%2C00000000-0000-4000-8000-000000000001%2C00000000-0000-4000-8000-000000000002')/lists('00000000-0000-4000-8000-000000000022')/items('1')/permissions",
         "value" : [ {
           "id" : "permission-0001",
           "roles" : [ "owner" ],
@@ -88,7 +88,7 @@
               "@odata.type" : "#microsoft.graph.sharePointIdentity",
               "displayName" : "Identity 6",
               "email" : "email-1@example.invalid",
-              "id" : "00000000-0000-4000-8000-000000000013"
+              "id" : "00000000-0000-4000-8000-000000000016"
             },
             "siteUser" : {
               "displayName" : "Identity 6",
@@ -101,7 +101,7 @@
             "user" : {
               "displayName" : "Identity 6",
               "email" : "email-1@example.invalid",
-              "id" : "00000000-0000-4000-8000-000000000013"
+              "id" : "00000000-0000-4000-8000-000000000016"
             }
           },
           "inheritedFrom" : { }

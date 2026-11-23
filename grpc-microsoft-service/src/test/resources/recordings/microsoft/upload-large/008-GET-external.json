@@ -8,11 +8,11 @@
   "response" : {
     "status" : 200,
     "headers" : {
-      "etag" : "\"{00000000-0000-4000-8000-000000000010},2\"",
+      "etag" : "\"{00000000-0000-4000-8000-000000000013},2\"",
       "content-type" : "application/octet-stream"
     },
     "body" : {
-      "blob" : "1e2496b888b7fc6c7f9be8c41ee88d60f1bf1b5e7e75376ebcbeabefabf7e534",
+      "blob" : "0ed57c29e66ab13ca1ecd871891eae46c3af49a6587b7d5a972c8b66fc0aae88",
       "length" : 4849787
     }
   }

@@ -1,7 +1,7 @@
 {
   "request" : {
     "method" : "POST",
-    "url" : "https://graph.microsoft.com/v1.0/sites/tenant-1.example,00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000002/lists/00000000-0000-4000-8000-000000000019/columns",
+    "url" : "https://graph.microsoft.com/v1.0/sites/tenant-1.example,00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000002/lists/00000000-0000-4000-8000-000000000022/columns",
     "authorized" : true,
     "headers" : {
       "content-type" : "application/json"
@@ -11,7 +11,7 @@
         "name" : "PsLookup",
         "displayName" : "PsLookup",
         "lookup" : {
-          "listId" : "00000000-0000-4000-8000-000000000019",
+          "listId" : "00000000-0000-4000-8000-000000000022",
           "columnName" : "Title",
           "allowMultipleValues" : false
         }
@@ -26,13 +26,13 @@
     },
     "body" : {
       "json" : {
-        "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#sites('tenant-1.example%2C00000000-0000-4000-8000-000000000001%2C00000000-0000-4000-8000-000000000002')/lists('00000000-0000-4000-8000-000000000019')/columns/$entity",
+        "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#sites('tenant-1.example%2C00000000-0000-4000-8000-000000000001%2C00000000-0000-4000-8000-000000000002')/lists('00000000-0000-4000-8000-000000000022')/columns/$entity",
         "columnGroup" : "Custom Columns",
         "description" : "",
         "displayName" : "PsLookup",
         "enforceUniqueValues" : false,
         "hidden" : false,
-        "id" : "00000000-0000-4000-8000-000000000084",
+        "id" : "00000000-0000-4000-8000-000000000087",
         "indexed" : false,
         "name" : "PsLookup",
         "readOnly" : false,
@@ -41,7 +41,7 @@
           "allowMultipleValues" : false,
           "allowUnlimitedLength" : false,
           "columnName" : "Title",
-          "listId" : "00000000-0000-4000-8000-000000000019"
+          "listId" : "00000000-0000-4000-8000-000000000022"
         }
       }
     }

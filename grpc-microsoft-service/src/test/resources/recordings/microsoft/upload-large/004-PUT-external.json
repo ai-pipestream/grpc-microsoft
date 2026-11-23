@@ -8,7 +8,7 @@
       "content-type" : "application/octet-stream"
     },
     "body" : {
-      "sha256" : "f7c30f979de151530f6c7d7360354a820fb094843498fc04553f61e9da4e6147",
+      "sha256" : "f2202f846e69ffc52ffe900c83f8cec98d48af51ada0dcf9cd1ed2261e8f9139",
       "length" : 1572987
     }
   },
@@ -24,49 +24,49 @@
         "@content.downloadUrlNoAuth" : "https://redacted.example/url/11",
         "createdBy" : {
           "application" : {
-            "id" : "00000000-0000-4000-8000-000000000004",
+            "id" : "00000000-0000-4000-8000-000000000007",
             "displayName" : "Identity 1"
           },
           "user" : {
             "displayName" : "Identity 2"
           }
         },
-        "createdDateTime" : "2026-11-23T02:16:48Z",
-        "eTag" : "\"{00000000-0000-4000-8000-000000000010},2\"",
+        "createdDateTime" : "2026-11-23T02:26:33Z",
+        "eTag" : "\"{00000000-0000-4000-8000-000000000013},2\"",
         "id" : "item-0004",
         "lastModifiedBy" : {
           "application" : {
-            "id" : "00000000-0000-4000-8000-000000000004",
+            "id" : "00000000-0000-4000-8000-000000000007",
             "displayName" : "Identity 1"
           },
           "user" : {
             "displayName" : "Identity 2"
           }
         },
-        "lastModifiedDateTime" : "2026-11-23T02:16:51Z",
+        "lastModifiedDateTime" : "2026-11-23T02:26:36Z",
         "name" : "large.bin",
         "parentReference" : {
           "driveType" : "documentLibrary",
           "driveId" : "b!drive-0001",
           "id" : "item-0001",
-          "name" : "pipestream-live-write-20261123-021645-ade803e1",
-          "path" : "/drives/b!drive-0001/root:/pipestream-live-write-20261123-021645-ade803e1",
+          "name" : "pipestream-live-write-20261123-022631-a8adaf87",
+          "path" : "/drives/b!drive-0001/root:/pipestream-live-write-20261123-022631-a8adaf87",
           "siteId" : "00000000-0000-4000-8000-000000000001"
         },
         "webUrl" : "https://redacted.example/url/12",
-        "cTag" : "\"c:{00000000-0000-4000-8000-000000000010},2\"",
+        "cTag" : "\"c:{00000000-0000-4000-8000-000000000013},2\"",
         "file" : {
           "fileExtension" : ".bin",
           "hashes" : {
-            "quickXorHash" : "9igS8GS/lh4ZlYMIC72oKlqCd+A="
+            "quickXorHash" : "OTt/KmNjfIeXKI3HbC5QqpKH0+o="
           },
           "irmEffectivelyEnabled" : false,
           "irmEnabled" : false,
           "mimeType" : "application/octet-stream"
         },
         "fileSystemInfo" : {
-          "createdDateTime" : "2026-11-23T02:16:48Z",
-          "lastModifiedDateTime" : "2026-11-23T02:16:51Z"
+          "createdDateTime" : "2026-11-23T02:26:33Z",
+          "lastModifiedDateTime" : "2026-11-23T02:26:36Z"
         },
         "isAuthoritative" : false,
         "shared" : {

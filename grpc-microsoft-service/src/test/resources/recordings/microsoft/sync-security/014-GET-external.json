@@ -1,7 +1,7 @@
 {
   "request" : {
     "method" : "GET",
-    "url" : "https://redacted.example/url/3/_api/web/lists(guid'00000000-0000-4000-8000-000000000005')?$select=HasUniqueRoleAssignments",
+    "url" : "https://redacted.example/url/3/_api/web/lists(guid'00000000-0000-4000-8000-000000000008')?$select=HasUniqueRoleAssignments",
     "authorized" : true,
     "headers" : { }
   },

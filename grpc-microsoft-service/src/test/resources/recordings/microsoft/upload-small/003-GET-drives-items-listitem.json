@@ -8,17 +8,17 @@
   "response" : {
     "status" : 200,
     "headers" : {
-      "etag" : "\"00000000-0000-4000-8000-000000000008,1\"",
+      "etag" : "\"00000000-0000-4000-8000-000000000011,1\"",
       "content-type" : "application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8"
     },
     "body" : {
       "json" : {
         "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#drives('b%21drive-0001')/items('item-0003')/listItem(fields())/$entity",
-        "@odata.etag" : "\"00000000-0000-4000-8000-000000000008,1\"",
-        "createdDateTime" : "2026-11-23T02:16:47Z",
-        "eTag" : "\"00000000-0000-4000-8000-000000000008,1\"",
-        "id" : "202",
-        "lastModifiedDateTime" : "2026-11-23T02:16:47Z",
+        "@odata.etag" : "\"00000000-0000-4000-8000-000000000011,1\"",
+        "createdDateTime" : "2026-11-23T02:26:33Z",
+        "eTag" : "\"00000000-0000-4000-8000-000000000011,1\"",
+        "id" : "210",
+        "lastModifiedDateTime" : "2026-11-23T02:26:33Z",
         "webUrl" : "https://redacted.example/url/5",
         "createdBy" : {
           "user" : {
@@ -27,7 +27,7 @@
         },
         "lastModifiedBy" : {
           "application" : {
-            "id" : "00000000-0000-4000-8000-000000000004",
+            "id" : "00000000-0000-4000-8000-000000000007",
             "displayName" : "Identity 1"
           },
           "user" : {
@@ -35,7 +35,7 @@
           }
         },
         "parentReference" : {
-          "id" : "00000000-0000-4000-8000-000000000003",
+          "id" : "00000000-0000-4000-8000-000000000006",
           "siteId" : "tenant-1.example,00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000002"
         },
         "contentType" : {
@@ -44,12 +44,12 @@
         },
         "fields@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#drives('b%21drive-0001')/items('item-0003')/listItem/fields/$entity",
         "fields" : {
-          "@odata.etag" : "\"00000000-0000-4000-8000-000000000008,1\"",
-          "id" : "202",
+          "@odata.etag" : "\"00000000-0000-4000-8000-000000000011,1\"",
+          "id" : "210",
           "ContentType" : "Document",
-          "Created" : "2026-11-23T02:16:47Z",
+          "Created" : "2026-11-23T02:26:33Z",
           "AuthorLookupId" : "1073741822",
-          "Modified" : "2026-11-23T02:16:47Z",
+          "Modified" : "2026-11-23T02:26:33Z",
           "EditorLookupId" : "1073741822",
           "FileLeafRef" : "small.txt",
           "_CheckinComment" : "",
@@ -70,8 +70,8 @@
           "AppEditorLookupId" : "4",
           "Edit" : "0",
           "_UIVersionString" : "1.0",
-          "ParentVersionStringLookupId" : "202",
-          "ParentLeafNameLookupId" : "202"
+          "ParentVersionStringLookupId" : "210",
+          "ParentLeafNameLookupId" : "210"
         }
       }
     }

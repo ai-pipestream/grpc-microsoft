@@ -1,7 +1,7 @@
 {
   "request" : {
     "method" : "GET",
-    "url" : "https://redacted.example/url/3/_api/web/lists(guid'00000000-0000-4000-8000-000000000005')/roleassignments?$expand=Member,RoleDefinitionBindings",
+    "url" : "https://redacted.example/url/3/_api/web/lists(guid'00000000-0000-4000-8000-000000000008')/roleassignments?$expand=Member,RoleDefinitionBindings",
     "authorized" : true,
     "headers" : { }
   },

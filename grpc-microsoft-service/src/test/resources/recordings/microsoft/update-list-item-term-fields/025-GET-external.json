@@ -1,7 +1,7 @@
 {
   "request" : {
     "method" : "GET",
-    "url" : "https://redacted.example/url/3/_api/web/lists(guid'00000000-0000-4000-8000-000000000019')/fields(guid'00000000-0000-4000-8000-000000000095')?$select=InternalName",
+    "url" : "https://redacted.example/url/3/_api/web/lists(guid'00000000-0000-4000-8000-000000000022')/fields(guid'00000000-0000-4000-8000-000000000097')?$select=InternalName",
     "authorized" : true,
     "headers" : { }
   },

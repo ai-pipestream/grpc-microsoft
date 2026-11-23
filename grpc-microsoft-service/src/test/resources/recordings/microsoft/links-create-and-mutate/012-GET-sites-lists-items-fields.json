@@ -1,20 +1,20 @@
 {
   "request" : {
     "method" : "GET",
-    "url" : "https://graph.microsoft.com/v1.0/sites/tenant-1.example,00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000002/lists/00000000-0000-4000-8000-000000000019/items/1/fields",
+    "url" : "https://graph.microsoft.com/v1.0/sites/tenant-1.example,00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000002/lists/00000000-0000-4000-8000-000000000022/items/1/fields",
     "authorized" : true,
     "headers" : { }
   },
   "response" : {
     "status" : 200,
     "headers" : {
-      "etag" : "\"00000000-0000-4000-8000-000000000049,16\"",
+      "etag" : "\"00000000-0000-4000-8000-000000000052,16\"",
       "content-type" : "application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8"
     },
     "body" : {
       "json" : {
-        "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#sites('tenant-1.example%2C00000000-0000-4000-8000-000000000001%2C00000000-0000-4000-8000-000000000002')/lists('00000000-0000-4000-8000-000000000019')/items('1')/fields/$entity",
-        "@odata.etag" : "\"00000000-0000-4000-8000-000000000049,16\"",
+        "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#sites('tenant-1.example%2C00000000-0000-4000-8000-000000000001%2C00000000-0000-4000-8000-000000000002')/lists('00000000-0000-4000-8000-000000000022')/items('1')/fields/$entity",
+        "@odata.etag" : "\"00000000-0000-4000-8000-000000000052,16\"",
         "Title" : "retitled in batch",
         "PsText" : "hello",
         "PsNumber" : 4.5,
@@ -41,22 +41,22 @@
         } ],
         "PsTerm" : {
           "Label" : "Engineering",
-          "TermGuid" : "00000000-0000-4000-8000-000000000097",
+          "TermGuid" : "00000000-0000-4000-8000-000000000004",
           "WssId" : 10
         },
         "PsTerms" : [ {
           "Label" : "Engineering",
-          "TermGuid" : "00000000-0000-4000-8000-000000000097",
+          "TermGuid" : "00000000-0000-4000-8000-000000000004",
           "WssId" : 10
         }, {
           "Label" : "Research",
-          "TermGuid" : "00000000-0000-4000-8000-000000000098",
+          "TermGuid" : "00000000-0000-4000-8000-000000000005",
           "WssId" : 11
         } ],
         "id" : "1",
         "ContentType" : "Item",
-        "Modified" : "2026-11-23T02:17:43Z",
-        "Created" : "2026-11-23T02:17:05Z",
+        "Modified" : "2026-11-23T02:27:10Z",
+        "Created" : "2026-11-23T02:26:48Z",
         "AuthorLookupId" : "1073741822",
         "EditorLookupId" : "1073741822",
         "_UIVersionString" : "16.0",
