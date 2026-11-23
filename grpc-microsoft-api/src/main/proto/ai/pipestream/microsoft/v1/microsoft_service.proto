@@ -175,6 +175,9 @@ service MicrosoftService {
   rpc DeltaGroups(DeltaGroupsRequest) returns (stream DeltaGroupsResponse);
 
   // --- Term store ---
+  //
+  // Graph serves the term store to delegated tokens. An application token is
+  // answered NOT_FOUND for the store and an empty list of groups.
 
   // The term store of a site. GET /sites/{site-id}/termStore.
   rpc GetTermStore(GetTermStoreRequest) returns (GetTermStoreResponse);

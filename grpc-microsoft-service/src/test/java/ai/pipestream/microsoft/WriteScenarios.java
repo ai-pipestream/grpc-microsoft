@@ -779,8 +779,13 @@ final class WriteScenarios {
     /** Name of the term group the live tenant keeps for this test. */
     static final String TERM_GROUP = "pipestream-live-test";
 
-    private String termSetId;
-    private final List<ai.pipestream.microsoft.v1.Term> terms = new ArrayList<>();
+    /** The test tenant's term set "Departments" in that group, and two of its terms. */
+    private static final String TERM_SET = "a3d60745-8927-44b1-94ea-2421b4bcbac4";
+    private static final List<ai.pipestream.microsoft.v1.TermValue> TERMS = List.of(
+            ai.pipestream.microsoft.v1.TermValue.newBuilder().setLabel("Engineering")
+                    .setTermId("199d241d-d93f-4188-8169-2dc025e327f9").build(),
+            ai.pipestream.microsoft.v1.TermValue.newBuilder().setLabel("Research")
+                    .setTermId("8b1ff4b6-549e-4af1-aeb4-dea39fd59f8a").build());
 
     private String termStore() {
         ai.pipestream.microsoft.v1.TermStore store;
@@ -788,6 +793,10 @@ final class WriteScenarios {
             store = stub().getTermStore(ai.pipestream.microsoft.v1.GetTermStoreRequest.newBuilder()
                     .setSiteId(siteId).build()).getStore();
         } catch (StatusRuntimeException e) {
+            if (e.getStatus().getCode() == io.grpc.Status.Code.NOT_FOUND) {
+                throw new Skip("Graph shows an application token no term store: "
+                        + e.getStatus().getDescription());
+            }
             throw notGranted(e);
         }
         check(!store.getId().isEmpty(), "the term store has no id");
@@ -795,7 +804,6 @@ final class WriteScenarios {
         List<ai.pipestream.microsoft.v1.TermGroup> groups = new ArrayList<>();
         stub().listTermGroups(ai.pipestream.microsoft.v1.ListTermGroupsRequest.newBuilder()
                 .setSiteId(siteId).build()).forEachRemaining(r -> groups.add(r.getGroup()));
-        check(!groups.isEmpty(), "the term store has no group");
         String groupId = "";
         for (ai.pipestream.microsoft.v1.TermGroup group : groups) {
             check(!group.getId().isEmpty(), "a term group has no id");
@@ -803,58 +811,45 @@ final class WriteScenarios {
                 groupId = group.getId();
             }
         }
-        if (groupId.isEmpty()) {
-            throw new Skip("the term store has no group named " + TERM_GROUP);
-        }
+        check(!groupId.isEmpty(), "the term store has no group named " + TERM_GROUP);
         List<ai.pipestream.microsoft.v1.TermSet> sets = new ArrayList<>();
         stub().listTermSets(ai.pipestream.microsoft.v1.ListTermSetsRequest.newBuilder()
                 .setSiteId(siteId).setGroupId(groupId).build())
                 .forEachRemaining(r -> sets.add(r.getSet()));
-        check(!sets.isEmpty(), "the test term group has no term set");
-        ai.pipestream.microsoft.v1.TermSet set = sets.get(0);
-        check(!set.getId().isEmpty() && set.getLocalizedNamesCount() > 0, "the term set has no id or name");
+        check(sets.stream().anyMatch(set -> set.getId().equals(TERM_SET)),
+                "the test term group does not hold the test term set");
         List<ai.pipestream.microsoft.v1.Term> found = new ArrayList<>();
         stub().listTerms(ai.pipestream.microsoft.v1.ListTermsRequest.newBuilder()
-                .setSiteId(siteId).setSetId(set.getId()).build())
+                .setSiteId(siteId).setSetId(TERM_SET).build())
                 .forEachRemaining(r -> found.add(r.getTerm()));
-        check(found.size() >= 2, "the test term set needs two terms, it has " + found.size());
-        for (ai.pipestream.microsoft.v1.Term term : found) {
-            check(!term.getId().isEmpty(), "a term has no id");
-            check(term.getLabelsList().stream().anyMatch(label -> label.getIsDefault()),
-                    "a term has no default label");
+        for (ai.pipestream.microsoft.v1.TermValue wanted : TERMS) {
+            check(found.stream().anyMatch(term -> term.getId().equals(wanted.getTermId())
+                    && term.getLabelsList().stream().anyMatch(label -> label.getIsDefault()
+                            && label.getName().equals(wanted.getLabel()))),
+                    "the test term set does not list " + wanted.getLabel());
         }
-        termSetId = set.getId();
-        terms.addAll(found);
         return groups.size() + " group(s), " + sets.size() + " set(s) in the test group, "
-                + found.size() + " term(s) in its first set";
-    }
-
-    private static ai.pipestream.microsoft.v1.TermValue termValue(ai.pipestream.microsoft.v1.Term term) {
-        String label = term.getLabelsList().stream().filter(l -> l.getIsDefault()).findFirst()
-                .orElseThrow().getName();
-        return ai.pipestream.microsoft.v1.TermValue.newBuilder().setTermId(term.getId())
-                .setLabel(label).build();
+                + found.size() + " term(s) in the test set";
     }
 
     private String updateTermFields() {
         need(itemId, "the list item");
-        need(termSetId, "a term set");
-        ColumnSpec.Builder column = ColumnSpec.newBuilder().setTermSetId(termSetId);
+        ColumnSpec.Builder column = ColumnSpec.newBuilder().setTermSetId(TERM_SET);
         List<String> problems = new ArrayList<>();
         Set<String> created = ensureMoreColumns(problems, List.of(
                 column.clone().setName("PsTerm").setType(ColumnType.COLUMN_TYPE_TERM).build(),
                 column.clone().setName("PsTerms").setType(ColumnType.COLUMN_TYPE_MULTITERM).build()));
-        ai.pipestream.microsoft.v1.Term first = terms.get(0);
-        ai.pipestream.microsoft.v1.Term second = terms.get(1);
+        ai.pipestream.microsoft.v1.TermValue first = TERMS.get(0);
+        ai.pipestream.microsoft.v1.TermValue second = TERMS.get(1);
         if (created.contains("PsTerm")) {
-            writeAndRead(problems, FieldValue.newBuilder().setName("PsTerm").setTerm(termValue(first)),
-                    "PsTerm.TermGuid", List.of(first.getId()));
+            writeAndRead(problems, FieldValue.newBuilder().setName("PsTerm").setTerm(first),
+                    "PsTerm.TermGuid", List.of(first.getTermId()));
         }
         if (created.contains("PsTerms")) {
             writeAndRead(problems, FieldValue.newBuilder().setName("PsTerms").setMultiTerm(
                     ai.pipestream.microsoft.v1.MultiTermValue.newBuilder()
-                            .addTerms(termValue(first)).addTerms(termValue(second))),
-                    "PsTerms.TermGuid", List.of(first.getId(), second.getId()));
+                            .addTerms(first).addTerms(second)),
+                    "PsTerms.TermGuid", List.of(first.getTermId(), second.getTermId()));
         }
         check(problems.isEmpty(), String.join("; ", problems));
         return "a term and two terms read back";
