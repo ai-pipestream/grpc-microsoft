@@ -612,8 +612,14 @@ behaviour.
 
 - Explicit `$select` lists (`GraphPaths`) are needed for `sharepointIds`,
   `publication`, `system` and `@microsoft.graph.downloadUrl`. If Graph
-  answers 400, the request is retried once with Graph's default
-  projection (`GraphPager`).
+  rejects the query options (a 400 that names `$select`, `$expand`, a query
+  option or an unknown property), the request is retried with Graph's
+  default projection (`GraphPager`). Any other 400 fails the rpc. A read
+  answered this way is logged at WARNING and reported to the caller in the
+  call's trailing metadata as a typed `DegradedProjections` message
+  (`ProjectionReport`). The recorded tenant accepts every `$select` list on
+  the site, drive, item, list, user and group routes, so this path has only
+  been exercised against the fake.
 - List-item reads try `$select` + `$expand=fields,driveItem`, then
   `$expand` alone, then bare. They re-fetch an item when the delta payload
   lacks `fields`.

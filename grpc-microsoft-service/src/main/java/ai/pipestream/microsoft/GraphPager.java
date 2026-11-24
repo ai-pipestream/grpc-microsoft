@@ -18,9 +18,12 @@ import java.util.Objects;
  *
  * <p>Each request may name several candidate first URLs: the preferred one
  * (with the full {@code $select} / {@code $expand}) and progressively plainer
- * fallbacks. A {@code 400 Bad Request} on a candidate's first page moves on to
- * the next one, so a query option a Graph endpoint rejects degrades to Graph's
- * default property set instead of failing the rpc.</p>
+ * fallbacks. A candidate's first page moves on to the next one only when
+ * Graph rejects its query options
+ * ({@link GraphClient.GraphApiException#rejectsQueryOptions()}); any other
+ * {@code 400} fails the read. A read answered by a fallback lacks the
+ * properties only the preferred query asks for, so it is reported through
+ * {@link ProjectionReport}: logged, and sent to the caller of the rpc.</p>
  */
 public final class GraphPager {
 
@@ -116,7 +119,9 @@ public final class GraphPager {
     }
 
     /**
-     * GETs one entity, trying each candidate URL in turn on {@code 400}.
+     * GETs one entity, trying the next candidate URL when Graph rejects the
+     * query options of one. A read answered by a fallback is reported to
+     * {@link ProjectionReport}.
      *
      * @param candidates first-choice URL, then fallbacks
      * @param headers request headers
@@ -126,14 +131,24 @@ public final class GraphPager {
      */
     public JsonNode get(List<String> candidates, Map<String, String> headers)
             throws IOException, InterruptedException {
+        GraphClient.GraphApiException rejected = null;
         for (int i = 0; ; i++) {
+            JsonNode body;
             try {
-                return graph.get(candidates.get(i), headers);
+                body = graph.get(candidates.get(i), headers);
             } catch (GraphClient.GraphApiException e) {
-                if (e.status() != 400 || i == candidates.size() - 1) {
+                if (i == candidates.size() - 1 || !e.rejectsQueryOptions()) {
                     throw e;
                 }
+                if (rejected == null) {
+                    rejected = e;
+                }
+                continue;
             }
+            if (rejected != null) {
+                ProjectionReport.degraded(candidates.get(0), candidates.get(i), rejected);
+            }
+            return body;
         }
     }
 
