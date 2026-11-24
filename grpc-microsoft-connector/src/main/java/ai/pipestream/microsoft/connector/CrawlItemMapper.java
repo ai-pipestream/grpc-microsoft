@@ -72,21 +72,20 @@ public final class CrawlItemMapper {
      *
      * @param change a Sync change event
      * @param contentRequested whether the Sync was asked to inline file bytes
-     * @return the incremental item, or empty when the entity is missing or not a
-     *         drive item
+     * @return the incremental item, or empty when the entity is not a drive
+     *         item (for an upsert, also when it is missing)
+     * @throws IllegalArgumentException when a delete does not carry the drive
+     *         item it removes
      */
     public static Optional<Mapped<IncrementalCrawlItem>> toIncrementalCrawlItem(
             MicrosoftChange change, boolean contentRequested) {
         if (change.getOperation() == ChangeOperation.CHANGE_OPERATION_DELETE) {
-            String itemId = change.getEntity().getEntityId();
-            if (itemId.isEmpty()) {
-                return Optional.empty();
-            }
-            return Optional.of(new Mapped<>(IncrementalCrawlItem.newBuilder()
-                    .setItemType(IncrementalCrawlItem.ItemType.DeletedItem)
-                    .setItemId(itemId)
-                    .setDeletedItem(DeletedItem.getDefaultInstance())
-                    .build(), Optional.empty()));
+            return deletedItemId(change).map(itemId -> new Mapped<>(
+                    IncrementalCrawlItem.newBuilder()
+                            .setItemType(IncrementalCrawlItem.ItemType.DeletedItem)
+                            .setItemId(itemId)
+                            .setDeletedItem(DeletedItem.getDefaultInstance())
+                            .build(), Optional.empty()));
         }
         return driveItem(change).map(item -> {
             FileContent.Outcome content = FileContent.of(item, contentRequested);
@@ -112,6 +111,39 @@ public final class CrawlItemMapper {
                 .setItemId(itemId(item))
                 .setContentItem(contentItem(item, content))
                 .build(), content.omitted());
+    }
+
+    /**
+     * The id a delete is sent under: the one {@link #itemId(DriveItem)} gave
+     * the item when it was indexed, read from the drive item the delete
+     * carries. The change's own entity id is the bare item id, which names
+     * nothing in the index.
+     *
+     * @return the id, or empty when the deleted entity is of a kind that is
+     *         never indexed (anything but a drive item)
+     * @throws IllegalArgumentException when the delete carries no entity, or
+     *         a drive item without an id: the item it removes cannot be named,
+     *         and sending any other id would be acknowledged and remove nothing
+     */
+    private static Optional<String> deletedItemId(MicrosoftChange change) {
+        MicrosoftEntity entity = change.getEntity();
+        switch (entity.getEntityCase()) {
+            case DRIVE_ITEM -> {
+                DriveItem item = entity.getDriveItem();
+                if (item.getId().isEmpty()) {
+                    throw new IllegalArgumentException("delete " + change.getChangeId() + " of "
+                            + entity.getEntityId() + " carries a drive item without an id; the "
+                            + "item it removes cannot be named");
+                }
+                return Optional.of(itemId(item));
+            }
+            case ENTITY_NOT_SET -> throw new IllegalArgumentException("delete "
+                    + change.getChangeId() + " of " + entity.getEntityId() + " carries no "
+                    + "entity; the item it removes cannot be named");
+            default -> {
+                return Optional.empty();
+            }
+        }
     }
 
     private static Optional<DriveItem> driveItem(MicrosoftChange change) {

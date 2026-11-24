@@ -17,6 +17,7 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class CrawlItemMapperTest {
 
@@ -53,21 +54,65 @@ class CrawlItemMapperTest {
     }
 
     @Test
-    void deleteBecomesIncrementalDeletedItem() {
-        MicrosoftChange change = MicrosoftChange.newBuilder()
-                .setChangeId("c1")
-                .setOperation(ChangeOperation.CHANGE_OPERATION_DELETE)
-                .setEntity(MicrosoftEntity.newBuilder()
-                        .setEntityId("gone")
-                        .setIngestedAt(Timestamp.newBuilder().setSeconds(1)))
-                .build();
+    void deleteBecomesIncrementalDeletedItemUnderTheIdItWasIndexedWith() {
+        DriveItem indexed = DriveItem.newBuilder().setId("file-1").setDriveId("drive-1")
+                .setName("notes.txt").build();
+        MicrosoftChange change = delete(MicrosoftEntity.newBuilder()
+                .setEntityId("file-1")
+                .setDriveItem(DriveItem.newBuilder().setId("file-1").setDriveId("drive-1")
+                        .setDeleted(ai.pipestream.microsoft.v1.Deleted.newBuilder()
+                                .setState("deleted"))));
 
         IncrementalCrawlItem item =
                 CrawlItemMapper.toIncrementalCrawlItem(change, true).orElseThrow().item();
 
         assertThat(item.getItemType()).isEqualTo(IncrementalCrawlItem.ItemType.DeletedItem);
-        assertThat(item.getItemId()).isEqualTo("gone");
+        assertThat(item.getItemId()).isEqualTo("drive-1/file-1")
+                .isEqualTo(CrawlItemMapper.toCrawlItem(indexed, true).item().getItemId());
         assertThat(CrawlItemMapper.toCrawlItem(change, true)).isEmpty();
+    }
+
+    @Test
+    void aDeleteWithoutADriveIdUsesTheIdAnUpsertWithoutOneWouldHave() {
+        DriveItem indexed = DriveItem.newBuilder().setId("file-1").build();
+        MicrosoftChange change = delete(MicrosoftEntity.newBuilder()
+                .setEntityId("file-1").setDriveItem(indexed));
+
+        assertThat(CrawlItemMapper.toIncrementalCrawlItem(change, true).orElseThrow().item()
+                .getItemId())
+                .isEqualTo("file-1")
+                .isEqualTo(CrawlItemMapper.toCrawlItem(indexed, true).item().getItemId());
+    }
+
+    @Test
+    void aDeleteThatDoesNotCarryItsDriveItemIsRefusedNotSentUnderAnotherId() {
+        MicrosoftChange bare = delete(MicrosoftEntity.newBuilder().setEntityId("gone"));
+        MicrosoftChange noId = delete(MicrosoftEntity.newBuilder().setEntityId("gone")
+                .setDriveItem(DriveItem.newBuilder().setDriveId("drive-1")));
+
+        assertThatThrownBy(() -> CrawlItemMapper.toIncrementalCrawlItem(bare, true))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("c1").hasMessageContaining("gone");
+        assertThatThrownBy(() -> CrawlItemMapper.toIncrementalCrawlItem(noId, true))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("c1").hasMessageContaining("gone");
+    }
+
+    @Test
+    void aDeleteOfAnEntityThatIsNeverIndexedIsSkippedLikeItsUpsert() {
+        MicrosoftChange change = delete(MicrosoftEntity.newBuilder()
+                .setEntityId("list-item-1")
+                .setListItem(ai.pipestream.microsoft.v1.ListItem.newBuilder().setId("7")));
+
+        assertThat(CrawlItemMapper.toIncrementalCrawlItem(change, true)).isEmpty();
+    }
+
+    private static MicrosoftChange delete(MicrosoftEntity.Builder entity) {
+        return MicrosoftChange.newBuilder()
+                .setChangeId("c1")
+                .setOperation(ChangeOperation.CHANGE_OPERATION_DELETE)
+                .setEntity(entity.setIngestedAt(Timestamp.newBuilder().setSeconds(1)))
+                .build();
     }
 
     @Test
