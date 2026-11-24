@@ -585,7 +585,12 @@ behaviour.
   - The Output and OKF sinks keep a mirror. A complete run replaces it. An
     incremental or narrowed run merges into it, and deletes become tombstones (OKF
     `status: deprecated`). With no baseline in the process, the run writes
-    beside the bundle under `increments/{run-id}`.
+    beside the bundle under `increments/{run-id}`. The mirror's entries are
+    owned by the connection whose `Sync` wrote them (`RunMirror.Pass`, one
+    per `Sync` through `MicrosoftChangeSink.forConnection`): a complete run
+    replaces only its own connection's entries, a baseline is per
+    connection, and a named connection's increment goes under
+    `increments/{connection-id}/{run-id}`.
 - `MicrosoftCatalog` (grpc-okf) now maps `LIST`, `LIST_ITEM` and `PERMISSION`
   entities.
 - A permission's `entity_id` is `{target}/{permission_id}`, for example
@@ -637,7 +642,10 @@ behaviour.
 
 - Subscriptions (cut by the review).
 - Per-connection `ConnectionOutput` binding. Every connection writes to the
-  process-wide output and OKF sinks; the sync table is per connection.
+  process-wide output and OKF sinks, into one bundle that keeps each
+  connection's entries apart; the sync table is per connection. Two
+  connections that reach the same drive write the same object keys, and the
+  one that wrote last owns the entry.
 - `Sync` emits permissions inline on drive items and list items, not as
   standalone `PERMISSION` entities.
 - A run that mixes `DELTA` and `CRAWL` sweeps (one drive restarted by a 410)

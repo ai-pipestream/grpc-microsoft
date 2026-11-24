@@ -38,6 +38,7 @@ public final class OkfMicrosoftChangeSink implements MicrosoftChangeSink {
     private final OkfOutput output;
     private final SharePointOkfPublisher publisher;
     private final RunMirror<CatalogEntry> mirror = new RunMirror<>();
+    private final RunMirror<CatalogEntry>.Pass own = mirror.pass("");
 
     /**
      * Creates a sink.
@@ -76,8 +77,7 @@ public final class OkfMicrosoftChangeSink implements MicrosoftChangeSink {
      */
     @Override
     public void emit(MicrosoftChange change) {
-        MicrosoftCatalog.from(change).ifPresent(entry ->
-                mirror.put(entry.path(), change.getEntity().getEntityCase(), entry));
+        emit(own, change);
     }
 
     /**
@@ -92,15 +92,61 @@ public final class OkfMicrosoftChangeSink implements MicrosoftChangeSink {
      * {@inheritDoc}
      */
     @Override
-    public synchronized void completeRun(String runId,
-            Set<MicrosoftEntity.EntityCase> enumerated) {
-        RunMirror.Completed<CatalogEntry> completed = mirror.complete(enumerated);
-        write(runId, completed.values(), completed.increment());
+    public void completeRun(String runId, Set<MicrosoftEntity.EntityCase> enumerated) {
+        complete(own, runId, enumerated);
     }
 
-    private void write(String runId, List<CatalogEntry> captured, boolean increment) {
+    /**
+     * This sink for the Sync passes of one connection. The view collects
+     * that Sync's entries on its own, and a pass of it replaces only that
+     * connection's entries in the bundle.
+     *
+     * @param connectionId the catalog connection id
+     * @return the view; one per Sync
+     */
+    @Override
+    public MicrosoftChangeSink forConnection(String connectionId) {
+        RunMirror<CatalogEntry>.Pass pass = mirror.pass(connectionId);
+        return new MicrosoftChangeSink() {
+            @Override
+            public void emit(MicrosoftChange change) {
+                OkfMicrosoftChangeSink.emit(pass, change);
+            }
+
+            @Override
+            public void snapshot(MicrosoftSnapshot snapshot) {
+                OkfMicrosoftChangeSink.this.snapshot(snapshot);
+            }
+
+            @Override
+            public void completeRun(String runId, Set<MicrosoftEntity.EntityCase> enumerated) {
+                complete(pass, runId, enumerated);
+            }
+        };
+    }
+
+    private static void emit(RunMirror<CatalogEntry>.Pass pass, MicrosoftChange change) {
+        MicrosoftCatalog.from(change).ifPresent(entry ->
+                pass.put(entry.path(), change.getEntity().getEntityCase(), entry));
+    }
+
+    private void complete(RunMirror<CatalogEntry>.Pass pass, String runId,
+            Set<MicrosoftEntity.EntityCase> enumerated) {
+        // One pass at a time writes the bundle.
+        synchronized (mirror) {
+            RunMirror.Completed<CatalogEntry> completed = pass.complete(enumerated);
+            String connection = pass.connectionId().isEmpty() ? ""
+                    : ai.pipestream.okf.OkfPaths.segment(pass.connectionId()) + "-";
+            write(connection + ai.pipestream.okf.OkfPaths.segment(runId), runId,
+                    completed.values(), completed.increment());
+        }
+    }
+
+    /** Writes the bundle, or an increment named by {@code incrementName} beside it. */
+    private void write(String incrementName, String runId, List<CatalogEntry> captured,
+            boolean increment) {
         Path scratch = null;
-        String suffix = "increments-" + ai.pipestream.okf.OkfPaths.segment(runId);
+        String suffix = "increments-" + incrementName;
         try {
             OkfOutput dest = increment ? beside(output, suffix) : output;
             if (!dest.enabled()) {
@@ -117,7 +163,7 @@ public final class OkfMicrosoftChangeSink implements MicrosoftChangeSink {
                     captured);
             bundle.write(dest);
             if (publisher != null) {
-                (increment ? publisher.under("increments/" + ai.pipestream.okf.OkfPaths.segment(runId))
+                (increment ? publisher.under("increments/" + incrementName)
                         : publisher).publish(bundle.okf(), dest);
             }
             LOG.log(System.Logger.Level.INFO,
