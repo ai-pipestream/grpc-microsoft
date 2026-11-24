@@ -55,7 +55,7 @@
           "id" : "0",
           "status" : 201,
           "headers" : {
-            "Location" : "https://redacted.example/url/143",
+            "Location" : "https://redacted.example/url/141",
             "Cache-Control" : "no-cache",
             "SPLogId" : "00000000-0000-4000-8000-000000000178",
             "OData-Version" : "4.0",
@@ -65,11 +65,11 @@
           "body" : {
             "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#sites('tenant-1.example%2C00000000-0000-4000-8000-000000000001%2C00000000-0000-4000-8000-000000000002')/lists('00000000-0000-4000-8000-000000000022')/items/$entity",
             "@odata.etag" : "\"00000000-0000-4000-8000-000000000179,1\"",
-            "createdDateTime" : "2026-11-24T17:39:54Z",
+            "createdDateTime" : "2026-11-24T18:06:15Z",
             "eTag" : "\"00000000-0000-4000-8000-000000000179,1\"",
             "id" : "5",
-            "lastModifiedDateTime" : "2026-11-24T17:39:54Z",
-            "webUrl" : "https://redacted.example/url/144",
+            "lastModifiedDateTime" : "2026-11-24T18:06:15Z",
+            "webUrl" : "https://redacted.example/url/142",
             "createdBy" : {
               "user" : {
                 "displayName" : "Identity 2"
@@ -89,7 +89,7 @@
               "siteId" : "tenant-1.example,00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000002"
             },
             "contentType" : {
-              "id" : "0x0100BCC905DBB8ADDD449BB45D442CD9B6E6",
+              "id" : "0x0100988D7D1E8452124D858BAEA46D94D7CE",
               "name" : "Item"
             },
             "fields@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#sites('tenant-1.example%2C00000000-0000-4000-8000-000000000001%2C00000000-0000-4000-8000-000000000002')/lists('00000000-0000-4000-8000-000000000022')/items('5')/fields/$entity",
@@ -100,8 +100,8 @@
               "PsTerms" : [ ],
               "id" : "5",
               "ContentType" : "Item",
-              "Modified" : "2026-11-24T17:39:54Z",
-              "Created" : "2026-11-24T17:39:54Z",
+              "Modified" : "2026-11-24T18:06:15Z",
+              "Created" : "2026-11-24T18:06:15Z",
               "AuthorLookupId" : "1073741822",
               "EditorLookupId" : "1073741822",
               "_UIVersionString" : "1.0",

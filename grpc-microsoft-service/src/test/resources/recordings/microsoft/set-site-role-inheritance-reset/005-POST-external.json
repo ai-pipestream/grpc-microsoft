@@ -1,7 +1,7 @@
 {
   "request" : {
     "method" : "POST",
-    "url" : "https://redacted.example/url/3/_api/web/lists(guid'00000000-0000-4000-8000-000000000008')/items(220)/resetroleinheritance",
+    "url" : "https://redacted.example/url/3/_api/web/lists(guid'00000000-0000-4000-8000-000000000008')/items(230)/resetroleinheritance",
     "authorized" : true,
     "headers" : {
       "content-type" : "application/json"

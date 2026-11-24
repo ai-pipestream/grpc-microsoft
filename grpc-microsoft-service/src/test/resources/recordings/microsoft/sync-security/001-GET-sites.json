@@ -16,7 +16,7 @@
         "createdDateTime" : "2026-11-08T22:18:00.68Z",
         "description" : "Rules regarding the architecture and contrib guidelines for Pipestream software",
         "id" : "tenant-1.example,00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000002",
-        "lastModifiedDateTime" : "2026-11-24T17:39:20Z",
+        "lastModifiedDateTime" : "2026-11-24T18:05:30Z",
         "name" : "WelcomeToPipestream",
         "webUrl" : "https://redacted.example/url/3",
         "displayName" : "Welcome to PipeStream",

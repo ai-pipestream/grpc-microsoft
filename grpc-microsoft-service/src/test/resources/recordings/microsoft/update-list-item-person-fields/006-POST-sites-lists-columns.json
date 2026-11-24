@@ -19,7 +19,7 @@
   "response" : {
     "status" : 201,
     "headers" : {
-      "location" : "https://redacted.example/url/130",
+      "location" : "https://redacted.example/url/128",
       "content-type" : "application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8"
     },
     "body" : {
