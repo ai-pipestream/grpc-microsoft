@@ -1,0 +1,12 @@
+{
+  "request" : {
+    "method" : "DELETE",
+    "url" : "https://graph.microsoft.com/v1.0/subscriptions/00000000-0000-4000-8000-000000000004",
+    "authorized" : true,
+    "headers" : { }
+  },
+  "response" : {
+    "status" : 204,
+    "headers" : { }
+  }
+}
