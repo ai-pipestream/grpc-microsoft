@@ -14,6 +14,7 @@ import ai.pipestream.sync.v1.Checkpoint;
 import ai.pipestream.sync.v1.DeleteAssetRequest;
 import ai.pipestream.sync.v1.PutCheckpointRequest;
 import ai.pipestream.sync.v1.ReconcileRequest;
+import ai.pipestream.sync.v1.ReconcileScopeRequest;
 import ai.pipestream.sync.v1.SyncTableServiceGrpc;
 import ai.pipestream.sync.v1.UpsertAssetRequest;
 import io.grpc.ManagedChannel;
@@ -224,15 +225,25 @@ public final class SyncTableMicrosoftChangeSink implements MicrosoftChangeSink, 
      * of a kind in {@code enumerated} that the run did not write are marked
      * deleted. Rows of every other kind are left as they are, because the
      * pass did not read that kind. An incremental or narrowed pass names no
-     * kind and reconciles nothing: its unchanged rows keep their older run
-     * id.
+     * kind: its unchanged rows keep their older run id.
+     *
+     * <p>Such a pass may still have read single drives or lists again from
+     * scratch. For each of those {@code scopes} the rows stamped with that
+     * scope that the run did not write are marked deleted, through
+     * {@code ReconcileScope}. A ledger too old to have that rpc answers
+     * {@code UNIMPLEMENTED}, which fails the pass: nothing is reconciled
+     * more widely in its place. Rows written before rows carried a scope
+     * are outside every scope and are only reconciled by a complete pass.</p>
      *
      * @param runId identifier of the completed run
      * @param enumerated the kinds of entity the pass enumerated in full
+     * @param scopes the drives and lists the pass enumerated in full on
+     *        their own
      * @throws WriteFailedException if the sync-table refuses or cannot be reached
      */
     @Override
-    public void completeRun(String runId, Set<MicrosoftEntity.EntityCase> enumerated) {
+    public void completeRun(String runId, Set<MicrosoftEntity.EntityCase> enumerated,
+            Set<SweepScope> scopes) {
         if (runId == null || runId.isBlank()) {
             return;
         }
@@ -252,6 +263,25 @@ public final class SyncTableMicrosoftChangeSink implements MicrosoftChangeSink, 
                         + runId + " of connection " + connectionId, e);
             }
         }
+        for (SweepScope scope : scopes) {
+            if (enumerated.contains(scope.kind())) {
+                // The whole kind was reconciled above.
+                continue;
+            }
+            try {
+                stub.reconcileScope(ReconcileScopeRequest.newBuilder()
+                        .setSource(SOURCE)
+                        .setConnectionId(connectionId)
+                        .setRunId(runId)
+                        .setKind(kind(scope.kind()))
+                        .setScope(scope.id())
+                        .build());
+            } catch (StatusRuntimeException e) {
+                throw new WriteFailedException("ReconcileScope", "scope " + scope.id() + " ("
+                        + kind(scope.kind()) + ") of run " + runId + " of connection "
+                        + connectionId, e);
+            }
+        }
     }
 
     static Asset toAsset(MicrosoftChange change) {
@@ -269,6 +299,7 @@ public final class SyncTableMicrosoftChangeSink implements MicrosoftChangeSink, 
                 .setConnectionId(connection)
                 .setNativeId(entity.getEntityId())
                 .setKind(kind)
+                .setScope(SweepScope.idOf(entity))
                 .setPhase(phase(change))
                 .setStatus(AssetSyncStatus.ASSET_SYNC_STATUS_SYNCED)
                 .setRunId(change.getCursor())

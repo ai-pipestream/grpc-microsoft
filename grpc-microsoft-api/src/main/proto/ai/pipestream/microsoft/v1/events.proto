@@ -114,8 +114,10 @@ message MicrosoftSnapshot {
   // Whether the sweep was a full enumeration (CHANGE_SOURCE_CRAWL: entities
   // the consumer holds for this scope but the sweep did not emit are gone
   // upstream) or incremental (CHANGE_SOURCE_DELTA: unseen entities are
-  // unchanged and must not be reconciled away). UNSPECIFIED means a
-  // first-revision server, which only did full sweeps.
+  // unchanged and must not be reconciled away). A sweep under
+  // SyncRequest.folder_path enumerates that folder only and says nothing
+  // about the rest of the drive. UNSPECIFIED means a first-revision
+  // server, which only did full sweeps.
   ChangeSource source = 9;
   // Extensible key-value metadata (extension-metadata map - see convention).
   map<string, string> metadata = 99;

@@ -20,7 +20,7 @@ import java.util.Set;
  * Accumulates Microsoft Graph changes into an OKF v0.2 directory tree, zip,
  * and sibling WARC 1.1 file. Optionally uploads that payload to a SharePoint
  * library ({@code OKF_SPO_DRIVE_ID}). Materializes on
- * {@link #completeRun(String, Set)}.
+ * {@link #completeRun(String, Set, Set)}.
  *
  * <p>The bundle is a mirror: a run replaces the entries of the kinds of
  * entity it enumerated in full with exactly the entries it emitted and keeps
@@ -92,8 +92,9 @@ public final class OkfMicrosoftChangeSink implements MicrosoftChangeSink {
      * {@inheritDoc}
      */
     @Override
-    public void completeRun(String runId, Set<MicrosoftEntity.EntityCase> enumerated) {
-        complete(own, runId, enumerated);
+    public void completeRun(String runId, Set<MicrosoftEntity.EntityCase> enumerated,
+            Set<SweepScope> scopes) {
+        complete(own, runId, enumerated, scopes);
     }
 
     /**
@@ -119,22 +120,24 @@ public final class OkfMicrosoftChangeSink implements MicrosoftChangeSink {
             }
 
             @Override
-            public void completeRun(String runId, Set<MicrosoftEntity.EntityCase> enumerated) {
-                complete(pass, runId, enumerated);
+            public void completeRun(String runId, Set<MicrosoftEntity.EntityCase> enumerated,
+                    Set<SweepScope> scopes) {
+                complete(pass, runId, enumerated, scopes);
             }
         };
     }
 
     private static void emit(RunMirror<CatalogEntry>.Pass pass, MicrosoftChange change) {
         MicrosoftCatalog.from(change).ifPresent(entry ->
-                pass.put(entry.path(), change.getEntity().getEntityCase(), entry));
+                pass.put(entry.path(), change.getEntity().getEntityCase(),
+                        SweepScope.idOf(change.getEntity()), entry));
     }
 
     private void complete(RunMirror<CatalogEntry>.Pass pass, String runId,
-            Set<MicrosoftEntity.EntityCase> enumerated) {
+            Set<MicrosoftEntity.EntityCase> enumerated, Set<SweepScope> scopes) {
         // One pass at a time writes the bundle.
         synchronized (mirror) {
-            RunMirror.Completed<CatalogEntry> completed = pass.complete(enumerated);
+            RunMirror.Completed<CatalogEntry> completed = pass.complete(enumerated, scopes);
             String connection = pass.connectionId().isEmpty() ? ""
                     : ai.pipestream.okf.OkfPaths.segment(pass.connectionId()) + "-";
             write(connection + ai.pipestream.okf.OkfPaths.segment(runId), runId,

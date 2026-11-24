@@ -129,6 +129,20 @@ allowlist and no site has no lists, so there `include_security` is enough).
 A full `Sync` that leaves a flag out never read those rows and leaves them,
 and their records in the output mirror, as an earlier `Sync` wrote them.
 
+A run that is not complete still reconciles each drive and list it read
+from scratch on its own. That is the drive whose delta link Graph rejected
+with `410 Gone`: it is enumerated again without delete records, so the
+items gone from it are marked deleted in the ledger and leave the output
+mirror, while the drives still on their delta links are not touched. The
+same holds for a list, and for a `Sync` of some of the connection's drives
+without a `since_cursor`. A drive read under a `folder_path` other than the
+connection's own is not reconciled. Ledger rows carry the drive id, or
+`site_id/list_id`, as `Asset.scope`, and the run calls the sync table's
+`ReconcileScope` rpc: a sync table too old to have it answers
+`UNIMPLEMENTED`, which fails the `Sync` and reconciles nothing. Rows
+written before rows carried a scope get one the next time they are
+written; until then only a complete run reconciles them.
+
 The output and OKF bundle is one for the process, shared by every
 connection. Each record in it belongs to the connection whose `Sync` wrote
 it: a complete `Sync` of one connection replaces that connection's records

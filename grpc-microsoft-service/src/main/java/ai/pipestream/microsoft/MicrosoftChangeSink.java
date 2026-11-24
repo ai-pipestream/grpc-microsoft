@@ -14,14 +14,16 @@ import java.util.Set;
  * {@link OkfMicrosoftChangeSink} writes OKF + WARC when {@code OKF_DIR}
  * or {@code OKF_SPO_DRIVE_ID} is set.
  *
- * <p>A pass ends with {@link #completeRun(String, Set)}, which names the
- * kinds of entity the pass enumerated in full over everything the
- * connection covers. Only for those kinds may a sink treat an entity it
- * holds but the pass did not emit as gone. After an incremental (delta)
- * pass unseen entities are unchanged; after a pass narrowed to some drives,
- * some sites or a folder they were never looked at; and a pass that did not
- * ask for lists or for security never read those kinds at all. In each case
- * the entities must be kept.</p>
+ * <p>A pass ends with {@link #completeRun(String, Set, Set)}, which names
+ * the kinds of entity the pass enumerated in full over everything the
+ * connection covers, and the single drives and lists it enumerated in full
+ * when it did not cover the whole connection. Only for those kinds, and
+ * inside those drives and lists, may a sink treat an entity it holds but
+ * the pass did not emit as gone. After an incremental (delta) pass unseen
+ * entities are unchanged; after a pass narrowed to some drives, some sites
+ * or a folder they were never looked at; and a pass that did not ask for
+ * lists or for security never read those kinds at all. In each case the
+ * entities must be kept.</p>
  */
 public interface MicrosoftChangeSink {
 
@@ -69,18 +71,35 @@ public interface MicrosoftChangeSink {
     }
 
     /**
+     * A run that enumerated no single drive or list on its own finished.
+     * Forwards to {@link #completeRun(String, Set, Set)} with no scope.
+     *
+     * @param runId identifier of the completed run
+     * @param enumerated the kinds of entity the pass enumerated in full over
+     *        everything the connection covers
+     */
+    default void completeRun(String runId, Set<MicrosoftEntity.EntityCase> enumerated) {
+        completeRun(runId, enumerated, Set.of());
+    }
+
+    /**
      * A run finished. Sync-table sinks reconcile, for each kind in
-     * {@code enumerated}, the rows the run did not write; mirrors drop the
-     * entities of those kinds the run did not emit. Entities of every other
-     * kind are kept. The default does nothing.
+     * {@code enumerated}, the rows the run did not write, and for each scope
+     * in {@code scopes} the rows of that drive or list the run did not
+     * write; mirrors drop the same entities. Everything else is kept. The
+     * default does nothing.
      *
      * @param runId identifier of the completed run
      * @param enumerated the kinds of entity the pass enumerated in full over
      *        everything the connection covers
      *        ({@link MicrosoftCrawler.Result#enumerated()}); empty after an
      *        incremental or a narrowed pass
+     * @param scopes the drives and lists the pass enumerated in full on
+     *        their own ({@link MicrosoftCrawler.Result#scopes()}); empty
+     *        when {@code enumerated} already covers them
      */
-    default void completeRun(String runId, Set<MicrosoftEntity.EntityCase> enumerated) {
+    default void completeRun(String runId, Set<MicrosoftEntity.EntityCase> enumerated,
+            Set<SweepScope> scopes) {
     }
 
     /**

@@ -19,6 +19,7 @@ public final class InMemoryMicrosoftChangeSink implements MicrosoftChangeSink {
     private final List<String> completedRuns = new CopyOnWriteArrayList<>();
     private final List<Set<MicrosoftEntity.EntityCase>> enumeratedKinds =
             new CopyOnWriteArrayList<>();
+    private final List<Set<SweepScope>> enumeratedScopes = new CopyOnWriteArrayList<>();
 
     /** Creates an empty collector. */
     public InMemoryMicrosoftChangeSink() {
@@ -53,9 +54,21 @@ public final class InMemoryMicrosoftChangeSink implements MicrosoftChangeSink {
     }
 
     @Override
-    public void completeRun(String runId, Set<MicrosoftEntity.EntityCase> enumerated) {
+    public void completeRun(String runId, Set<MicrosoftEntity.EntityCase> enumerated,
+            Set<SweepScope> scopes) {
         completedRuns.add(runId);
         enumeratedKinds.add(Set.copyOf(enumerated));
+        enumeratedScopes.add(Set.copyOf(scopes));
+    }
+
+    /**
+     * For each entry of {@link #completedRuns()}, the drives and lists that
+     * run enumerated in full on their own.
+     *
+     * @return an immutable copy, in call order
+     */
+    public List<Set<SweepScope>> enumeratedScopes() {
+        return List.copyOf(enumeratedScopes);
     }
 
     /**
@@ -79,7 +92,7 @@ public final class InMemoryMicrosoftChangeSink implements MicrosoftChangeSink {
     }
 
     /**
-     * Run ids passed to {@link #completeRun(String, Set)}, in call order.
+     * Run ids passed to {@link #completeRun(String, Set, Set)}, in call order.
      *
      * @return an immutable copy
      */

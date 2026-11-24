@@ -111,8 +111,9 @@ public final class OutputMicrosoftChangeSink implements MicrosoftChangeSink, Aut
     }
 
     @Override
-    public void completeRun(String runId, Set<MicrosoftEntity.EntityCase> enumerated) {
-        complete(own, runId, enumerated);
+    public void completeRun(String runId, Set<MicrosoftEntity.EntityCase> enumerated,
+            Set<SweepScope> scopes) {
+        complete(own, runId, enumerated, scopes);
     }
 
     /**
@@ -138,15 +139,17 @@ public final class OutputMicrosoftChangeSink implements MicrosoftChangeSink, Aut
             }
 
             @Override
-            public void completeRun(String runId, Set<MicrosoftEntity.EntityCase> enumerated) {
-                complete(pass, runId, enumerated);
+            public void completeRun(String runId, Set<MicrosoftEntity.EntityCase> enumerated,
+                    Set<SweepScope> scopes) {
+                complete(pass, runId, enumerated, scopes);
             }
         };
     }
 
     private void emit(RunMirror<Message>.Pass pass, MicrosoftChange change) {
         String relative = MicrosoftObjectKeys.of(change);
-        pass.put(relative, change.getEntity().getEntityCase(), change);
+        pass.put(relative, change.getEntity().getEntityCase(),
+                SweepScope.idOf(change.getEntity()), change);
         String key = ObjectKeys.under(prefix, relative);
         try {
             for (OutputFormat format : formats) {
@@ -160,10 +163,10 @@ public final class OutputMicrosoftChangeSink implements MicrosoftChangeSink, Aut
     }
 
     private void complete(RunMirror<Message>.Pass pass, String runId,
-            Set<MicrosoftEntity.EntityCase> enumerated) {
+            Set<MicrosoftEntity.EntityCase> enumerated, Set<SweepScope> scopes) {
         // One pass at a time writes the end-of-run artifacts.
         synchronized (mirror) {
-            RunMirror.Completed<Message> completed = pass.complete(enumerated);
+            RunMirror.Completed<Message> completed = pass.complete(enumerated, scopes);
             String target = completed.increment()
                     ? ObjectKeys.under(prefix, ObjectKeys.join("increments",
                             pass.connectionId().isEmpty()
@@ -175,9 +178,9 @@ public final class OutputMicrosoftChangeSink implements MicrosoftChangeSink, Aut
                     format.complete(store, completed.values(), target);
                 }
                 LOG.log(System.Logger.Level.INFO, "microsoft-proxy output wrote {0} records "
-                        + "store={1} prefix={2} connection={3} enumerated={4}",
+                        + "store={1} prefix={2} connection={3} enumerated={4} scopes={5}",
                         completed.values().size(), store.id(), target, pass.connectionId(),
-                        enumerated);
+                        enumerated, scopes);
             } catch (IOException e) {
                 throw new UncheckedIOException("output complete failed for run " + runId, e);
             }
