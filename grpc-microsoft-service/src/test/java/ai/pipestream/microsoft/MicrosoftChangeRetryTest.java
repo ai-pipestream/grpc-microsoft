@@ -125,7 +125,7 @@ class MicrosoftChangeRetryTest {
                 .isFalse();
         assertThat(MicrosoftChangeGrpcService.startsPass(ChangeNotification.newBuilder()
                 .setLifecycleEvent(LifecycleEvent.LIFECYCLE_EVENT_SUBSCRIPTION_REMOVED).build()))
-                .isFalse();
+                .isTrue();
     }
 
     private MicrosoftChangeServiceGrpc.MicrosoftChangeServiceBlockingStub start(

@@ -202,6 +202,29 @@ OKF_SPO_DRIVE_ID=b!...
 OKF_SPO_FOLDER_PATH=/Knowledge/okf-run
 ```
 
+## Change feed
+
+`MicrosoftChangeService` (same port) streams changes continuously.
+`WatchChanges` runs `Sync` passes back to back and polls by default. Graph
+change notifications only shorten the wait, and need a receiver Graph can
+reach over HTTPS:
+
+| Variable | What |
+|---|---|
+| `MICROSOFT_NOTIFICATION_PORT` | Port of the notification receiver (`/graph/notifications`, `/graph/lifecycle`); unset = receiver off |
+| `MICROSOFT_NOTIFICATION_CLIENT_STATE` | Secret sent with every subscription and checked on every notification; required for the receiver and for `CreateSubscription` |
+| `MICROSOFT_SUBSCRIPTION_RENEWAL` | `off` stops the server renewing its subscriptions; default on when a clientState is set |
+| `MICROSOFT_SUBSCRIPTION_RENEW_BEFORE_MINUTES` | How long before its expiration a subscription is renewed; default 1440 |
+
+The server keeps its own subscriptions alive: the ones created through
+`CreateSubscription` and, after a restart, the ones Graph lists with its
+clientState (default connection at start, other connections when
+`ListSubscriptions` or `GetSubscription` is called for them). It renews each
+to the longest expiration Graph allows before it expires and when Graph asks
+for a reauthorization, and creates a subscription again when Graph no longer
+has it. `ListSubscriptionRenewals` shows what it keeps and the last error. A
+subscription that expires while the server is down is not created again.
+
 ## Permissions
 
 What each group of rpcs needs, as proven against a real tenant on 2026-11-22.

@@ -91,18 +91,27 @@ final class GraphSubscriptions {
                 body)).body());
     }
 
+    /**
+     * A subscription with the clientState Graph reports for it.
+     *
+     * @param subscription the subscription
+     * @param clientState its clientState; empty when Graph sent none
+     */
+    record Entry(Subscription subscription, String clientState) {
+    }
+
     /** GET /subscriptions/{id}. */
-    Subscription get(String id) throws IOException, InterruptedException {
-        return subscription(graph.get("/subscriptions/" + segment(required(id))));
+    Entry get(String id) throws IOException, InterruptedException {
+        return entry(graph.get("/subscriptions/" + segment(required(id))));
     }
 
     /** GET /subscriptions, following {@code @odata.nextLink}. */
-    List<Subscription> list() throws IOException, InterruptedException {
-        List<Subscription> out = new ArrayList<>();
+    List<Entry> list() throws IOException, InterruptedException {
+        List<Entry> out = new ArrayList<>();
         String next = "/subscriptions";
         while (next != null && !next.isBlank()) {
             JsonNode page = graph.get(next);
-            page.path("value").forEach(node -> out.add(subscription(node)));
+            page.path("value").forEach(node -> out.add(entry(node)));
             next = page.path("@odata.nextLink").asText("");
         }
         return out;
@@ -112,7 +121,8 @@ final class GraphSubscriptions {
     Subscription update(UpdateSubscriptionRequest request, Instant now)
             throws IOException, InterruptedException {
         String id = required(request.getSubscriptionId());
-        String resource = request.hasExpirationDateTime() ? "" : get(id).getResource();
+        String resource = request.hasExpirationDateTime() ? ""
+                : get(id).subscription().getResource();
         ObjectNode body = JSON.createObjectNode().put("expirationDateTime", expiration(
                 request.hasExpirationDateTime() ? request.getExpirationDateTime() : null, resource,
                 now).toString());
@@ -120,6 +130,14 @@ final class GraphSubscriptions {
             body.put("notificationUrl", request.getNotificationUrl());
         }
         return subscription(graph.patch("/subscriptions/" + segment(id), body));
+    }
+
+    /** PATCH /subscriptions/{id} with the longest expiration its resource allows. */
+    Subscription renew(String id, String resource, Instant now)
+            throws IOException, InterruptedException {
+        ObjectNode body = JSON.createObjectNode().put("expirationDateTime",
+                now.plus(maxLifetime(resource)).toString());
+        return subscription(graph.patch("/subscriptions/" + segment(required(id)), body));
     }
 
     /** POST /subscriptions/{id}/reauthorize, with an empty JSON body so a length is sent. */
@@ -164,6 +182,10 @@ final class GraphSubscriptions {
             case "deleted" -> SubscriptionChangeType.SUBSCRIPTION_CHANGE_TYPE_DELETED;
             default -> SubscriptionChangeType.SUBSCRIPTION_CHANGE_TYPE_UNSPECIFIED;
         };
+    }
+
+    static Entry entry(JsonNode node) {
+        return new Entry(subscription(node), node.path("clientState").asText(""));
     }
 
     static Subscription subscription(JsonNode node) {

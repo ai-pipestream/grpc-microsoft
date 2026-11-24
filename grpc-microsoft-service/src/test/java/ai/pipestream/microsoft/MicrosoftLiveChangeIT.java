@@ -47,8 +47,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * <p>Runs only when the application credentials and site are set,
  * {@code MICROSOFT_LIVE_CHANGES=1}, and {@code MICROSOFT_NOTIFICATION_PUBLIC_URL}
  * is the public HTTPS base that forwards to {@code MICROSOFT_NOTIFICATION_PORT}
- * (default 8089) on this machine. It writes one file at the drive root and one
- * subscription, and removes both.</p>
+ * (default 8089) on this machine. It writes one file at the drive root and
+ * three subscriptions, and removes them all.</p>
  */
 class MicrosoftLiveChangeIT {
 
@@ -67,6 +67,7 @@ class MicrosoftLiveChangeIT {
     private final List<Row> rows = new ArrayList<>();
     private final Set<String> secrets = ConcurrentHashMap.newKeySet();
     private final List<JsonNode> pending = new ArrayList<>();
+    private final List<JsonNode> lifecyclePending = new ArrayList<>();
 
     private static boolean notBlank(String value) {
         return value != null && !value.isBlank();
@@ -153,10 +154,18 @@ class MicrosoftLiveChangeIT {
                 receiverBus, Clock.systemUTC())) {
             receiver.tap(envelope -> {
                 synchronized (pending) {
-                    pending.add(envelope);
-                    lastArrival.set(System.nanoTime());
+                    if (lifecycle(envelope)) {
+                        lifecyclePending.add(envelope);
+                    } else {
+                        pending.add(envelope);
+                        lastArrival.set(System.nanoTime());
+                    }
                 }
             });
+            SubscriptionRenewer renewer = ChangeScenarios.renewer(changes::subscriptions,
+                    serviceBus, backend);
+            changes.renewer(renewer);
+            renewer.answerLifecycles();
             ChangeScenarios.Notifications live = new ChangeScenarios.Notifications() {
                 @Override
                 public void arrive(String stepId) {
@@ -176,7 +185,8 @@ class MicrosoftLiveChangeIT {
             ChangeScenarios scenarios = new ChangeScenarios(
                     MicrosoftChangeServiceGrpc.newBlockingStub(channel),
                     MicrosoftChangeServiceGrpc.newStub(channel), client, backend, receiverBus,
-                    serviceBus, live);
+                    serviceBus, live, renewer, () -> ChangeScenarios.renewer(
+                            changes::subscriptions, new NotificationBus(), backend));
             clear(recordings);
             ObjectNode run = Recordings.JSON.createObjectNode()
                     .put("suffix", suffix)
@@ -209,6 +219,7 @@ class MicrosoftLiveChangeIT {
             } finally {
                 listener.close();
                 scenarios.cleanUp();
+                renewer.close();
             }
             Files.createDirectories(recordings);
             Files.writeString(recordings.resolve(Recordings.RUN_FILE),
@@ -246,8 +257,10 @@ class MicrosoftLiveChangeIT {
         }
         ArrayNode bodies = Recordings.JSON.createArrayNode();
         synchronized (pending) {
-            pending.forEach(body -> bodies.add(scrubber.json(body)));
-            pending.clear();
+            List<JsonNode> arrived = stepId.equals(ChangeScenarios.LIFECYCLE_STEP)
+                    ? lifecyclePending : pending;
+            arrived.forEach(body -> bodies.add(scrubber.json(body)));
+            arrived.clear();
         }
         String text = Recordings.JSON.writerWithDefaultPrettyPrinter().writeValueAsString(bodies) + "\n";
         List<String> violations = RecordingScrubber.violations(text);
@@ -258,6 +271,16 @@ class MicrosoftLiveChangeIT {
         Files.createDirectories(dir);
         Files.writeString(dir.resolve(ChangeRecordings.NOTIFICATIONS_FILE), text,
                 StandardCharsets.UTF_8);
+    }
+
+    /** Whether a posted body is a lifecycle notification. */
+    private static boolean lifecycle(JsonNode envelope) {
+        for (JsonNode item : envelope.path("value")) {
+            if (!item.path("lifecycleEvent").asText("").isEmpty()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static void clear(Path directory) throws IOException {

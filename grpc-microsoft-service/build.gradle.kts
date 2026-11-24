@@ -73,7 +73,7 @@ tasks.register<Test>("liveCoverageTest") {
 }
 
 tasks.register<Test>("liveChangesTest") {
-    description = "Calls every MicrosoftChangeService rpc against the real Microsoft Graph tenant with a notification receiver behind MICROSOFT_NOTIFICATION_PUBLIC_URL, writes one file and one subscription that it removes, records the exchanges and notifications, and writes build/live-changes.md; needs the live credentials, MICROSOFT_LIVE_CHANGES=1 and MICROSOFT_NOTIFICATION_PUBLIC_URL, skips otherwise"
+    description = "Calls every MicrosoftChangeService rpc against the real Microsoft Graph tenant with a notification receiver behind MICROSOFT_NOTIFICATION_PUBLIC_URL, writes one file and its subscriptions and removes them, records the exchanges and notifications, and writes build/live-changes.md; needs the live credentials, MICROSOFT_LIVE_CHANGES=1 and MICROSOFT_NOTIFICATION_PUBLIC_URL, skips otherwise"
     group = "verification"
     testClassesDirs = sourceSets.test.get().output.classesDirs
     classpath = sourceSets.test.get().runtimeClasspath

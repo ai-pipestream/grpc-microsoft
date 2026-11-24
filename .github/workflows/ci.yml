@@ -48,7 +48,7 @@ on:
         options: [write, changes]
         default: write
       run_live_changes:
-        description: Run the live change-notification test through a temporary tunnel (one file and one subscription, both removed)
+        description: Run the live change-notification test through a temporary tunnel (one file and its subscriptions, all removed)
         type: boolean
         default: false
       import_admin_recordings_run_id:
