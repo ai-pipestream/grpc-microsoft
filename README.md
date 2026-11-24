@@ -129,6 +129,15 @@ and the Graph OKF catalog mapping.
 into typed `ListColumn`s (scalars and one-level nested objects; `@odata.*`
 skipped). `ListChildren` stays a listing RPC and does not fetch columns.
 
+A `Sync` with `include_content` sets `DriveItem.content_state` on every
+drive item: `INLINED` (the bytes are in `content`), `EMPTY`,
+`OMITTED_OVER_LIMIT` (larger than `max_inline_bytes` or the server's
+`MICROSOFT_ATTACHMENT_MAX_BYTES`, by its listed size or by what the
+download turned out to be; read it with `DownloadContent`),
+`OMITTED_NOT_A_FILE` (a folder or a package) and `OMITTED_MALWARE`. An
+item without `content` is never ambiguous. A read that did not ask for
+content leaves the state `UNSPECIFIED`.
+
 To land the OKF payload **on** a SharePoint library (markdown tree + zip +
 `.warc.gz`), set a destination drive. Files larger than 4 MiB use a Graph
 upload session; the session URL is called **without** `Authorization`.
@@ -305,6 +314,12 @@ Direct mode (no `grpc.target`) takes `microsoft.tenant.id`,
 `microsoft.site.id`, `microsoft.drive.ids`, `microsoft.folder.path`,
 `microsoft.graph.base.url` and `microsoft.authority` (the Entra authority
 host, for a national cloud whose Graph root the base URL names).
+
+`include.content=true` inlines file bytes on each drive item, in both
+modes. `max.inline.bytes` caps the file size (0 = no limit in direct mode,
+the service's own limit in gRPC mode); keep it under the producer's
+`max.request.size`, or one large file fails the task. A record whose file
+was not inlined says why in `DriveItem.content_state`.
 
 ## Proto lint (Buf)
 

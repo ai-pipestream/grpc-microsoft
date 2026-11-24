@@ -1,5 +1,6 @@
 package ai.pipestream.microsoft.connector;
 
+import ai.pipestream.microsoft.v1.ContentState;
 import ai.pipestream.microsoft.v1.DriveItem;
 import microsoft.graph.connectors.contracts.grpc.Content;
 
@@ -87,6 +88,19 @@ final class FileContent {
         if (item.getFolder() || (!inlined && (!contentRequested || item.getSize() == 0))) {
             return Outcome.NOTHING;
         }
+        // What MicrosoftService itself says became of the bytes, when it says.
+        switch (item.getContentState()) {
+            case CONTENT_STATE_OMITTED_NOT_A_FILE, CONTENT_STATE_EMPTY -> {
+                return Outcome.NOTHING;
+            }
+            case CONTENT_STATE_OMITTED_MALWARE -> {
+                return Outcome.omitted(OmittedContent.Reason.MALWARE,
+                        "Graph flagged the file as malware; it was not downloaded");
+            }
+            default -> {
+                // Inlined, over the limit, or an older service: read below.
+            }
+        }
         MediaType mediaType = MediaType.parse(item.getMimeType());
         if (!mediaType.isText()) {
             return Outcome.omitted(OmittedContent.Reason.NOT_TEXT, mediaType.type().isEmpty()
@@ -96,6 +110,11 @@ final class FileContent {
         long rawSize = inlined ? item.getContent().size() : item.getSize();
         if (rawSize > CrawlItemMapper.CONTENT_CAP_BYTES) {
             return tooLarge("the file is " + rawSize + " bytes");
+        }
+        if (!inlined && item.getContentState() == ContentState.CONTENT_STATE_OMITTED_OVER_LIMIT) {
+            return Outcome.omitted(OmittedContent.Reason.TOO_LARGE, "MicrosoftService found the "
+                    + "file over its inline limit when it downloaded it (listed as "
+                    + item.getSize() + " bytes)");
         }
         if (!inlined) {
             return Outcome.omitted(OmittedContent.Reason.NOT_INLINED,

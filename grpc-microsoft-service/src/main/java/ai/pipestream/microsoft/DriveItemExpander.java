@@ -1,5 +1,6 @@
 package ai.pipestream.microsoft;
 
+import ai.pipestream.microsoft.v1.ContentState;
 import ai.pipestream.microsoft.v1.DriveItem;
 import ai.pipestream.microsoft.v1.DriveItemInclude;
 import ai.pipestream.microsoft.v1.DriveItemRef;
@@ -113,6 +114,44 @@ final class DriveItemExpander {
             }
         }
         return item;
+    }
+
+    /**
+     * An item with its bytes inlined, or with the reason they are not: every
+     * item of a read that asked for content says in
+     * {@link DriveItem#getContentState()} what became of them. Nothing is
+     * downloaded for a folder, a package, a file Graph flagged as malware,
+     * an empty file, or a file listed as larger than {@code max}.
+     *
+     * @param files the files API
+     * @param item the item, as listed
+     * @param max the inline byte limit; 0 = none
+     * @return the item with its content state, and its content when inlined
+     * @throws IOException if the download fails
+     * @throws InterruptedException if the calling thread is interrupted while waiting
+     */
+    static DriveItem withContent(GraphFiles files, DriveItem item, long max)
+            throws IOException, InterruptedException {
+        DriveItem.Builder out = item.toBuilder();
+        if (item.getFolder() || item.hasPackage()) {
+            return out.setContentState(ContentState.CONTENT_STATE_OMITTED_NOT_A_FILE).build();
+        }
+        if (item.hasMalware()) {
+            return out.setContentState(ContentState.CONTENT_STATE_OMITTED_MALWARE).build();
+        }
+        if (item.getSize() <= 0) {
+            return out.setContentState(ContentState.CONTENT_STATE_EMPTY).build();
+        }
+        if (max > 0 && item.getSize() > max) {
+            return out.setContentState(ContentState.CONTENT_STATE_OMITTED_OVER_LIMIT).build();
+        }
+        // The listed size can be stale: the download itself is held to the limit too.
+        byte[] bytes = inline(files, item.getDriveId(), item.getId(), max);
+        if (bytes == null) {
+            return out.setContentState(ContentState.CONTENT_STATE_OMITTED_OVER_LIMIT).build();
+        }
+        return out.setContent(com.google.protobuf.ByteString.copyFrom(bytes))
+                .setContentState(ContentState.CONTENT_STATE_INLINED).build();
     }
 
     /**

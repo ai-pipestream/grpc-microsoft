@@ -15,7 +15,6 @@ import ai.pipestream.microsoft.v1.SiteAcl;
 import ai.pipestream.microsoft.v1.SiteGroupMembers;
 import ai.pipestream.microsoft.v1.SyncCursor;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.google.protobuf.ByteString;
 import com.google.protobuf.Timestamp;
 
 import java.io.IOException;
@@ -407,16 +406,9 @@ public final class MicrosoftCrawler {
 
     private DriveItem enrich(DriveItem item) throws IOException, InterruptedException {
         item = expander.expand(item);
-        if (options.includeContent() && !item.getFolder() && !item.hasPackage()
-                && !item.hasMalware() && item.getSize() > 0
-                && (options.maxInlineBytes() == 0 || item.getSize() <= options.maxInlineBytes())) {
-            byte[] bytes = DriveItemExpander.inline(files, item.getDriveId(), item.getId(),
-                    options.maxInlineBytes());
-            if (bytes != null) {
-                item = item.toBuilder().setContent(ByteString.copyFrom(bytes)).build();
-            }
-        }
-        return item;
+        return options.includeContent()
+                ? DriveItemExpander.withContent(files, item, options.maxInlineBytes())
+                : item;
     }
 
     /** Returns whether every list sweep of the site was a full enumeration. */

@@ -1428,7 +1428,9 @@ public final class MicrosoftGrpcService
                             + " bytes, above the inline limit; use DownloadContent")
                     .asRuntimeException();
         }
-        return item.toBuilder().setContent(ByteString.copyFrom(bytes)).build();
+        return item.toBuilder().setContent(ByteString.copyFrom(bytes))
+                .setContentState(ai.pipestream.microsoft.v1.ContentState.CONTENT_STATE_INLINED)
+                .build();
     }
 
     /**
