@@ -21,6 +21,12 @@ import ai.pipestream.microsoft.v1.DeltaGroupsRequest;
 import ai.pipestream.microsoft.v1.DeltaGroupsResponse;
 import ai.pipestream.microsoft.v1.DeltaUsersRequest;
 import ai.pipestream.microsoft.v1.DeltaUsersResponse;
+import ai.pipestream.microsoft.v1.ListSiteChangesRequest;
+import ai.pipestream.microsoft.v1.ListSiteChangesResponse;
+import ai.pipestream.microsoft.v1.SiteChange;
+import ai.pipestream.microsoft.v1.SiteChangeObject;
+import ai.pipestream.microsoft.v1.SiteChangeScope;
+import ai.pipestream.microsoft.v1.SiteChangeType;
 import ai.pipestream.microsoft.v1.DeleteListItemRequest;
 import ai.pipestream.microsoft.v1.DownloadContentRequest;
 import ai.pipestream.microsoft.v1.DriveItem;
@@ -91,6 +97,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.HexFormat;
@@ -257,6 +264,8 @@ final class WriteScenarios {
     private String folderId;
     private SiteSecurable folderSecurable;
     private boolean inheritanceBroken;
+    /** The end of each change log before the list item and folder stopped inheriting. */
+    private final Map<SiteChangeScope, String> changeTokens = new EnumMap<>(SiteChangeScope.class);
     private String listId;
     private DriveItem small;
     private byte[] smallBytes;
@@ -373,6 +382,9 @@ final class WriteScenarios {
                         "GetSiteRoleInheritance [list item]", this::inheritanceOfTheListItem),
                 new Scenario("list-site-role-assignments-list-item", "ListSiteRoleAssignments",
                         "ListSiteRoleAssignments [list item]", this::roleAssignmentsOfTheListItem),
+                new Scenario("list-site-changes-latest", "ListSiteChanges",
+                        "ListSiteChanges [the end of the site, site collection and list logs]",
+                        this::endOfTheChangeLogs),
                 new Scenario("set-site-role-inheritance-break", "SetSiteRoleInheritance",
                         "SetSiteRoleInheritance [list item and folder stop inheriting]",
                         this::breakInheritance),
@@ -382,6 +394,12 @@ final class WriteScenarios {
                 new Scenario("set-site-role-inheritance-reset", "SetSiteRoleInheritance",
                         "SetSiteRoleInheritance [list item and folder inherit again]",
                         this::restoreInheritance),
+                new Scenario("list-site-changes", "ListSiteChanges",
+                        "ListSiteChanges [what the break and the reset left in each log]",
+                        this::siteChanges),
+                new Scenario("list-site-changes-old-token", "ListSiteChanges",
+                        "ListSiteChanges [a token older than the change log]",
+                        this::siteChangesFromAnOldToken),
                 new Scenario("update-list-item-fields", "UpdateListItemFields",
                         "UpdateListItemFields [every column type]", this::updateListItemFields),
                 new Scenario("update-list-item-rich-fields", "UpdateListItemFields",
@@ -1636,6 +1654,114 @@ final class WriteScenarios {
         }
         inheritanceBroken = false;
         return "the list item and the test folder inherit again";
+    }
+
+    private static final List<SiteChangeScope> CHANGE_SCOPES = List.of(
+            SiteChangeScope.SITE_CHANGE_SCOPE_WEB, SiteChangeScope.SITE_CHANGE_SCOPE_SITE_COLLECTION,
+            SiteChangeScope.SITE_CHANGE_SCOPE_LIST);
+
+    /** A ListSiteChanges request for one of the three logs of the test site. */
+    private ListSiteChangesRequest.Builder changesOf(SiteChangeScope scope) {
+        ListSiteChangesRequest.Builder request = ListSiteChangesRequest.newBuilder().setSiteId(siteId)
+                .setScope(scope);
+        return scope == SiteChangeScope.SITE_CHANGE_SCOPE_LIST ? request.setListId(listId) : request;
+    }
+
+    /** Reads a change log; the token the stream ended with is the last element's. */
+    private List<ListSiteChangesResponse> changes(ListSiteChangesRequest request) {
+        List<ListSiteChangesResponse> stream = new ArrayList<>();
+        try {
+            stub().listSiteChanges(request).forEachRemaining(stream::add);
+        } catch (StatusRuntimeException e) {
+            throw notGranted(e);
+        }
+        check(!stream.isEmpty() && stream.get(stream.size() - 1).getEventCase()
+                == ListSiteChangesResponse.EventCase.CHANGE_TOKEN
+                && !stream.get(stream.size() - 1).getChangeToken().isEmpty(),
+                "the stream did not end with a change token");
+        return stream;
+    }
+
+    private String endOfTheChangeLogs() {
+        need(listId, "the test list");
+        for (SiteChangeScope scope : CHANGE_SCOPES) {
+            List<ListSiteChangesResponse> stream = changes(changesOf(scope)
+                    .setChangeToken("latest").build());
+            check(stream.size() == 1, "the end of a log came with " + (stream.size() - 1) + " change(s)");
+            changeTokens.put(scope, stream.get(0).getChangeToken());
+        }
+        check(new HashSet<>(changeTokens.values()).size() == CHANGE_SCOPES.size(),
+                "two logs ended on the same token");
+        return "a change token for the site, the site collection and the test list";
+    }
+
+    private String siteChanges() {
+        if (changeTokens.size() < CHANGE_SCOPES.size() || inheritanceBroken) {
+            throw new Skip("needs the change tokens from before the list item stopped inheriting, "
+                    + "and the item inheriting again");
+        }
+        need(itemId, "the list item");
+        List<String> seen = new ArrayList<>();
+        for (SiteChangeScope scope : CHANGE_SCOPES) {
+            List<ListSiteChangesResponse> stream = changes(changesOf(scope)
+                    .setChangeToken(changeTokens.get(scope)).build());
+            String end = stream.get(stream.size() - 1).getChangeToken();
+            check(!end.equals(changeTokens.get(scope)), "the log did not move");
+            Map<String, Integer> kinds = new TreeMap<>();
+            Set<SiteChangeType> onTheItem = new TreeSet<>();
+            for (ListSiteChangesResponse response : stream.subList(0, stream.size() - 1)) {
+                SiteChange change = response.getChange();
+                check(change.hasTime() && !change.getChangeToken().isEmpty(),
+                        "a change has no time or no token");
+                check(change.getObject() != SiteChangeObject.SITE_CHANGE_OBJECT_UNSPECIFIED
+                        && change.getType() != SiteChangeType.SITE_CHANGE_TYPE_UNSPECIFIED,
+                        "a change of an unknown kind: " + change.getMetadataMap());
+                kinds.merge(name(change.getObject()) + " " + name(change.getType()), 1, Integer::sum);
+                if (change.getObject() == SiteChangeObject.SITE_CHANGE_OBJECT_ITEM
+                        && change.getListId().equalsIgnoreCase(listId)
+                        && change.getItemId().equals(itemId)) {
+                    check(change.getSecurable().getListItem().getItemId().equals(itemId),
+                            "the change on the list item does not name it as a securable");
+                    onTheItem.add(change.getType());
+                }
+            }
+            check(!onTheItem.isEmpty(), "nothing about the list item in the "
+                    + name(scope) + " log: " + kinds);
+            // Read again from the end: nothing new, same token.
+            List<ListSiteChangesResponse> again = changes(changesOf(scope).setChangeToken(end)
+                    .addObjects(SiteChangeObject.SITE_CHANGE_OBJECT_ITEM).build());
+            check(again.stream().filter(ListSiteChangesResponse::hasChange).allMatch(response ->
+                    response.getChange().getObject() == SiteChangeObject.SITE_CHANGE_OBJECT_ITEM),
+                    "a filter for items answered another object");
+            seen.add(name(scope) + ": " + kinds + ", on the list item "
+                    + onTheItem.stream().map(WriteScenarios::name).toList());
+        }
+        return String.join("; ", seen);
+    }
+
+    private String siteChangesFromAnOldToken() {
+        String token = changeTokens.get(SiteChangeScope.SITE_CHANGE_SCOPE_LIST);
+        need(token, "a change token of the test list");
+        // version;scope;id;ticks;number - the same log, a year earlier.
+        String[] parts = token.split(";");
+        check(parts.length == 5, "a change token of " + parts.length + " parts");
+        long ticks = Long.parseLong(parts[3]) - Duration.ofDays(365).toSeconds() * 10_000_000L;
+        String old = String.join(";", parts[0], parts[1], parts[2], Long.toString(ticks), "1");
+        try {
+            List<ListSiteChangesResponse> stream = new ArrayList<>();
+            stub().listSiteChanges(changesOf(SiteChangeScope.SITE_CHANGE_SCOPE_LIST)
+                    .setChangeToken(old).build()).forEachRemaining(stream::add);
+            return "SharePoint accepted the token: " + (stream.size() - 1) + " change(s)";
+        } catch (StatusRuntimeException e) {
+            return "refused with " + e.getStatus().getCode() + ": "
+                    + new RecordingScrubber("https://graph.microsoft.com/v1.0")
+                            .text(String.valueOf(e.getStatus().getDescription()));
+        }
+    }
+
+    private static String name(com.google.protobuf.ProtocolMessageEnum value) {
+        String name = value.getValueDescriptor().getName();
+        return name.substring(name.indexOf("_", "SITE_CHANGE_".length()) + 1);
     }
 
     private SiteSecurable listSecurable() {

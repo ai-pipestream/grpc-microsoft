@@ -3,12 +3,15 @@ package ai.pipestream.microsoft;
 import ai.pipestream.microsoft.v1.AuthMode;
 import ai.pipestream.microsoft.v1.GetSiteRoleInheritanceRequest;
 import ai.pipestream.microsoft.v1.GetSiteRoleInheritanceResponse;
+import ai.pipestream.microsoft.v1.ListSiteChangesRequest;
+import ai.pipestream.microsoft.v1.ListSiteChangesResponse;
 import ai.pipestream.microsoft.v1.ListSiteGroupMembersRequest;
 import ai.pipestream.microsoft.v1.ListSiteGroupMembersResponse;
 import ai.pipestream.microsoft.v1.ListSiteGroupsRequest;
 import ai.pipestream.microsoft.v1.ListSiteGroupsResponse;
 import ai.pipestream.microsoft.v1.ListSiteRoleAssignmentsRequest;
 import ai.pipestream.microsoft.v1.ListSiteRoleAssignmentsResponse;
+import ai.pipestream.microsoft.v1.SiteChange;
 import ai.pipestream.microsoft.v1.SiteSecurable;
 import ai.pipestream.microsoft.v1.ColumnDefinition;
 import ai.pipestream.microsoft.v1.DeltaDriveItemsRequest;
@@ -1073,6 +1076,31 @@ public final class MicrosoftGrpcService
                     .setHasUniqueRoleAssignments(node.path("HasUniqueRoleAssignments").asBoolean(false))
                     .build();
         });
+    }
+
+    @Override
+    public void listSiteChanges(ListSiteChangesRequest request,
+            StreamObserver<ListSiteChangesResponse> observer) {
+        stream(observer, () -> {
+            MicrosoftSessions.Session session = sessions.resolve(request.getConnectionId());
+            String token = siteChanges(session, request, change -> observer.onNext(
+                    ListSiteChangesResponse.newBuilder().setChange(change).build()));
+            observer.onNext(ListSiteChangesResponse.newBuilder().setChangeToken(token).build());
+        });
+    }
+
+    /**
+     * Reads a change log of a site.
+     *
+     * @param session the connection
+     * @param request names the site, the scope, the token and the filter
+     * @param out receives each change, oldest first
+     * @return the change token to resume from
+     */
+    String siteChanges(MicrosoftSessions.Session session, ListSiteChangesRequest request,
+            Consumer<SiteChange> out) throws IOException, InterruptedException {
+        SiteChanges.scopePath(request);
+        return SiteChanges.read(sharePoint.web(session, request.getSiteId()), request, out);
     }
 
     @Override

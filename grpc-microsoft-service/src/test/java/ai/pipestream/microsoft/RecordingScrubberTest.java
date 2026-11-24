@@ -259,6 +259,32 @@ class RecordingScrubberTest {
     }
 
     @Test
+    void aChangeLogEntryKeepsItsKindAndIdsAndLosesNamesTitlesAndPaths() throws Exception {
+        JsonNode scrubbed = scrubber.json(Recordings.JSON.readTree("""
+                {"value":[{"odata.type":"SP.ChangeItem",
+                  "ChangeToken":{"StringValue":"1;3;0f8fad5b-d9cb-469f-a165-70867728950e;638000000000000000;42"},
+                  "ChangeType":17,"Time":"2026-11-24T17:00:00Z","ItemId":4,
+                  "ListId":"0f8fad5b-d9cb-469f-a165-70867728950e","Editor":"Ada Lovelace",
+                  "EditorEmailHint":"ada@contoso.com","ListTitle":"Board papers",
+                  "ServerRelativeUrl":"/sites/Board/Lists/Papers/4_.000",
+                  "ContentTypeId":{"StringValue":"0x0100AB"},
+                  "SharedWithUsers":[{"Name":"Grace Hopper","Email":"grace@contoso.com"}]}]}"""));
+
+        JsonNode change = scrubbed.path("value").get(0);
+        String list = change.path("ListId").asText();
+        assertThat(change.path("odata.type").asText()).isEqualTo("SP.ChangeItem");
+        assertThat(change.path("Time").asText()).isEqualTo("2026-11-24T17:00:00Z");
+        assertThat(change.path("ChangeType").asInt()).isEqualTo(17);
+        assertThat(change.path("ItemId").asInt()).isEqualTo(4);
+        assertThat(list).startsWith(RecordingScrubber.GUID_PREFIX);
+        assertThat(change.path("ChangeToken").path("StringValue").asText())
+                .isEqualTo("1;3;" + list + ";638000000000000000;42");
+        assertThat(change.path("EditorEmailHint").asText()).isEqualTo("email-1@example.invalid");
+        assertThat(scrubbed.toString()).doesNotContain("Ada", "Board", "Papers", "Grace", "contoso", "0x0100AB");
+        assertThat(RecordingScrubber.violations(scrubbed.toString())).isEmpty();
+    }
+
+    @Test
     void xmlSchemaNamespacesStay() {
         String xml = "<Value xmlns:q1=\"http://www.w3.org/2001/XMLSchema\" p4:type=\"q1:string\">";
 

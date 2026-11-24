@@ -84,7 +84,8 @@ class MicrosoftChangeReplayTest {
         String suffix = run.path("suffix").asText();
         ChangeScenarios.Backend backend = new ChangeScenarios.Backend(run.path("driveId").asText(),
                 suffix, Instant.parse(run.path("startedAt").asText()),
-                run.path("notificationUrl").asText(), run.path("lifecycleUrl").asText());
+                run.path("notificationUrl").asText(), run.path("lifecycleUrl").asText(),
+                run.path("siteId").asText(""));
         Map<String, byte[]> blobs = new ConcurrentHashMap<>();
         blobs.put(Recordings.sha256(ChangeRecordings.content(suffix)), ChangeRecordings.content(suffix));
         ReplayTransport transport = new ReplayTransport(blobs);
@@ -98,9 +99,10 @@ class MicrosoftChangeReplayTest {
         NotificationBus serviceBus = new NotificationBus();
         receiver = NotificationReceiver.start(0, backend.clientState(), receiverBus,
                 Clock.systemUTC());
-        MicrosoftChangeGrpcService service = new MicrosoftChangeGrpcService(
-                new MicrosoftGrpcService(config, new GraphFiles(client),
-                        MicrosoftGrpcService.DEFAULT_ATTACHMENT_MAX_BYTES),
+        MicrosoftGrpcService microsoft = new MicrosoftGrpcService(config, new GraphFiles(client),
+                MicrosoftGrpcService.DEFAULT_ATTACHMENT_MAX_BYTES);
+        microsoft.sharePointTokens((session, resource) -> () -> "replay-token");
+        MicrosoftChangeGrpcService service = new MicrosoftChangeGrpcService(microsoft,
                 serviceBus, true, backend.clientState(), Clock.systemUTC());
         executor = Executors.newVirtualThreadPerTaskExecutor();
         String name = InProcessServerBuilder.generateName();

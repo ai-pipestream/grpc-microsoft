@@ -29,8 +29,8 @@ build. Do not change how tests are run.
 
 | Module | What |
 |---|---|
-| `grpc-microsoft-api` | `ai.pipestream.microsoft.v1`. `microsoft_service.proto` is the service; `drive.proto`, `list.proto`, `site.proto`, `permission.proto`, `write.proto`, `directory.proto` (Entra), `site_security.proto` (SharePoint groups, role assignments, `SiteAcl`, `SiteAdmins`), `term_store.proto`, `microsoft_admin_service.proto` and `change_feed.proto` (`MicrosoftChangeService`). |
-| `grpc-microsoft-service` | The process (port 9096). `MicrosoftGrpcService` (rpc handlers), `GraphClient`, `GraphAuth` and `ClientCertificate` (secret or certificate sign-in), `MicrosoftSessions` (catalog connections), `MicrosoftMapper`, `MicrosoftCrawler` (`Sync`, delta), `WritePlans`, `UploadHandler`, `MutateHandler` (`$batch`), `ListFieldWriter` and `ColumnSpecs` (typed column values), `SharePointRest`, `SiteSecurityReader` and `SiteSecurityMapper`. Change stream: `MicrosoftChangeGrpcService`, `GraphSubscriptions`, `SubscriptionRenewer`, `NotificationReceiver`, `NotificationBus`. |
+| `grpc-microsoft-api` | `ai.pipestream.microsoft.v1`. `microsoft_service.proto` is the service; `drive.proto`, `list.proto`, `site.proto`, `permission.proto`, `write.proto`, `directory.proto` (Entra), `site_security.proto` (SharePoint groups, role assignments, `SiteAcl`, `SiteAdmins`), `site_change.proto` (the SharePoint change log), `term_store.proto`, `microsoft_admin_service.proto` and `change_feed.proto` (`MicrosoftChangeService`). |
+| `grpc-microsoft-service` | The process (port 9096). `MicrosoftGrpcService` (rpc handlers), `GraphClient`, `GraphAuth` and `ClientCertificate` (secret or certificate sign-in), `MicrosoftSessions` (catalog connections), `MicrosoftMapper`, `MicrosoftCrawler` (`Sync`, delta), `WritePlans`, `UploadHandler`, `MutateHandler` (`$batch`), `ListFieldWriter` and `ColumnSpecs` (typed column values), `SharePointRest`, `SiteSecurityReader`, `SiteSecurityMapper` and `SiteChanges` (`getchanges`). Change stream: `MicrosoftChangeGrpcService`, `GraphSubscriptions`, `SubscriptionRenewer`, `NotificationReceiver`, `NotificationBus`. |
 | `grpc-microsoft-admin` | `MicrosoftAdminService`: list, ensure (with `dry_run`) and revoke per-site application grants. The only process that signs in with `Sites.FullControl.All`; deployed on its own. Default port 9097, the same as the sync ledger's default. |
 | `grpc-microsoft-connector` | Microsoft Copilot / Graph Connector Agent adapter (port 30303). Its `Contracts/` protos are a frozen MIT copy of Microsoft's wire and are outside the Buf workspace. |
 | `grpc-microsoft-output` | Store keys, OKF catalog mapping, the `microsoft-connector` output format. |
@@ -43,7 +43,7 @@ build. Do not change how tests are run.
   Graph v1.0, design decisions, what is left out and why.
 - Graph first. SharePoint REST is used only where Graph has no route or
   refuses the operation: site groups and members, role assignments and
-  inheritance, site admins, hyperlink and term column creation
+  inheritance, site admins, the change log (`getchanges`), hyperlink and term column creation
   (`CreateFieldAsXml`), hyperlink values (`ValidateUpdateListItem`).
   SharePoint REST app-only calls need the certificate credential.
 - The README's "Permissions" table lists which permission and site grant

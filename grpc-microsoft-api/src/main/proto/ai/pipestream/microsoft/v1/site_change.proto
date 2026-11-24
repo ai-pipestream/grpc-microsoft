@@ -1,0 +1,154 @@
+syntax = "proto3";
+
+package ai.pipestream.microsoft.v1;
+
+import "ai/pipestream/microsoft/v1/site_security.proto";
+import "google/protobuf/timestamp.proto";
+
+option java_multiple_files = true;
+option java_package = "ai.pipestream.microsoft.v1";
+option java_outer_classname = "SiteChangeProto";
+
+// ============================================================================
+// SITE CHANGES - the change log of a SharePoint site, as the SharePoint REST
+// API reports it (getChanges). It names what changed in a site's security:
+// role assignments, role inheritance, groups and their members. Graph does
+// not.
+// ============================================================================
+
+// What a site change is about.
+enum SiteChangeObject {
+  // Unknown or not reported.
+  SITE_CHANGE_OBJECT_UNSPECIFIED = 0;
+  // A list item (a file's or folder's list item included).
+  SITE_CHANGE_OBJECT_ITEM = 1;
+  // A list or document library.
+  SITE_CHANGE_OBJECT_LIST = 2;
+  // A site (a web).
+  SITE_CHANGE_OBJECT_WEB = 3;
+  // The site collection.
+  SITE_CHANGE_OBJECT_SITE_COLLECTION = 4;
+  // A file outside a document library.
+  SITE_CHANGE_OBJECT_FILE = 5;
+  // A folder outside a document library.
+  SITE_CHANGE_OBJECT_FOLDER = 6;
+  // A user of the site collection.
+  SITE_CHANGE_OBJECT_USER = 7;
+  // A SharePoint group.
+  SITE_CHANGE_OBJECT_GROUP = 8;
+  // A column.
+  SITE_CHANGE_OBJECT_FIELD = 9;
+  // A content type.
+  SITE_CHANGE_OBJECT_CONTENT_TYPE = 10;
+  // A list view.
+  SITE_CHANGE_OBJECT_VIEW = 11;
+  // An alert.
+  SITE_CHANGE_OBJECT_ALERT = 12;
+  // A security policy of the web application.
+  SITE_CHANGE_OBJECT_SECURITY_POLICY = 13;
+}
+
+// What happened to the object. The numbers are SharePoint's ChangeType values.
+enum SiteChangeType {
+  // Unknown or not reported.
+  SITE_CHANGE_TYPE_UNSPECIFIED = 0;
+  // The object was added.
+  SITE_CHANGE_TYPE_ADD = 1;
+  // The object was changed.
+  SITE_CHANGE_TYPE_UPDATE = 2;
+  // The object was deleted.
+  SITE_CHANGE_TYPE_DELETE = 3;
+  // The object was renamed.
+  SITE_CHANGE_TYPE_RENAME = 4;
+  // The object was moved away from this place.
+  SITE_CHANGE_TYPE_MOVE_AWAY = 5;
+  // The object was moved into this place.
+  SITE_CHANGE_TYPE_MOVE_INTO = 6;
+  // The object was restored from a recycle bin or a backup.
+  SITE_CHANGE_TYPE_RESTORE = 7;
+  // A permission level (role definition) was added.
+  SITE_CHANGE_TYPE_ROLE_DEFINITION_ADD = 8;
+  // A permission level was deleted.
+  SITE_CHANGE_TYPE_ROLE_DEFINITION_DELETE = 9;
+  // A permission level was changed.
+  SITE_CHANGE_TYPE_ROLE_DEFINITION_UPDATE = 10;
+  // A principal was given a permission level on the object.
+  SITE_CHANGE_TYPE_ROLE_ASSIGNMENT_ADD = 11;
+  // A principal lost a permission level on the object.
+  SITE_CHANGE_TYPE_ROLE_ASSIGNMENT_DELETE = 12;
+  // A member was added to the group.
+  SITE_CHANGE_TYPE_GROUP_MEMBER_ADD = 13;
+  // A member was removed from the group.
+  SITE_CHANGE_TYPE_GROUP_MEMBER_DELETE = 14;
+  // The object was changed without its modified time or editor changing.
+  SITE_CHANGE_TYPE_SYSTEM_UPDATE = 15;
+  // The navigation of the site was changed.
+  SITE_CHANGE_TYPE_NAVIGATION = 16;
+  // The object stopped inheriting and has its own role assignments.
+  SITE_CHANGE_TYPE_SCOPE_ADD = 17;
+  // The object inherits its parent's role assignments again.
+  SITE_CHANGE_TYPE_SCOPE_DELETE = 18;
+  // A content type was added to the list.
+  SITE_CHANGE_TYPE_LIST_CONTENT_TYPE_ADD = 19;
+  // A content type was removed from the list.
+  SITE_CHANGE_TYPE_LIST_CONTENT_TYPE_DELETE = 20;
+  // The object needs to be read again.
+  SITE_CHANGE_TYPE_DIRTY = 21;
+  // An activity on the object, such as a view or a share.
+  SITE_CHANGE_TYPE_ACTIVITY = 22;
+}
+
+// Which change log to read.
+enum SiteChangeScope {
+  // Same as SITE_CHANGE_SCOPE_WEB.
+  SITE_CHANGE_SCOPE_UNSPECIFIED = 0;
+  // The site itself (its web).
+  SITE_CHANGE_SCOPE_WEB = 1;
+  // The whole site collection the site is in.
+  SITE_CHANGE_SCOPE_SITE_COLLECTION = 2;
+  // One list of the site.
+  SITE_CHANGE_SCOPE_LIST = 3;
+}
+
+// One entry of a site's change log.
+message SiteChange {
+  // What the change is about.
+  SiteChangeObject object = 1;
+  // What happened.
+  SiteChangeType type = 2;
+  // When it happened.
+  google.protobuf.Timestamp time = 3;
+  // Change token of this entry. A read from it answers the entries after it.
+  string change_token = 4;
+  // Graph site id of the site the object is in. Empty when the entry names
+  // no site.
+  string site_id = 5;
+  // GUID of the site collection.
+  string site_collection_id = 6;
+  // GUID of the site (web) the object is in.
+  string web_id = 7;
+  // GUID of the list (list, item and view changes).
+  string list_id = 8;
+  // Number of the list item within its list (item changes).
+  string item_id = 9;
+  // GUID of the item, file or folder.
+  string unique_id = 10;
+  // Id of the SharePoint group within the site collection (group changes).
+  int32 group_id = 11;
+  // Id of the user within the site collection (user changes).
+  int32 user_id = 12;
+  // GUID of the column (field changes).
+  string field_id = 13;
+  // Id of the content type (content type changes; item changes carry the
+  // item's content type).
+  string content_type_id = 14;
+  // GUID of the view (view changes).
+  string view_id = 15;
+  // GUID of the alert (alert changes).
+  string alert_id = 16;
+  // The site, list or list item the entry is about, as the site security rpcs
+  // take it. Not set for other objects.
+  SiteSecurable securable = 17;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}

@@ -6,6 +6,7 @@ import "ai/pipestream/microsoft/v1/common.proto";
 import "ai/pipestream/microsoft/v1/directory.proto";
 import "ai/pipestream/microsoft/v1/events.proto";
 import "ai/pipestream/microsoft/v1/microsoft_service.proto";
+import "ai/pipestream/microsoft/v1/site_change.proto";
 import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";
 
@@ -94,6 +95,8 @@ message WatchChangesRequest {
   google.protobuf.Duration min_interval = 4;
   // The Entra directory to watch next to the Sync scope; unset = none.
   DirectoryWatch directory = 5;
+  // The SharePoint change logs to read next to the Sync scope; unset = none.
+  SiteChangeWatch site_changes = 6;
 }
 
 // What of the Entra directory a WatchChanges stream watches. Every pass
@@ -108,6 +111,33 @@ message DirectoryWatch {
   // each group. The first pass then lists every direct member of every
   // group. Keep the value for the life of a resume cursor.
   bool group_members = 3;
+}
+
+// Which SharePoint change logs a WatchChanges stream reads. The first pass
+// of a site takes only the end of its log; every later pass streams the
+// entries since the pass before. Needs a certificate credential.
+message SiteChangeWatch {
+  // The sites whose log is read.
+  repeated string site_ids = 1;
+  // Which log of each site: its own or its site collection's. The list
+  // scope is not allowed. Keep the value for the life of a resume cursor.
+  SiteChangeScope scope = 2;
+  // Only entries about these objects. Empty = every object.
+  repeated SiteChangeObject objects = 3;
+  // Only entries of these types. Empty = every type.
+  repeated SiteChangeType types = 4;
+}
+
+// Marker sent after a pass read the change log of a site.
+message SiteChangeSnapshot {
+  // The site, as the request named it.
+  string site_id = 1;
+  // CHANGE_SOURCE_CRAWL when the pass only took the end of the log (the
+  // first pass of the site): what changed before is not reported.
+  // CHANGE_SOURCE_DELTA when the entries since the pass before were read.
+  ChangeSource source = 2;
+  // Entries the read emitted.
+  int64 change_count = 3;
 }
 
 // Which part of the directory a snapshot is about.
@@ -153,7 +183,7 @@ message PassCompleted {
   PassTrigger trigger = 2;
   // Notifications that arrived since the previous pass started.
   int32 notification_count = 3;
-  // Changes the pass emitted, user and group changes included.
+  // Changes the pass emitted; user, group and site log changes included.
   int64 change_count = 4;
   // When the pass started.
   google.protobuf.Timestamp started_at = 5;
@@ -185,6 +215,10 @@ message WatchChangesResponse {
     GroupChange group_change = 7;
     // The end of the users or of the groups of a pass.
     DirectorySnapshot directory_snapshot = 8;
+    // One entry of a site's change log; only with site_changes.
+    SiteChange site_change = 9;
+    // The end of one site's change log in a pass.
+    SiteChangeSnapshot site_change_snapshot = 10;
   }
 }
 

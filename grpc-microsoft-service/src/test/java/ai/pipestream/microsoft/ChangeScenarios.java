@@ -16,6 +16,10 @@ import ai.pipestream.microsoft.v1.MicrosoftChangeServiceGrpc;
 import ai.pipestream.microsoft.v1.PassTrigger;
 import ai.pipestream.microsoft.v1.ReauthorizeSubscriptionRequest;
 import ai.pipestream.microsoft.v1.RenewalAction;
+import ai.pipestream.microsoft.v1.SiteChange;
+import ai.pipestream.microsoft.v1.SiteChangeObject;
+import ai.pipestream.microsoft.v1.SiteChangeSnapshot;
+import ai.pipestream.microsoft.v1.SiteChangeWatch;
 import ai.pipestream.microsoft.v1.Subscription;
 import ai.pipestream.microsoft.v1.SubscriptionChangeType;
 import ai.pipestream.microsoft.v1.SubscriptionRenewal;
@@ -88,9 +92,10 @@ final class ChangeScenarios {
      * @param startedAt when the live run started; base of every requested expiration
      * @param notificationUrl public URL of the receiver's notification path
      * @param lifecycleUrl public URL of the receiver's lifecycle path
+     * @param siteId the site of the drive; empty when the run does not know it
      */
     record Backend(String driveId, String suffix, Instant startedAt, String notificationUrl,
-            String lifecycleUrl) {
+            String lifecycleUrl, String siteId) {
 
         /** The clientState of the run. */
         String clientState() {
@@ -215,7 +220,10 @@ final class ChangeScenarios {
                         "CreateSubscription (one Entra group)", this::subscribeToAGroup),
                 new Scenario("22-subscribe-group-members", "CreateSubscription",
                         "CreateSubscription (the members of one Entra group)",
-                        this::subscribeToGroupMembers));
+                        this::subscribeToGroupMembers),
+                new Scenario("23-watch-site-log", "WatchChanges",
+                        "WatchChanges (the site's change log after a sharing link is added)",
+                        this::watchSiteLog));
     }
 
     /** Runs one step. */
@@ -556,16 +564,83 @@ final class ChangeScenarios {
         return "since the cursor: " + users + " user change(s), " + groups + " group change(s)";
     }
 
+    private String watchSiteLog() throws Exception {
+        if (backend.siteId().isBlank()) {
+            throw new Skip("the run does not know the site of the drive");
+        }
+        WatchChangesRequest.Builder request = WatchChangesRequest.newBuilder()
+                .setSiteChanges(SiteChangeWatch.newBuilder().addSiteIds(backend.siteId()));
+        List<WatchChangesResponse> first;
+        try {
+            first = firstPass(request.build());
+        } catch (StatusRuntimeException e) {
+            if (e.getStatus().getCode() == Status.Code.FAILED_PRECONDITION) {
+                throw new Skip("no certificate credential: " + e.getStatus().getDescription());
+            }
+            throw e;
+        }
+        SiteChangeSnapshot start = siteSnapshot(first);
+        check(start.getSource() == ChangeSource.CHANGE_SOURCE_CRAWL && start.getChangeCount() == 0
+                        && first.stream().noneMatch(WatchChangesResponse::hasSiteChange),
+                "the first pass of the site did not start at the end of its log");
+        String cursor = first.get(first.size() - 1).getResumeCursor();
+        check(!SyncCursor.parseFrom(Base64.getUrlDecoder().decode(cursor))
+                .getSiteChangeTokensOrDefault(backend.siteId(), "").isBlank(),
+                "the resume cursor holds no change token of the site");
+
+        JsonNode item = graph.putBytes("/drives/" + backend.driveId() + "/root:/site-log-"
+                + backend.fileName() + ":/content", ChangeRecordings.content(backend.suffix()),
+                "text/plain");
+        String id = item.path("id").asText("");
+        check(!id.isBlank(), "the upload answered no item id");
+        try {
+            graph.post("/drives/" + backend.driveId() + "/items/" + id + "/createLink",
+                    Recordings.JSON.createObjectNode().put("type", "view").put("scope", "organization"));
+        } finally {
+            graph.delete("/drives/" + backend.driveId() + "/items/" + id);
+        }
+
+        List<WatchChangesResponse> next = firstPass(request.setResumeCursor(cursor).build());
+        SiteChangeSnapshot read = siteSnapshot(next);
+        List<SiteChange> changes = next.stream().filter(WatchChangesResponse::hasSiteChange)
+                .map(WatchChangesResponse::getSiteChange).toList();
+        check(read.getSource() == ChangeSource.CHANGE_SOURCE_DELTA
+                && read.getChangeCount() == changes.size(), "the snapshot is " + read.getSource()
+                + " with " + read.getChangeCount() + " for " + changes.size() + " change(s)");
+        java.util.Map<String, Integer> kinds = new java.util.TreeMap<>();
+        changes.forEach(change -> kinds.merge(change.getObject().name().substring(
+                "SITE_CHANGE_OBJECT_".length()) + " " + change.getType().name().substring(
+                "SITE_CHANGE_TYPE_".length()), 1, Integer::sum));
+        check(changes.stream().anyMatch(change -> change.getObject()
+                == SiteChangeObject.SITE_CHANGE_OBJECT_ITEM && change.getSecurable().hasListItem()),
+                "the log holds no list item change: " + kinds);
+        return "first pass took the end of the log; after a file was shared: " + kinds;
+    }
+
+    private static SiteChangeSnapshot siteSnapshot(List<WatchChangesResponse> pass) {
+        SiteChangeSnapshot snapshot = pass.stream()
+                .filter(WatchChangesResponse::hasSiteChangeSnapshot)
+                .map(WatchChangesResponse::getSiteChangeSnapshot).findFirst().orElse(null);
+        check(snapshot != null, "the pass sent no snapshot of the site's change log");
+        return snapshot;
+    }
+
     /** Opens a watch with the directory on, collects its first pass and closes it. */
     private List<WatchChangesResponse> directoryPass(String resumeCursor) throws Exception {
-        Context.CancellableContext stream = Context.current().withCancellation();
-        BlockingQueue<WatchChangesResponse> seen = new LinkedBlockingQueue<>();
-        AtomicReference<Throwable> failure = new AtomicReference<>();
-        WatchChangesRequest request = WatchChangesRequest.newBuilder()
-                .setSync(SyncRequest.newBuilder().addDriveIds(backend.driveId()))
+        return firstPass(WatchChangesRequest.newBuilder()
                 .setResumeCursor(resumeCursor)
                 .setDirectory(DirectoryWatch.newBuilder().setUsers(true).setGroups(true)
                         .setGroupMembers(true))
+                .build());
+    }
+
+    /** Opens a watch of the run's drive, collects its first pass and closes it. */
+    private List<WatchChangesResponse> firstPass(WatchChangesRequest watched) throws Exception {
+        Context.CancellableContext stream = Context.current().withCancellation();
+        BlockingQueue<WatchChangesResponse> seen = new LinkedBlockingQueue<>();
+        AtomicReference<Throwable> failure = new AtomicReference<>();
+        WatchChangesRequest request = watched.toBuilder()
+                .setSync(SyncRequest.newBuilder().addDriveIds(backend.driveId()))
                 .setPollInterval(com.google.protobuf.Duration.newBuilder().setSeconds(3600))
                 .build();
         try {

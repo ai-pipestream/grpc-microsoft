@@ -9,6 +9,7 @@ import "ai/pipestream/microsoft/v1/events.proto";
 import "ai/pipestream/microsoft/v1/list.proto";
 import "ai/pipestream/microsoft/v1/permission.proto";
 import "ai/pipestream/microsoft/v1/site.proto";
+import "ai/pipestream/microsoft/v1/site_change.proto";
 import "ai/pipestream/microsoft/v1/site_security.proto";
 import "ai/pipestream/microsoft/v1/term_store.proto";
 import "ai/pipestream/microsoft/v1/write.proto";
@@ -227,6 +228,12 @@ service MicrosoftService {
   // list or list item its own role assignments, or makes it inherit its
   // parent's again.
   rpc SetSiteRoleInheritance(SetSiteRoleInheritanceRequest) returns (SetSiteRoleInheritanceResponse);
+
+  // What changed in a site, its site collection or one of its lists since a
+  // change token, as a stream that ends with the token to resume from. Names
+  // changes to role assignments, role inheritance, groups and group members.
+  // Needs a certificate credential. SharePoint REST: POST {scope}/getchanges.
+  rpc ListSiteChanges(ListSiteChangesRequest) returns (stream ListSiteChangesResponse);
 
   // --- Sync ----------------------------------------------------------------
 
@@ -1247,6 +1254,40 @@ message ListSiteRoleAssignmentsRequest {
 message ListSiteRoleAssignmentsResponse {
   // The assignment.
   SiteRoleAssignment assignment = 1;
+}
+
+// Request to read a change log of a site.
+message ListSiteChangesRequest {
+  // Site id.
+  string site_id = 1;
+  // Which change log to read.
+  SiteChangeScope scope = 2;
+  // GUID of the list. Required with SITE_CHANGE_SCOPE_LIST, not allowed
+  // otherwise.
+  string list_id = 3;
+  // The change token a previous ListSiteChanges stream of the same scope
+  // ended with. Empty = everything the change log still holds. `latest` = no
+  // entries, only the token of the end of the log.
+  string change_token = 4;
+  // Only entries about these objects. Empty = every object.
+  repeated SiteChangeObject objects = 5;
+  // Only entries of these types. Empty = every type.
+  repeated SiteChangeType types = 6;
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 7;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// One event of a ListSiteChanges stream.
+message ListSiteChangesResponse {
+  // Exactly one arm is set.
+  oneof event {
+    // One entry of the change log, oldest first.
+    SiteChange change = 1;
+    // Terminal: the change token to resume from.
+    string change_token = 2;
+  }
 }
 
 // Request to read whether a securable has its own role assignments.

@@ -163,4 +163,7 @@ message SyncCursor {
   // `@odata.deltaLink` of the Entra groups (`/groups/delta`), when a
   // WatchChanges stream watches them. Sync does not read or write it.
   string groups_delta_link = 5;
+  // Site id to the change token its SharePoint change log was last read to,
+  // when a WatchChanges stream reads it. Sync does not read or write it.
+  map<string, string> site_change_tokens = 6;
 }

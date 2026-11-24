@@ -235,6 +235,15 @@ kind. The first pass lists every user and group; later passes read
 Subscriptions on `/users`, `/groups` and `/groups/{id}/members` shorten the
 wait the same way as the ones on drives and lists.
 
+`WatchChangesRequest.site_changes` adds the SharePoint change log of the named
+sites to every pass: one `site_change` per entry, then one
+`site_change_snapshot` per site. The log names what a drive notification with
+security webhooks only hints at: the list item, list or site whose role
+assignments or inheritance changed, and the group whose members changed. The
+first pass of a site takes only the end of its log; the resume cursor carries
+the change token of each site. `ListSiteChanges` reads the same log on its
+own. Both need the certificate credential.
+
 ## Permissions
 
 What each group of rpcs needs, as proven against a real tenant on 2026-11-22.

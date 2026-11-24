@@ -142,6 +142,7 @@ class MicrosoftLiveCoverageIT {
             Map.entry("ListSiteGroupMembers", "GET {web}/_api/web/sitegroups/getbyid({id})/users"),
             Map.entry("ListSiteRoleAssignments", "GET {web}/_api/{securable}/roleassignments"),
             Map.entry("GetSiteRoleInheritance", "GET {web}/_api/{securable}?$select=HasUniqueRoleAssignments"),
+            Map.entry("ListSiteChanges", "POST {web}/_api/{scope}/getchanges"),
             Map.entry("SetSiteRoleInheritance", "POST {web}/_api/{securable}/breakroleinheritance"),
             Map.entry("ListUsers", "GET /users"),
             Map.entry("ListGroups", "GET /groups"),
@@ -585,6 +586,11 @@ class MicrosoftLiveCoverageIT {
                 s -> s.getSiteRoleInheritance(GetSiteRoleInheritanceRequest.newBuilder()
                         .setSecurable(siteSecurable).build()),
                 r -> "unique " + r.getHasUniqueRoleAssignments());
+        stream("ListSiteChanges", "ListSiteChanges [the end of the site's change log]", LIST_CAP,
+                s -> s.listSiteChanges(ai.pipestream.microsoft.v1.ListSiteChangesRequest.newBuilder()
+                        .setSiteId(chosenSite).setChangeToken("latest").build()),
+                l -> l.size() == 1 && !l.get(0).getChangeToken().isEmpty() ? "a change token"
+                        : l.size() + " message(s) and no change token");
 
         // --------------------------------------------------- term store --
         termStoreLine = termStoreRoutes(chosenSite);
