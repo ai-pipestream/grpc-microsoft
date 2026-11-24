@@ -390,11 +390,16 @@ final class RecordingScrubber {
         return run(text, at, c -> !Character.isWhitespace(c) && c != '"' && c != '<' && c != '>');
     }
 
-    /** Where {@code /_api/web} starts in the URL of a site's REST API; -1 in any other URL. */
+    /** Where {@code /_api/web} or {@code /_api/site} starts in the URL of a site's REST API; -1 in any other URL. */
     static int apiStart(String url) {
-        int at = url.indexOf("/_api/web");
-        int end = at + 9;
-        return at > 0 && (end == url.length() || "/?".indexOf(url.charAt(end)) >= 0) ? at : -1;
+        for (String root : List.of("/_api/web", "/_api/site")) {
+            int at = url.indexOf(root);
+            int end = at + root.length();
+            if (at > 0 && (end == url.length() || "/?".indexOf(url.charAt(end)) >= 0)) {
+                return at;
+            }
+        }
+        return -1;
     }
 
     /** Where the value of a {@code deltatoken=} or {@code skiptoken=} parameter starts; {@code at} when none starts here. */

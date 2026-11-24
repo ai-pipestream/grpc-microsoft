@@ -125,6 +125,12 @@ class RecordingScrubberTest {
                 + GUID_A + "')/roleassignments?$expand=Member"))
                 .isEqualTo(site + "/_api/web/lists(guid'" + RecordingScrubber.GUID_PREFIX
                         + "000000000001')/roleassignments?$expand=Member");
+        assertThat(scrubber.text("https://contoso.sharepoint.com/sites/Team/_api/site/getchanges"))
+                .isEqualTo(site + "/_api/site/getchanges");
+        assertThat(scrubber.text("https://contoso.sharepoint.com/sites/Team/_api/site?$select=CurrentChangeToken"))
+                .isEqualTo(site + "/_api/site?$select=CurrentChangeToken");
+        assertThat(scrubber.text("https://contoso.sharepoint.com/sites/Team/_api/sitepages/pages"))
+                .isEqualTo(RecordingScrubber.URL_PREFIX + "2");
     }
 
     @Test
