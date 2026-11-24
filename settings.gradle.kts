@@ -10,6 +10,7 @@ include("grpc-microsoft-output")
 include("grpc-microsoft-connector")
 include("grpc-microsoft-mcp")
 include("grpc-microsoft-connect")
+include("grpc-microsoft-admin")
 
 // The shared core (ai.pipestream.integration:*) builds from source when a
 // grpc-integration checkout is next to this one (or at -PintegrationDir);

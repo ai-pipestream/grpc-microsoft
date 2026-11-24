@@ -1,9 +1,20 @@
 package ai.pipestream.microsoft;
 
 import ai.pipestream.microsoft.v1.AuthMode;
+import ai.pipestream.microsoft.v1.GetSiteRoleInheritanceRequest;
+import ai.pipestream.microsoft.v1.GetSiteRoleInheritanceResponse;
+import ai.pipestream.microsoft.v1.ListSiteGroupMembersRequest;
+import ai.pipestream.microsoft.v1.ListSiteGroupMembersResponse;
+import ai.pipestream.microsoft.v1.ListSiteGroupsRequest;
+import ai.pipestream.microsoft.v1.ListSiteGroupsResponse;
+import ai.pipestream.microsoft.v1.ListSiteRoleAssignmentsRequest;
+import ai.pipestream.microsoft.v1.ListSiteRoleAssignmentsResponse;
+import ai.pipestream.microsoft.v1.SiteSecurable;
 import ai.pipestream.microsoft.v1.ColumnDefinition;
 import ai.pipestream.microsoft.v1.DeltaDriveItemsRequest;
 import ai.pipestream.microsoft.v1.DeltaDriveItemsResponse;
+import ai.pipestream.microsoft.v1.DeltaGroupsRequest;
+import ai.pipestream.microsoft.v1.DeltaGroupsResponse;
 import ai.pipestream.microsoft.v1.DeltaListItemsRequest;
 import ai.pipestream.microsoft.v1.DeltaListItemsResponse;
 import ai.pipestream.microsoft.v1.DeltaResync;
@@ -47,7 +58,15 @@ import ai.pipestream.microsoft.v1.ListPermissionsRequest;
 import ai.pipestream.microsoft.v1.ListPermissionsResponse;
 import ai.pipestream.microsoft.v1.ListSitesRequest;
 import ai.pipestream.microsoft.v1.ListSitesResponse;
+import ai.pipestream.microsoft.v1.ListGroupTransitiveMembersRequest;
+import ai.pipestream.microsoft.v1.ListGroupTransitiveMembersResponse;
+import ai.pipestream.microsoft.v1.ListGroupsRequest;
+import ai.pipestream.microsoft.v1.ListGroupsResponse;
 import ai.pipestream.microsoft.v1.ListSubsitesRequest;
+import ai.pipestream.microsoft.v1.ListUserTransitiveMemberOfRequest;
+import ai.pipestream.microsoft.v1.ListUserTransitiveMemberOfResponse;
+import ai.pipestream.microsoft.v1.ListUsersRequest;
+import ai.pipestream.microsoft.v1.ListUsersResponse;
 import ai.pipestream.microsoft.v1.ListSubsitesResponse;
 import ai.pipestream.microsoft.v1.MicrosoftChange;
 import ai.pipestream.microsoft.v1.MicrosoftServiceGrpc;
@@ -60,8 +79,42 @@ import ai.pipestream.microsoft.v1.Site;
 import ai.pipestream.microsoft.v1.SyncCursor;
 import ai.pipestream.microsoft.v1.SyncRequest;
 import ai.pipestream.microsoft.v1.SyncResponse;
+import ai.pipestream.microsoft.v1.ColumnOutcome;
+import ai.pipestream.microsoft.v1.ColumnScope;
+import ai.pipestream.microsoft.v1.ColumnSpec;
+import ai.pipestream.microsoft.v1.CopyDriveItemRequest;
+import ai.pipestream.microsoft.v1.CopyDriveItemResponse;
+import ai.pipestream.microsoft.v1.CopyProgress;
+import ai.pipestream.microsoft.v1.CreateFolderRequest;
+import ai.pipestream.microsoft.v1.CreateFolderResponse;
+import ai.pipestream.microsoft.v1.CreateListItemRequest;
+import ai.pipestream.microsoft.v1.CreateListItemResponse;
+import ai.pipestream.microsoft.v1.DeleteDriveItemRequest;
+import ai.pipestream.microsoft.v1.DeleteDriveItemResponse;
+import ai.pipestream.microsoft.v1.SetSiteRoleInheritanceRequest;
+import ai.pipestream.microsoft.v1.SetSiteRoleInheritanceResponse;
+import ai.pipestream.microsoft.v1.DeleteListItemRequest;
+import ai.pipestream.microsoft.v1.DeleteListItemResponse;
+import ai.pipestream.microsoft.v1.EnsureColumnsRequest;
+import ai.pipestream.microsoft.v1.EnsureColumnsResponse;
+import ai.pipestream.microsoft.v1.EnsureListRequest;
+import ai.pipestream.microsoft.v1.EnsureListResponse;
+import ai.pipestream.microsoft.v1.EnsureState;
+import ai.pipestream.microsoft.v1.ListTemplate;
+import ai.pipestream.microsoft.v1.MutateRequest;
+import ai.pipestream.microsoft.v1.MutateResponse;
+import ai.pipestream.microsoft.v1.RestoreDriveItemVersionRequest;
+import ai.pipestream.microsoft.v1.RestoreDriveItemVersionResponse;
+import ai.pipestream.microsoft.v1.UpdateDriveItemRequest;
+import ai.pipestream.microsoft.v1.UpdateDriveItemResponse;
+import ai.pipestream.microsoft.v1.UpdateListItemFieldsRequest;
+import ai.pipestream.microsoft.v1.UpdateListItemFieldsResponse;
+import ai.pipestream.microsoft.v1.UploadItemRequest;
+import ai.pipestream.microsoft.v1.UploadItemResponse;
 import ai.pipestream.sync.v1.ConnectionServiceGrpc;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.Message;
 import io.grpc.Status;
@@ -70,7 +123,9 @@ import io.grpc.stub.StreamObserver;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.time.Duration;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -79,7 +134,8 @@ import java.util.Objects;
  * {@code MicrosoftService} over Microsoft Graph v1.0: every rpc of the contract,
  * one Graph route each (named on the rpc), with REST paging hidden behind
  * streams, delta links surfaced as typed terminal events, and binaries streamed
- * in chunks. Every outgoing entity is checked by {@link MicrosoftValidator}.
+ * in chunks, plus the write rpcs. Every outgoing entity is checked by
+ * {@link MicrosoftValidator}.
  * Requests that name a {@code connection_id} run against that catalog
  * connection ({@link MicrosoftSessions}); every client-supplied delta link or
  * resume cursor is validated against the configured Graph host and the route it
@@ -112,6 +168,9 @@ public final class MicrosoftGrpcService
      */
     public static final int DEFAULT_DOWNLOAD_CHUNK_BYTES = 1024 * 1024;
 
+    /** Time between progress checks of {@code CopyDriveItem} when the request names none. */
+    public static final Duration DEFAULT_COPY_POLL_INTERVAL = Duration.ofSeconds(1);
+
     /** Site ids returned by {@code ProbeConnection} when its limit is 0. */
     public static final int DEFAULT_PROBE_SITES = 5;
 
@@ -122,6 +181,9 @@ public final class MicrosoftGrpcService
     private final long attachmentMaxBytes;
     private final MicrosoftChangeSink downstream;
     private final int downloadChunkBytes;
+    private final WritePlans plans;
+    private volatile long mutateLingerMillis = MutateHandler.DEFAULT_LINGER_MILLIS;
+    private volatile SharePointRest sharePoint = new SharePointRest(SharePointRest::certificateTokens);
 
     /**
      * Creates a service with no downstream {@link MicrosoftChangeSink}.
@@ -179,6 +241,16 @@ public final class MicrosoftGrpcService
         this.attachmentMaxBytes = attachmentMaxBytes;
         this.downstream = downstream;
         this.downloadChunkBytes = downloadChunkBytes;
+        this.plans = new WritePlans(mapper, () -> sharePoint);
+    }
+
+    /**
+     * Sets how long a {@code Mutate} batch waits for more ops before it is sent.
+     *
+     * @param millis the wait in milliseconds
+     */
+    void mutateLingerMillis(long millis) {
+        this.mutateLingerMillis = millis;
     }
 
     // ------------------------------------------------------------ identity
@@ -198,17 +270,18 @@ public final class MicrosoftGrpcService
     public void probeConnection(ProbeConnectionRequest request,
             StreamObserver<ProbeConnectionResponse> observer) {
         unary(observer, () -> {
+            boolean credential = !request.getClientSecret().isBlank()
+                    || !request.getClientCertificatePem().isBlank();
             boolean inline = !request.getTenantId().isBlank() || !request.getClientId().isBlank()
-                    || !request.getClientSecret().isBlank();
+                    || credential;
             MicrosoftSessions.Session session;
             if (inline) {
-                if (request.getTenantId().isBlank() || request.getClientId().isBlank()
-                        || request.getClientSecret().isBlank()) {
-                    throw new IllegalArgumentException(
-                            "an inline probe needs tenant_id, client_id and client_secret");
+                if (request.getTenantId().isBlank() || request.getClientId().isBlank() || !credential) {
+                    throw new IllegalArgumentException("an inline probe needs tenant_id, client_id and"
+                            + " client_secret or client_certificate_pem");
                 }
                 session = sessions.inline(request.getTenantId(), request.getClientId(),
-                        request.getClientSecret());
+                        request.getClientSecret(), request.getClientCertificatePem());
             } else {
                 session = sessions.resolve(request.getConnectionId());
             }
@@ -234,6 +307,78 @@ public final class MicrosoftGrpcService
                 }
             }
             return response.build();
+        });
+    }
+
+    // ------------------------------------------------------------ directory
+
+    @Override
+    public void listUsers(ListUsersRequest request, StreamObserver<ListUsersResponse> observer) {
+        stream(observer, () -> {
+            MicrosoftSessions.Session session = sessions.resolve(request.getConnectionId());
+            session.pager().forEach(List.of("/users?$select=" + GraphPaths.USER_SELECT, "/users"),
+                    Map.of(), node -> {
+                        observer.onNext(ListUsersResponse.newBuilder()
+                                .setUser(valid(mapper.toUser(node))).build());
+                        return true;
+                    });
+        });
+    }
+
+    @Override
+    public void listGroups(ListGroupsRequest request, StreamObserver<ListGroupsResponse> observer) {
+        stream(observer, () -> {
+            MicrosoftSessions.Session session = sessions.resolve(request.getConnectionId());
+            session.pager().forEach(List.of("/groups?$select=" + GraphPaths.GROUP_SELECT, "/groups"),
+                    Map.of(), node -> {
+                        observer.onNext(ListGroupsResponse.newBuilder()
+                                .setGroup(valid(mapper.toGroup(node))).build());
+                        return true;
+                    });
+        });
+    }
+
+    @Override
+    public void listGroupTransitiveMembers(ListGroupTransitiveMembersRequest request,
+            StreamObserver<ListGroupTransitiveMembersResponse> observer) {
+        stream(observer, () -> {
+            MicrosoftSessions.Session session = sessions.resolve(request.getConnectionId());
+            String route = "/groups/" + GraphPaths.segment(request.getGroupId(), "group_id")
+                    + "/transitiveMembers";
+            session.pager().forEach(List.of(route), Map.of(), node -> {
+                observer.onNext(ListGroupTransitiveMembersResponse.newBuilder()
+                        .setMember(valid(mapper.toMember(node))).build());
+                return true;
+            });
+        });
+    }
+
+    @Override
+    public void listGroupOwners(ai.pipestream.microsoft.v1.ListGroupOwnersRequest request,
+            StreamObserver<ai.pipestream.microsoft.v1.ListGroupOwnersResponse> observer) {
+        stream(observer, () -> {
+            MicrosoftSessions.Session session = sessions.resolve(request.getConnectionId());
+            String route = "/groups/" + GraphPaths.segment(request.getGroupId(), "group_id") + "/owners";
+            session.pager().forEach(List.of(route), Map.of(), node -> {
+                observer.onNext(ai.pipestream.microsoft.v1.ListGroupOwnersResponse.newBuilder()
+                        .setOwner(valid(mapper.toMember(node))).build());
+                return true;
+            });
+        });
+    }
+
+    @Override
+    public void listUserTransitiveMemberOf(ListUserTransitiveMemberOfRequest request,
+            StreamObserver<ListUserTransitiveMemberOfResponse> observer) {
+        stream(observer, () -> {
+            MicrosoftSessions.Session session = sessions.resolve(request.getConnectionId());
+            String route = "/users/" + GraphPaths.segment(request.getUserId(), "user_id")
+                    + "/transitiveMemberOf";
+            session.pager().forEach(List.of(route), Map.of(), node -> {
+                observer.onNext(ListUserTransitiveMemberOfResponse.newBuilder()
+                        .setMember(valid(mapper.toMember(node))).build());
+                return true;
+            });
         });
     }
 
@@ -326,6 +471,38 @@ public final class MicrosoftGrpcService
                         }
                     });
             observer.onNext(DeltaSitesResponse.newBuilder().setDeltaLink(outcome.deltaLink()).build());
+        });
+    }
+
+    @Override
+    public void deltaGroups(DeltaGroupsRequest request, StreamObserver<DeltaGroupsResponse> observer) {
+        stream(observer, () -> {
+            MicrosoftSessions.Session session = sessions.resolve(request.getConnectionId());
+            String base = "/groups/delta";
+            String link = request.getDeltaLink().trim();
+            List<String> fresh = List.of(base + "?$select=" + GraphPaths.GROUP_SELECT
+                    + (request.getIncludeMembers() ? ",members" : ""));
+            if (link.equalsIgnoreCase("latest")) {
+                // Directory deltas spell the "from now" token differently from drives and sites.
+                fresh = List.of(base + "?$deltatoken=latest");
+                link = "";
+            } else if (!link.isEmpty()) {
+                GraphLinks.requireDeltaLink(session.graph().baseUrl(), link, "groups");
+            }
+            GraphPager.DeltaOutcome outcome = session.pager().delta(fresh, link, Map.of(),
+                    new GraphPager.DeltaVisitor() {
+                        @Override
+                        public void resync(DeltaResync resync) {
+                            observer.onNext(DeltaGroupsResponse.newBuilder().setResync(resync).build());
+                        }
+
+                        @Override
+                        public void item(JsonNode node) {
+                            observer.onNext(DeltaGroupsResponse.newBuilder()
+                                    .setChange(valid(mapper.toGroupChange(node))).build());
+                        }
+                    });
+            observer.onNext(DeltaGroupsResponse.newBuilder().setDeltaLink(outcome.deltaLink()).build());
         });
     }
 
@@ -702,6 +879,157 @@ public final class MicrosoftGrpcService
         });
     }
 
+    // ------------------------------------------------------------ site security
+
+    /** Replaces where SharePoint REST tokens come from. */
+    void sharePointTokens(SharePointRest.Tokens tokens) {
+        this.sharePoint = new SharePointRest(tokens);
+    }
+
+    private static String termStore(String siteId) {
+        return "/sites/" + GraphPaths.site(siteId) + "/termStore";
+    }
+
+    @Override
+    public void getTermStore(ai.pipestream.microsoft.v1.GetTermStoreRequest request,
+            StreamObserver<ai.pipestream.microsoft.v1.GetTermStoreResponse> observer) {
+        unary(observer, () -> {
+            MicrosoftSessions.Session session = sessions.resolve(request.getConnectionId());
+            return ai.pipestream.microsoft.v1.GetTermStoreResponse.newBuilder()
+                    .setStore(TermStoreMapper.toStore(session.graph().get(termStore(request.getSiteId()))))
+                    .build();
+        });
+    }
+
+    @Override
+    public void listTermGroups(ai.pipestream.microsoft.v1.ListTermGroupsRequest request,
+            StreamObserver<ai.pipestream.microsoft.v1.ListTermGroupsResponse> observer) {
+        stream(observer, () -> {
+            MicrosoftSessions.Session session = sessions.resolve(request.getConnectionId());
+            session.pager().forEach(List.of(termStore(request.getSiteId()) + "/groups"), Map.of(), node -> {
+                observer.onNext(ai.pipestream.microsoft.v1.ListTermGroupsResponse.newBuilder()
+                        .setGroup(TermStoreMapper.toGroup(node)).build());
+                return true;
+            });
+        });
+    }
+
+    @Override
+    public void listTermSets(ai.pipestream.microsoft.v1.ListTermSetsRequest request,
+            StreamObserver<ai.pipestream.microsoft.v1.ListTermSetsResponse> observer) {
+        stream(observer, () -> {
+            MicrosoftSessions.Session session = sessions.resolve(request.getConnectionId());
+            String path = termStore(request.getSiteId()) + "/groups/"
+                    + GraphPaths.segment(request.getGroupId(), "group_id") + "/sets";
+            session.pager().forEach(List.of(path), Map.of(), node -> {
+                observer.onNext(ai.pipestream.microsoft.v1.ListTermSetsResponse.newBuilder()
+                        .setSet(TermStoreMapper.toSet(node, request.getGroupId())).build());
+                return true;
+            });
+        });
+    }
+
+    @Override
+    public void listTerms(ai.pipestream.microsoft.v1.ListTermsRequest request,
+            StreamObserver<ai.pipestream.microsoft.v1.ListTermsResponse> observer) {
+        stream(observer, () -> {
+            MicrosoftSessions.Session session = sessions.resolve(request.getConnectionId());
+            String set = termStore(request.getSiteId()) + "/sets/"
+                    + GraphPaths.segment(request.getSetId(), "set_id");
+            String path = request.getParentTermId().isBlank() ? set + "/children"
+                    : set + "/terms/" + GraphPaths.segment(request.getParentTermId(), "parent_term_id")
+                            + "/children";
+            session.pager().forEach(List.of(path), Map.of(), node -> {
+                observer.onNext(ai.pipestream.microsoft.v1.ListTermsResponse.newBuilder()
+                        .setTerm(TermStoreMapper.toTerm(node, request.getSetId(),
+                                request.getParentTermId())).build());
+                return true;
+            });
+        });
+    }
+
+    @Override
+    public void listSiteGroups(ListSiteGroupsRequest request,
+            StreamObserver<ListSiteGroupsResponse> observer) {
+        stream(observer, () -> {
+            MicrosoftSessions.Session session = sessions.resolve(request.getConnectionId());
+            sharePoint.web(session, request.getSiteId()).forEach("/web/sitegroups", node -> {
+                observer.onNext(ListSiteGroupsResponse.newBuilder()
+                        .setGroup(SiteSecurityMapper.toGroup(node)).build());
+                return true;
+            });
+        });
+    }
+
+    @Override
+    public void listSiteGroupMembers(ListSiteGroupMembersRequest request,
+            StreamObserver<ListSiteGroupMembersResponse> observer) {
+        stream(observer, () -> {
+            MicrosoftSessions.Session session = sessions.resolve(request.getConnectionId());
+            if (request.getGroupId() <= 0) {
+                throw new IllegalArgumentException("group_id is required");
+            }
+            sharePoint.web(session, request.getSiteId()).forEach(
+                    "/web/sitegroups/getbyid(" + request.getGroupId() + ")/users", node -> {
+                        observer.onNext(ListSiteGroupMembersResponse.newBuilder()
+                                .setMember(SiteSecurityMapper.toPrincipal(node)).build());
+                        return true;
+                    });
+        });
+    }
+
+    @Override
+    public void listSiteRoleAssignments(ListSiteRoleAssignmentsRequest request,
+            StreamObserver<ListSiteRoleAssignmentsResponse> observer) {
+        stream(observer, () -> {
+            MicrosoftSessions.Session session = sessions.resolve(request.getConnectionId());
+            SiteSecurable securable = request.getSecurable();
+            sharePoint.web(session, SharePointRest.siteId(securable)).forEach(
+                    SharePointRest.path(securable) + "/roleassignments?$expand=Member,RoleDefinitionBindings",
+                    node -> {
+                        observer.onNext(ListSiteRoleAssignmentsResponse.newBuilder()
+                                .setAssignment(SiteSecurityMapper.toRoleAssignment(node)).build());
+                        return true;
+                    });
+        });
+    }
+
+    @Override
+    public void getSiteRoleInheritance(GetSiteRoleInheritanceRequest request,
+            StreamObserver<GetSiteRoleInheritanceResponse> observer) {
+        unary(observer, () -> {
+            MicrosoftSessions.Session session = sessions.resolve(request.getConnectionId());
+            SiteSecurable securable = request.getSecurable();
+            JsonNode node = sharePoint.web(session, SharePointRest.siteId(securable))
+                    .get(SharePointRest.path(securable) + "?$select=HasUniqueRoleAssignments");
+            return GetSiteRoleInheritanceResponse.newBuilder()
+                    .setHasUniqueRoleAssignments(node.path("HasUniqueRoleAssignments").asBoolean(false))
+                    .build();
+        });
+    }
+
+    @Override
+    public void setSiteRoleInheritance(SetSiteRoleInheritanceRequest request,
+            StreamObserver<SetSiteRoleInheritanceResponse> observer) {
+        unary(observer, () -> {
+            MicrosoftSessions.Session session = sessions.resolve(request.getConnectionId());
+            SiteSecurable securable = request.getSecurable();
+            if (securable.getSecurableCase() == SiteSecurable.SecurableCase.SITE_ID) {
+                throw new IllegalArgumentException("a site's role inheritance cannot be changed here");
+            }
+            SharePointRest.Web web = sharePoint.web(session, SharePointRest.siteId(securable));
+            String path = SharePointRest.path(securable);
+            web.post(path + (request.getInherit() ? "/resetroleinheritance"
+                    : "/breakroleinheritance(copyRoleAssignments=" + request.getCopyRoleAssignments()
+                            + ",clearSubscopes=" + request.getClearSubscopes() + ")"),
+                    com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode());
+            return SetSiteRoleInheritanceResponse.newBuilder()
+                    .setHasUniqueRoleAssignments(web.get(path + "?$select=HasUniqueRoleAssignments")
+                            .path("HasUniqueRoleAssignments").asBoolean(false))
+                    .build();
+        });
+    }
+
     // ------------------------------------------------------------ sync
 
     @Override
@@ -719,7 +1047,8 @@ public final class MicrosoftGrpcService
                     request.getIncludeContent(), inlineLimit(request.getMaxInlineBytes()),
                     flags.listColumns(), flags.permissions(), flags.retentionLabel(), flags.publication(),
                     request.getIncludeLists(), listInclude.getDriveItem(), listInclude.getPermissions(),
-                    request.getDeltaPreferences(), request.getIncludeSystem(), since);
+                    request.getDeltaPreferences(), request.getIncludeSystem(),
+                    request.getIncludeSecurity(), since);
             DeltaHeaders.prefer(options.preferences());
             Object lock = new Object();
             MicrosoftChangeSink observerSink = new MicrosoftChangeSink() {
@@ -741,7 +1070,7 @@ public final class MicrosoftGrpcService
                     : new CompositeMicrosoftChangeSink(List.of(observerSink,
                             downstream.forConnection(session.connectionId())));
             MicrosoftCrawler.Result result = new MicrosoftCrawler(session.config(), session.files(), sink,
-                    options).crawl();
+                    options, siteId -> sharePoint.web(session, siteId)).crawl();
             sink.completeRun(result.runId(), result.fullSweep());
             synchronized (lock) {
                 observer.onNext(SyncResponse.newBuilder()
@@ -756,6 +1085,291 @@ public final class MicrosoftGrpcService
             ai.pipestream.microsoft.v1.DriveItemInclude include, boolean defaultListColumns) {
         return new DriveItemExpander(session.files(), mapper,
                 DriveItemExpander.Flags.of(present, include, defaultListColumns));
+    }
+
+    // ------------------------------------------------------------ writes
+
+    @Override
+    public StreamObserver<UploadItemRequest> uploadItem(
+            StreamObserver<UploadItemResponse> observer) {
+        return new UploadHandler(sessions, mapper, plans, observer);
+    }
+
+    @Override
+    public void createFolder(CreateFolderRequest request,
+            StreamObserver<CreateFolderResponse> observer) {
+        unary(observer, () -> plans.createFolder(request)
+                .run(sessions.resolve(request.getConnectionId()).graph()));
+    }
+
+    @Override
+    public void updateDriveItem(UpdateDriveItemRequest request,
+            StreamObserver<UpdateDriveItemResponse> observer) {
+        unary(observer, () -> {
+            MicrosoftSessions.Session session = sessions.resolve(request.getConnectionId());
+            return plans.updateDriveItem(session, request).run(session.graph());
+        });
+    }
+
+    @Override
+    public void deleteDriveItem(DeleteDriveItemRequest request,
+            StreamObserver<DeleteDriveItemResponse> observer) {
+        unary(observer, () -> plans.deleteDriveItem(request)
+                .run(sessions.resolve(request.getConnectionId()).graph()));
+    }
+
+    @Override
+    public void restoreDriveItemVersion(RestoreDriveItemVersionRequest request,
+            StreamObserver<RestoreDriveItemVersionResponse> observer) {
+        unary(observer, () -> plans.restoreDriveItemVersion(request)
+                .run(sessions.resolve(request.getConnectionId()).graph()));
+    }
+
+    @Override
+    public void copyDriveItem(CopyDriveItemRequest request,
+            StreamObserver<CopyDriveItemResponse> observer) {
+        stream(observer, () -> {
+            MicrosoftSessions.Session session = sessions.resolve(request.getConnectionId());
+            String sourceDrive = request.getItem().getDriveId();
+            String targetDrive = request.getDestinationDriveId().isBlank() ? sourceDrive
+                    : request.getDestinationDriveId();
+            ObjectNode body = GraphClient.object();
+            if (!request.getDestinationDriveId().isBlank()
+                    || !request.getDestinationParentId().isBlank()) {
+                ObjectNode parent = body.putObject("parentReference").put("driveId", targetDrive);
+                if (!request.getDestinationParentId().isBlank()) {
+                    parent.put("id", request.getDestinationParentId());
+                }
+            }
+            if (!request.getName().isBlank()) {
+                body.put("name", request.getName());
+            }
+            String route = GraphPaths.item(sourceDrive, request.getItem().getItemId()) + "/copy";
+            String conflict = WritePlans.conflict(request.getConflictBehavior());
+            if (!conflict.isEmpty()) {
+                route += "?@microsoft.graph.conflictBehavior=" + conflict;
+            }
+            Duration interval = request.hasPollInterval()
+                    ? Duration.ofSeconds(request.getPollInterval().getSeconds(),
+                            request.getPollInterval().getNanos())
+                    : DEFAULT_COPY_POLL_INTERVAL;
+            if (interval.isNegative()) {
+                throw new IllegalArgumentException("poll_interval must not be negative");
+            }
+            String monitor = session.graph()
+                    .execute(new GraphClient.Call("POST", route, Map.of(), body)).location();
+            if (monitor.isBlank()) {
+                throw new IOException("Graph accepted the copy without a monitor URL");
+            }
+            JsonNode copied = awaitCopy(session, monitor, targetDrive, interval, observer);
+            observer.onNext(CopyDriveItemResponse.newBuilder()
+                    .setItem(valid(mapper.toDriveItem(copied, targetDrive))).build());
+        });
+    }
+
+    /** Polls a copy monitor URL, streaming progress, and returns the new item's JSON. */
+    private static JsonNode awaitCopy(MicrosoftSessions.Session session, String monitor,
+            String targetDrive, Duration interval, StreamObserver<CopyDriveItemResponse> observer)
+            throws IOException, InterruptedException {
+        while (true) {
+            GraphClient.Reply reply = session.graph().getUnauthenticated(monitor);
+            JsonNode operation = reply.body();
+            String status = operation.path("status").asText("");
+            if (status.equalsIgnoreCase("failed")) {
+                throw new GraphClient.GraphApiException(GraphClient.GraphApiException.NO_HTTP_STATUS,
+                        operation.path("error").path("code").asText("operationFailed"),
+                        operation.path("error").path("message").asText("the copy failed"),
+                        operation.toString());
+            }
+            String resourceId = operation.path("resourceId").asText("");
+            if (!resourceId.isBlank() && !status.equalsIgnoreCase("inProgress")
+                    && !status.equalsIgnoreCase("notStarted")) {
+                return session.graph().get(GraphPaths.item(targetDrive, resourceId), Map.of());
+            }
+            if (!operation.path("id").asText("").isBlank() && status.isEmpty()) {
+                return operation;
+            }
+            if (reply.status() == 303 && !reply.location().isBlank()) {
+                return session.graph().get(reply.location(), Map.of());
+            }
+            observer.onNext(CopyDriveItemResponse.newBuilder()
+                    .setProgress(CopyProgress.newBuilder().setPercentageComplete(
+                            operation.path("percentageComplete").asDouble(0)))
+                    .build());
+            Thread.sleep(interval);
+        }
+    }
+
+    @Override
+    public void createListItem(CreateListItemRequest request,
+            StreamObserver<CreateListItemResponse> observer) {
+        unary(observer, () -> {
+            MicrosoftSessions.Session session = sessions.resolve(request.getConnectionId());
+            return plans.createListItem(session, request).run(session.graph());
+        });
+    }
+
+    @Override
+    public void updateListItemFields(UpdateListItemFieldsRequest request,
+            StreamObserver<UpdateListItemFieldsResponse> observer) {
+        unary(observer, () -> {
+            MicrosoftSessions.Session session = sessions.resolve(request.getConnectionId());
+            return plans.updateListItemFields(session, request).run(session.graph());
+        });
+    }
+
+    @Override
+    public void deleteListItem(DeleteListItemRequest request,
+            StreamObserver<DeleteListItemResponse> observer) {
+        unary(observer, () -> plans.deleteListItem(request)
+                .run(sessions.resolve(request.getConnectionId()).graph()));
+    }
+
+    @Override
+    public void ensureColumns(EnsureColumnsRequest request,
+            StreamObserver<EnsureColumnsResponse> observer) {
+        unary(observer, () -> {
+            MicrosoftSessions.Session session = sessions.resolve(request.getConnectionId());
+            ColumnScope scope = request.getScope();
+            String siteId;
+            String listId;
+            String route;
+            switch (scope.getScopeCase()) {
+                case SITE_ID -> {
+                    siteId = scope.getSiteId();
+                    listId = "";
+                    route = "/sites/" + GraphPaths.site(siteId) + "/columns";
+                }
+                case LIST -> {
+                    siteId = scope.getList().getSiteId();
+                    listId = scope.getList().getListId();
+                    route = GraphPaths.list(siteId, listId) + "/columns";
+                }
+                default -> throw new IllegalArgumentException("scope is required");
+            }
+            Map<String, ObjectNode> bodies = new LinkedHashMap<>();
+            for (ColumnSpec spec : request.getColumnsList()) {
+                if (bodies.put(spec.getName(), ColumnSpecs.toGraph(spec, siteId)) != null) {
+                    throw new IllegalArgumentException(
+                            "column " + spec.getName() + " is named twice");
+                }
+            }
+            Map<String, JsonNode> existing = new LinkedHashMap<>();
+            session.pager().forEach(List.of(route), Map.of(), node -> {
+                existing.put(node.path("name").asText(""), node);
+                return true;
+            });
+            EnsureColumnsResponse.Builder response = EnsureColumnsResponse.newBuilder();
+            for (ColumnSpec spec : request.getColumnsList()) {
+                ColumnOutcome.Builder outcome = ColumnOutcome.newBuilder().setName(spec.getName());
+                JsonNode found = existing.get(spec.getName());
+                if (found != null) {
+                    ColumnDefinition actual = valid(mapper.toColumn(found, siteId, listId, ""));
+                    List<String> drift = ColumnSpecs.drift(spec, actual);
+                    outcome.setActual(actual).addAllDrift(drift).setState(drift.isEmpty()
+                            ? EnsureState.ENSURE_STATE_EXISTS : EnsureState.ENSURE_STATE_DRIFT);
+                } else if (request.getDryRun()) {
+                    outcome.setState(EnsureState.ENSURE_STATE_WOULD_CREATE);
+                } else {
+                    try {
+                        JsonNode created = ColumnSpecs.needsSharePoint(spec)
+                                ? createThroughSharePoint(session, siteId, listId, route, spec)
+                                : session.graph().post(route, bodies.get(spec.getName()));
+                        outcome.setActual(valid(mapper.toColumn(created, siteId, listId, "")))
+                                .setState(EnsureState.ENSURE_STATE_CREATED);
+                    } catch (GraphClient.GraphApiException e) {
+                        outcome.setState(EnsureState.ENSURE_STATE_FAILED)
+                                .setError(GraphErrors.toWriteError(e));
+                    }
+                }
+                response.addColumns(outcome);
+            }
+            return response.build();
+        });
+    }
+
+    /** Creates a column with SharePoint's own API and reads it back from Graph. */
+    private JsonNode createThroughSharePoint(MicrosoftSessions.Session session, String siteId,
+            String listId, String route, ColumnSpec spec) throws IOException, InterruptedException {
+        SharePointRest.Web web = sharePoint.web(session, siteId);
+        String create = SharePointRest.fields(listId) + "/CreateFieldAsXml";
+        String termStoreId = spec.getTermStoreId();
+        String noteColumnId = "";
+        if (ColumnSpecs.isTerm(spec)) {
+            if (termStoreId.isBlank()) {
+                termStoreId = web.get(SharePointRest.KEYWORDS_TERM_STORE).path("SspId").asText("");
+            }
+            if (termStoreId.isBlank()) {
+                throw Status.FAILED_PRECONDITION.withDescription("the site names no term store for "
+                        + "column " + spec.getName() + "; set term_store_id").asRuntimeException();
+            }
+            noteColumnId = web.post(create, ColumnSpecs.toSharePointTermNote(spec))
+                    .path("Id").asText("");
+        }
+        web.post(create, ColumnSpecs.toSharePoint(spec, termStoreId, noteColumnId));
+        JsonNode[] created = new JsonNode[1];
+        session.pager().forEach(List.of(route), Map.of(), node -> {
+            if (node.path("name").asText("").equals(spec.getName())) {
+                created[0] = node;
+            }
+            return created[0] == null;
+        });
+        if (created[0] == null) {
+            throw Status.INTERNAL.withDescription("SharePoint created column " + spec.getName()
+                    + " but Graph does not list it").asRuntimeException();
+        }
+        return created[0];
+    }
+
+    @Override
+    public void ensureList(EnsureListRequest request, StreamObserver<EnsureListResponse> observer) {
+        unary(observer, () -> {
+            MicrosoftSessions.Session session = sessions.resolve(request.getConnectionId());
+            String siteId = request.getSiteId();
+            String lists = "/sites/" + GraphPaths.site(siteId) + "/lists";
+            String template = request.getTemplate() == ListTemplate.LIST_TEMPLATE_DOCUMENT_LIBRARY
+                    ? "documentLibrary" : "genericList";
+            ObjectNode body = GraphClient.object();
+            body.put("displayName", request.getDisplayName());
+            if (!request.getDescription().isEmpty()) {
+                body.put("description", request.getDescription());
+            }
+            body.putObject("list").put("template", template);
+            if (request.getColumnsCount() > 0) {
+                ArrayNode columns = body.putArray("columns");
+                for (ColumnSpec spec : request.getColumnsList()) {
+                    columns.add(ColumnSpecs.toGraph(spec, siteId));
+                }
+            }
+            JsonNode found = null;
+            try {
+                found = session.graph().get(
+                        lists + "/" + GraphPaths.segment(request.getDisplayName(), "display_name"),
+                        Map.of());
+            } catch (GraphClient.GraphApiException e) {
+                if (e.status() != 404) {
+                    throw e;
+                }
+            }
+            EnsureListResponse.Builder response = EnsureListResponse.newBuilder();
+            if (found != null) {
+                SharePointList list = valid(mapper.toList(found, siteId));
+                boolean same = list.getList().getTemplate().isEmpty()
+                        || list.getList().getTemplate().equalsIgnoreCase(template);
+                return response.setList(list).setState(same ? EnsureState.ENSURE_STATE_EXISTS
+                        : EnsureState.ENSURE_STATE_DRIFT).build();
+            }
+            if (request.getDryRun()) {
+                return response.setState(EnsureState.ENSURE_STATE_WOULD_CREATE).build();
+            }
+            return response.setList(valid(mapper.toList(session.graph().post(lists, body), siteId)))
+                    .setState(EnsureState.ENSURE_STATE_CREATED).build();
+        });
+    }
+
+    @Override
+    public StreamObserver<MutateRequest> mutate(StreamObserver<MutateResponse> observer) {
+        return new MutateHandler(sessions, plans, observer, mutateLingerMillis);
     }
 
     private ListItemReader reader(MicrosoftSessions.Session session, String siteId, String listId,
@@ -919,51 +1533,7 @@ public final class MicrosoftGrpcService
     }
 
     private static void fail(StreamObserver<?> observer, Throwable t) {
-        Throwable cause = t;
-        if (cause instanceof java.io.UncheckedIOException u && u.getCause() != null) {
-            cause = u.getCause();
-        }
-        if (cause instanceof StatusRuntimeException e) {
-            observer.onError(e);
-            return;
-        }
-        Status status;
-        if (cause instanceof SyncTableMicrosoftChangeSink.WriteFailedException e) {
-            // The ledger's own code is not passed through: its PERMISSION_DENIED
-            // or NOT_FOUND would read as Graph's answer to the caller.
-            status = (switch (e.ledgerStatus()) {
-                case UNAVAILABLE, DEADLINE_EXCEEDED, RESOURCE_EXHAUSTED, CANCELLED, ABORTED ->
-                        Status.UNAVAILABLE;
-                default -> Status.INTERNAL;
-            }).withDescription(e.getMessage());
-        } else if (cause instanceof GraphClient.GraphApiException e) {
-            status = (switch (e.status()) {
-                case 400 -> Status.INVALID_ARGUMENT;
-                case 401 -> Status.UNAUTHENTICATED;
-                case 403 -> Status.PERMISSION_DENIED;
-                case 404 -> Status.NOT_FOUND;
-                case 409, 412 -> Status.ABORTED;
-                case 410 -> Status.FAILED_PRECONDITION;
-                case 416 -> Status.OUT_OF_RANGE;
-                case 429 -> Status.RESOURCE_EXHAUSTED;
-                case 503, 504 -> Status.UNAVAILABLE;
-                default -> Status.INTERNAL;
-            }).withDescription(e.getMessage());
-        } else if (cause instanceof GraphPager.RepeatedLinkException e) {
-            status = Status.INTERNAL.withDescription(e.getMessage());
-        } else if (cause instanceof IllegalArgumentException e) {
-            status = Status.INVALID_ARGUMENT.withDescription(e.getMessage());
-        } else if (cause instanceof InterruptedException e) {
-            Thread.currentThread().interrupt();
-            status = Status.CANCELLED.withDescription("interrupted: " + e.getMessage());
-        } else if (cause instanceof IOException e) {
-            status = Status.UNAVAILABLE.withDescription("Graph unreachable: " + e.getMessage());
-        } else if (cause instanceof IllegalStateException e) {
-            status = Status.UNAVAILABLE.withDescription(e.getMessage());
-        } else {
-            status = Status.INTERNAL.withDescription(String.valueOf(cause.getMessage()));
-        }
-        observer.onError(status.asRuntimeException());
+        observer.onError(GraphErrors.toException(t));
     }
 
     /**

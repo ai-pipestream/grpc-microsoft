@@ -44,7 +44,10 @@ public final class GraphPaths {
     /** Every {@code user} property {@code GraphUser} maps. */
     public static final String USER_SELECT = "id,displayName,userPrincipalName,mail,givenName,"
             + "surname,jobTitle,department,officeLocation,userType,accountEnabled,"
-            + "preferredLanguage";
+            + "preferredLanguage,proxyAddresses,otherMails";
+    /** Every {@code group} property the contract maps. */
+    public static final String GROUP_SELECT = "id,displayName,description,mail,mailNickname,"
+            + "mailEnabled,securityEnabled,groupTypes,visibility,securityIdentifier";
     /** Graph preference required for $filter on non-indexed list columns. */
     public static final String HONOR_NON_INDEXED = "HonorNonIndexedQueriesWarningMayFailRandomly";
 
@@ -176,6 +179,51 @@ public final class GraphPaths {
     public static String itemByPath(String driveId, String path) {
         String encoded = encodePath(path);
         return encoded.isEmpty() ? drive(driveId) + "/root" : drive(driveId) + "/root:" + encoded + ":";
+    }
+
+    /**
+     * The address of a named child of a folder:
+     * {@code /drives/{drive-id}/items/{parent-id}:/{name}:} or
+     * {@code /drives/{drive-id}/root:/{path}/{name}:}.
+     *
+     * @param driveId the drive id
+     * @param parentId the folder item id; blank to use {@code parentPath}
+     * @param parentPath the folder path from the drive root; blank for the root
+     * @param name the child name
+     * @return the route
+     * @throws IllegalArgumentException when {@code name} is blank or holds a slash
+     */
+    public static String childByName(String driveId, String parentId, String parentPath,
+            String name) {
+        if (name == null || name.isBlank()) {
+            throw new IllegalArgumentException("name is required");
+        }
+        if (name.indexOf('/') >= 0 || name.indexOf('\\') >= 0 || name.equals(".")) {
+            throw new IllegalArgumentException("name must not contain a slash");
+        }
+        String encoded = encodePath(name);
+        if (parentId != null && !parentId.isBlank()) {
+            return item(driveId, parentId) + ":" + encoded + ":";
+        }
+        return drive(driveId) + "/root:" + encodePath(parentPath) + encoded + ":";
+    }
+
+    /**
+     * The children collection of a folder: {@code .../items/{parent-id}/children},
+     * {@code .../root:/{path}:/children}, or {@code .../root/children}.
+     *
+     * @param driveId the drive id
+     * @param parentId the folder item id; blank to use {@code parentPath}
+     * @param parentPath the folder path from the drive root; blank for the root
+     * @return the route
+     */
+    public static String children(String driveId, String parentId, String parentPath) {
+        if (parentId != null && !parentId.isBlank()) {
+            return item(driveId, parentId) + "/children";
+        }
+        String encoded = encodePath(parentPath);
+        return encoded.isEmpty() ? drive(driveId) + "/root/children"
+                : drive(driveId) + "/root:" + encoded + ":/children";
     }
 
     /**

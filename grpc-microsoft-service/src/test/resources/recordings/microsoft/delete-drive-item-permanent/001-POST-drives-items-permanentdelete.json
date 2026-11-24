@@ -1,0 +1,17 @@
+{
+  "request" : {
+    "method" : "POST",
+    "url" : "https://graph.microsoft.com/v1.0/drives/b!drive-0001/items/item-0004/permanentDelete",
+    "authorized" : true,
+    "headers" : {
+      "content-type" : "application/json"
+    },
+    "body" : {
+      "json" : { }
+    }
+  },
+  "response" : {
+    "status" : 204,
+    "headers" : { }
+  }
+}

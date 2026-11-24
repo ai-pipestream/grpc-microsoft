@@ -1,0 +1,25 @@
+{
+  "request" : {
+    "method" : "POST",
+    "url" : "https://graph.microsoft.com/v1.0/drives/b!drive-0001/items/item-0003/copy",
+    "authorized" : true,
+    "headers" : {
+      "content-type" : "application/json"
+    },
+    "body" : {
+      "json" : {
+        "parentReference" : {
+          "driveId" : "b!drive-0001",
+          "id" : "item-0001"
+        },
+        "name" : "copy.txt"
+      }
+    }
+  },
+  "response" : {
+    "status" : 202,
+    "headers" : {
+      "location" : "https://redacted.example/url/21"
+    }
+  }
+}

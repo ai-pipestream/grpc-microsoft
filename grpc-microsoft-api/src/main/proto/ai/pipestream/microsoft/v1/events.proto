@@ -7,6 +7,7 @@ import "ai/pipestream/microsoft/v1/drive.proto";
 import "ai/pipestream/microsoft/v1/list.proto";
 import "ai/pipestream/microsoft/v1/permission.proto";
 import "ai/pipestream/microsoft/v1/site.proto";
+import "ai/pipestream/microsoft/v1/site_security.proto";
 import "google/protobuf/timestamp.proto";
 
 option java_multiple_files = true;
@@ -49,6 +50,17 @@ message MicrosoftEntity {
     // below it), so `entity_id` for this arm is the target key plus the
     // permission id, not the bare permission id.
     Permission permission = 16;
+    // Set when the wrapped entity is a SharePoint group with its members;
+    // `entity_id` is `site_group/{site id}/{group id}`.
+    SiteGroupMembers site_group = 17;
+    // Set when the wrapped entity is the role assignments of a site, list or
+    // list item; `entity_id` is `site_acl/site/{site id}`,
+    // `site_acl/list/{site id}/{list id}` or
+    // `site_acl/list_item/{site id}/{list id}/{item id}`.
+    SiteAcl site_acl = 18;
+    // Set when the wrapped entity is the site collection administrators of a
+    // site; `entity_id` is `site_admins/{site id}`.
+    SiteAdmins site_admins = 19;
   }
   // Extensible key-value metadata (extension-metadata map - see convention).
   map<string, string> metadata = 99;

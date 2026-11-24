@@ -9,6 +9,7 @@ dependencies {
     api(libs.grpc.protobuf)
     api(libs.grpc.stub)
     api(libs.protobuf.java)
+    api(libs.integration.sync.api)
     compileOnly(libs.tomcat.annotations)
 }
 

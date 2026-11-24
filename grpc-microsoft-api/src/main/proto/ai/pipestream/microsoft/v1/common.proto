@@ -127,6 +127,11 @@ message GraphUser {
   optional bool account_enabled = 11;
   // Preferred language (BCP 47), empty when omitted.
   string preferred_language = 12;
+  // Every address the mailbox answers to, each with its protocol prefix
+  // (`SMTP:` marks the primary address, `smtp:` an alias).
+  repeated string proxy_addresses = 13;
+  // Other email addresses of the user, such as the sign-up address of a guest.
+  repeated string other_mails = 14;
   // Extensible key-value metadata (extension-metadata map - see convention).
   map<string, string> metadata = 99;
 }

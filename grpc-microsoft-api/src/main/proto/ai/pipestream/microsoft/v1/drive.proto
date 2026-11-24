@@ -70,6 +70,9 @@ message Drive {
   // Id of the SharePoint list behind this document library; empty for
   // personal OneDrive. Join key to the list rpcs.
   string list_id = 16;
+  // Entity id of the `site_acl` record whose role assignments apply to this
+  // drive's library; set by a sync that reads security, empty otherwise.
+  string acl_owner_id = 17;
   // Extensible key-value metadata (extension-metadata map - see convention).
   map<string, string> metadata = 99;
 }
@@ -408,6 +411,9 @@ message DriveItem {
   // sharing changed (the `@microsoft.graph.sharedChanged` annotation,
   // requires the show-sharing-changes preference). Re-read permissions.
   bool sharing_changed = 45;
+  // Entity id of the `site_acl` record whose role assignments apply to this
+  // item; set by a sync that reads security, empty otherwise.
+  string acl_owner_id = 46;
   // Extensible key-value metadata (extension-metadata map - see convention).
   map<string, string> metadata = 99;
 }

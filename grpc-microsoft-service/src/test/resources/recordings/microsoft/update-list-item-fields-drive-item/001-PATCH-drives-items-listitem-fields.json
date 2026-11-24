@@ -1,0 +1,56 @@
+{
+  "request" : {
+    "method" : "PATCH",
+    "url" : "https://graph.microsoft.com/v1.0/drives/b!drive-0001/items/item-0003/listItem/fields",
+    "authorized" : true,
+    "headers" : {
+      "content-type" : "application/json"
+    },
+    "body" : {
+      "json" : {
+        "Title" : "live title"
+      }
+    }
+  },
+  "response" : {
+    "status" : 200,
+    "headers" : {
+      "etag" : "\"00000000-0000-4000-8000-000000000011,2\"",
+      "content-type" : "application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8"
+    },
+    "body" : {
+      "json" : {
+        "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#drives('b%21drive-0001')/items('item-0003')/listItem/fields/$entity",
+        "@odata.etag" : "\"00000000-0000-4000-8000-000000000011,2\"",
+        "id" : "210",
+        "ContentType" : "Document",
+        "Created" : "2026-11-23T02:26:33Z",
+        "AuthorLookupId" : "1073741822",
+        "Modified" : "2026-11-23T02:27:06Z",
+        "EditorLookupId" : "1073741822",
+        "FileLeafRef" : "renamed.txt",
+        "_CheckinComment" : "",
+        "LinkFilenameNoMenu" : "renamed.txt",
+        "LinkFilename" : "renamed.txt",
+        "DocIcon" : "txt",
+        "FileSizeDisplay" : "58",
+        "ItemChildCount" : "0",
+        "FolderChildCount" : "0",
+        "_ComplianceFlags" : "",
+        "_ComplianceTag" : "",
+        "_ComplianceTagWrittenTime" : "",
+        "_ComplianceTagUserId" : "",
+        "_CommentCount" : "",
+        "_LikeCount" : "",
+        "_DisplayName" : "",
+        "AppAuthorLookupId" : "4",
+        "AppEditorLookupId" : "4",
+        "Edit" : "0",
+        "_UIVersionString" : "2.0",
+        "ParentVersionStringLookupId" : "210",
+        "ParentLeafNameLookupId" : "210",
+        "Title" : "live title"
+      }
+    }
+  }
+}

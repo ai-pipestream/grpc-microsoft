@@ -1,0 +1,140 @@
+{
+  "request" : {
+    "method" : "GET",
+    "url" : "https://graph.microsoft.com/v1.0/sites/tenant-1.example,00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000002/lists/00000000-0000-4000-8000-000000000022/columns?$select=name,displayName",
+    "authorized" : true,
+    "headers" : { }
+  },
+  "response" : {
+    "status" : 200,
+    "headers" : {
+      "content-type" : "application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8"
+    },
+    "body" : {
+      "json" : {
+        "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#sites('tenant-1.example%2C00000000-0000-4000-8000-000000000001%2C00000000-0000-4000-8000-000000000002')/lists('00000000-0000-4000-8000-000000000022')/columns(name,displayName)",
+        "value" : [ {
+          "displayName" : "Title",
+          "name" : "Title"
+        }, {
+          "displayName" : "Color Tag",
+          "name" : "_ColorTag"
+        }, {
+          "displayName" : "Compliance Asset Id",
+          "name" : "ComplianceAssetId"
+        }, {
+          "displayName" : "PsText",
+          "name" : "PsText"
+        }, {
+          "displayName" : "PsNumber",
+          "name" : "PsNumber"
+        }, {
+          "displayName" : "PsFlag",
+          "name" : "PsFlag"
+        }, {
+          "displayName" : "PsChoice",
+          "name" : "PsChoice"
+        }, {
+          "displayName" : "PsWhen",
+          "name" : "PsWhen"
+        }, {
+          "displayName" : "PsNote",
+          "name" : "PsNote"
+        }, {
+          "displayName" : "PsMulti",
+          "name" : "PsMulti"
+        }, {
+          "displayName" : "PsMoney",
+          "name" : "PsMoney"
+        }, {
+          "displayName" : "PsLink",
+          "name" : "PsLink"
+        }, {
+          "displayName" : "PsLookup",
+          "name" : "PsLookup"
+        }, {
+          "displayName" : "PsLookups",
+          "name" : "PsLookups"
+        }, {
+          "displayName" : "PsOwner",
+          "name" : "PsOwner"
+        }, {
+          "displayName" : "PsPerson",
+          "name" : "PsPerson"
+        }, {
+          "displayName" : "PsPeople",
+          "name" : "PsPeople"
+        }, {
+          "displayName" : "PsTerm",
+          "name" : "PsTerm"
+        }, {
+          "displayName" : "PsTerms",
+          "name" : "PsTerms"
+        }, {
+          "displayName" : "ID",
+          "name" : "ID"
+        }, {
+          "displayName" : "Content Type",
+          "name" : "ContentType"
+        }, {
+          "displayName" : "Modified",
+          "name" : "Modified"
+        }, {
+          "displayName" : "Created",
+          "name" : "Created"
+        }, {
+          "displayName" : "Created By",
+          "name" : "Author"
+        }, {
+          "displayName" : "Modified By",
+          "name" : "Editor"
+        }, {
+          "displayName" : "Version",
+          "name" : "_UIVersionString"
+        }, {
+          "displayName" : "Attachments",
+          "name" : "Attachments"
+        }, {
+          "displayName" : "Edit",
+          "name" : "Edit"
+        }, {
+          "displayName" : "Title",
+          "name" : "LinkTitleNoMenu"
+        }, {
+          "displayName" : "Title",
+          "name" : "LinkTitle"
+        }, {
+          "displayName" : "Type",
+          "name" : "DocIcon"
+        }, {
+          "displayName" : "Item Child Count",
+          "name" : "ItemChildCount"
+        }, {
+          "displayName" : "Folder Child Count",
+          "name" : "FolderChildCount"
+        }, {
+          "displayName" : "Label setting",
+          "name" : "_ComplianceFlags"
+        }, {
+          "displayName" : "Retention label",
+          "name" : "_ComplianceTag"
+        }, {
+          "displayName" : "Retention label Applied",
+          "name" : "_ComplianceTagWrittenTime"
+        }, {
+          "displayName" : "Label applied by",
+          "name" : "_ComplianceTagUserId"
+        }, {
+          "displayName" : "Item is a Record",
+          "name" : "_IsRecord"
+        }, {
+          "displayName" : "App Created By",
+          "name" : "AppAuthor"
+        }, {
+          "displayName" : "App Modified By",
+          "name" : "AppEditor"
+        } ]
+      }
+    }
+  }
+}

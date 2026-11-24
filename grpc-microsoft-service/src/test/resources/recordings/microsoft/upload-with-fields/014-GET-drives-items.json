@@ -1,0 +1,70 @@
+{
+  "request" : {
+    "method" : "GET",
+    "url" : "https://graph.microsoft.com/v1.0/drives/b!drive-0013/items/item-0010",
+    "authorized" : true,
+    "headers" : { }
+  },
+  "response" : {
+    "status" : 200,
+    "headers" : {
+      "content-type" : "application/json; odata.metadata=minimal; odata.streaming=true; IEEE754Compatible=false; charset=utf-8"
+    },
+    "body" : {
+      "json" : {
+        "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#Collection(driveItem)/$entity",
+        "@microsoft.graph.downloadUrl" : "https://redacted.example/url/88",
+        "@microsoft.graph.downloadUrlNoAuth" : "https://redacted.example/url/89",
+        "createdBy" : {
+          "application" : {
+            "id" : "00000000-0000-4000-8000-000000000007",
+            "displayName" : "Identity 1"
+          },
+          "user" : {
+            "displayName" : "Identity 2"
+          }
+        },
+        "createdDateTime" : "2026-11-23T02:27:11Z",
+        "eTag" : "\"{00000000-0000-4000-8000-000000000132},3\"",
+        "id" : "item-0010",
+        "lastModifiedBy" : {
+          "application" : {
+            "id" : "00000000-0000-4000-8000-000000000007",
+            "displayName" : "Identity 1"
+          },
+          "user" : {
+            "displayName" : "Identity 2"
+          }
+        },
+        "lastModifiedDateTime" : "2026-11-23T02:27:12Z",
+        "name" : "with-fields.txt",
+        "parentReference" : {
+          "driveType" : "documentLibrary",
+          "driveId" : "b!drive-0013",
+          "id" : "item-0002",
+          "name" : "pipestreamlivewrite20261123022631a8adaf87lib",
+          "path" : "/drives/b!drive-0013/root:",
+          "siteId" : "00000000-0000-4000-8000-000000000001"
+        },
+        "webUrl" : "https://redacted.example/url/87",
+        "cTag" : "\"c:{00000000-0000-4000-8000-000000000132},1\"",
+        "file" : {
+          "fileExtension" : ".txt",
+          "hashes" : {
+            "quickXorHash" : "zePoa1ZyeEcDr8vn1Lgu8I2k9yY="
+          },
+          "mimeType" : "text/plain"
+        },
+        "fileSystemInfo" : {
+          "createdDateTime" : "2026-11-23T02:27:11Z",
+          "lastModifiedDateTime" : "2026-11-23T02:27:12Z"
+        },
+        "isAuthoritative" : false,
+        "shared" : {
+          "scope" : "users"
+        },
+        "size" : 59
+      }
+    }
+  }
+}

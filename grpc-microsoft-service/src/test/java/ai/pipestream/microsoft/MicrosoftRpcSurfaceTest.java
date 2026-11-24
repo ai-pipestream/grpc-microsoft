@@ -11,6 +11,8 @@ import ai.pipestream.microsoft.v1.DeltaListItemsRequest;
 import ai.pipestream.microsoft.v1.DeltaListItemsResponse;
 import ai.pipestream.microsoft.v1.DeltaPreferences;
 import ai.pipestream.microsoft.v1.DeltaResyncReason;
+import ai.pipestream.microsoft.v1.DeltaGroupsRequest;
+import ai.pipestream.microsoft.v1.DeltaGroupsResponse;
 import ai.pipestream.microsoft.v1.DeltaSitesRequest;
 import ai.pipestream.microsoft.v1.DeltaSitesResponse;
 import ai.pipestream.microsoft.v1.DownloadContentRequest;
@@ -27,6 +29,15 @@ import ai.pipestream.microsoft.v1.GetListRequest;
 import ai.pipestream.microsoft.v1.GetMeRequest;
 import ai.pipestream.microsoft.v1.GetSiteRequest;
 import ai.pipestream.microsoft.v1.GraphUser;
+import ai.pipestream.microsoft.v1.GroupChange;
+import ai.pipestream.microsoft.v1.GroupMemberChange;
+import ai.pipestream.microsoft.v1.MicrosoftChange;
+import ai.pipestream.microsoft.v1.ListUsersRequest;
+import ai.pipestream.microsoft.v1.ListUserTransitiveMemberOfRequest;
+import ai.pipestream.microsoft.v1.ListGroupsRequest;
+import ai.pipestream.microsoft.v1.ListGroupTransitiveMembersRequest;
+import ai.pipestream.microsoft.v1.GraphGroup;
+import ai.pipestream.microsoft.v1.DirectoryMember;
 import ai.pipestream.microsoft.v1.ListAllSitesRequest;
 import ai.pipestream.microsoft.v1.ListChildrenRequest;
 import ai.pipestream.microsoft.v1.ListColumn;
@@ -73,6 +84,7 @@ import java.util.concurrent.Executors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
 
 /**
  * One test per {@code MicrosoftService} rpc against the in-process fake Graph:
@@ -146,10 +158,15 @@ class MicrosoftRpcSurfaceTest {
                 {"id":"u1","displayName":"Ada","userPrincipalName":"ada@contoso.com",
                  "mail":"ada@contoso.com","givenName":"Ada","surname":"Lovelace","jobTitle":"Eng",
                  "department":"R&D","officeLocation":"B1","userType":"Guest","accountEnabled":false,
-                 "preferredLanguage":"en-GB"}
+                 "preferredLanguage":"en-GB",
+                 "proxyAddresses":["SMTP:ada@contoso.com","smtp:countess@contoso.com"],
+                 "otherMails":["ada@example.org"]}
                 """);
         GraphUser user = delegatedStub.getMe(GetMeRequest.getDefaultInstance()).getUser();
         assertThat(fake.only("/me").query()).isEqualTo("$select=" + GraphPaths.USER_SELECT);
+        assertThat(user.getProxyAddressesList()).containsExactly("SMTP:ada@contoso.com",
+                "smtp:countess@contoso.com");
+        assertThat(user.getOtherMailsList()).containsExactly("ada@example.org");
         assertThat(user.getSurname()).isEqualTo("Lovelace");
         assertThat(user.getUserType()).isEqualTo("Guest");
         assertThat(user.hasAccountEnabled()).isTrue();
@@ -247,6 +264,80 @@ class MicrosoftRpcSurfaceTest {
     }
 
     @Test
+    void usersAndGroupsAreListedWithEveryModelledProperty() {
+        fake.stub("/users", """
+                {"value":[{"id":"u1","displayName":"Ada","userPrincipalName":"ada@contoso.com",
+                  "userType":"Member","accountEnabled":true}]}""");
+        fake.stub("/groups", """
+                {"value":[{"id":"g1","displayName":"Engineers","description":"all of them",
+                  "mail":"eng@contoso.com","mailNickname":"eng","mailEnabled":true,
+                  "securityEnabled":false,"groupTypes":["Unified"],"visibility":"Private",
+                  "securityIdentifier":"S-1-12-1-1"}]}""");
+
+        assertThat(drain(appStub.listUsers(ListUsersRequest
+                .getDefaultInstance()))).extracting(r -> r.getUser().getUserPrincipalName())
+                .containsExactly("ada@contoso.com");
+        assertThat(fake.only("/users").query()).isEqualTo("$select=" + GraphPaths.USER_SELECT);
+
+        GraphGroup group = drain(appStub.listGroups(
+                ListGroupsRequest.getDefaultInstance())).get(0).getGroup();
+        assertThat(fake.only("/groups").query()).isEqualTo("$select=" + GraphPaths.GROUP_SELECT);
+        assertThat(group.getDisplayName()).isEqualTo("Engineers");
+        assertThat(group.getMailEnabled()).isTrue();
+        assertThat(group.hasSecurityEnabled()).isTrue();
+        assertThat(group.getSecurityEnabled()).isFalse();
+        assertThat(group.getGroupTypesList()).containsExactly("Unified");
+        assertThat(group.getVisibility()).isEqualTo("Private");
+        assertThat(group.getSecurityIdentifier()).isEqualTo("S-1-12-1-1");
+    }
+
+    @Test
+    void groupOwnersKeepEachOwnersKind() {
+        fake.stub("/groups/g1/owners", """
+                {"value":[{"@odata.type":"#microsoft.graph.user","id":"u1","displayName":"Ada"},
+                  {"@odata.type":"#microsoft.graph.servicePrincipal","id":"sp1","displayName":"App"}]}""");
+
+        List<DirectoryMember> owners = drain(appStub.listGroupOwners(
+                ai.pipestream.microsoft.v1.ListGroupOwnersRequest.newBuilder().setGroupId("g1").build()))
+                .stream().map(r -> r.getOwner()).toList();
+
+        assertThat(owners).hasSize(2);
+        assertThat(owners.get(0).getUser().getId()).isEqualTo("u1");
+        assertThat(owners.get(1).getOther().getType()).isEqualTo("servicePrincipal");
+        assertThat(code(() -> drain(appStub.listGroupOwners(
+                ai.pipestream.microsoft.v1.ListGroupOwnersRequest.getDefaultInstance()))))
+                .isEqualTo(Status.Code.INVALID_ARGUMENT);
+    }
+
+    @Test
+    void transitiveMembershipKeepsEachMembersKind() {
+        fake.stub("/groups/g1/transitiveMembers", """
+                {"value":[{"@odata.type":"#microsoft.graph.user","id":"u1","displayName":"Ada"},
+                  {"@odata.type":"#microsoft.graph.group","id":"g2","displayName":"Nested"},
+                  {"@odata.type":"#microsoft.graph.device","id":"d1","displayName":"Laptop"}]}""");
+        fake.stub("/users/u1/transitiveMemberOf", """
+                {"value":[{"@odata.type":"#microsoft.graph.group","id":"g1","displayName":"Engineers"},
+                  {"@odata.type":"#microsoft.graph.directoryRole","id":"r1","displayName":"Reader"}]}""");
+
+        List<DirectoryMember> members = drain(
+                appStub.listGroupTransitiveMembers(ListGroupTransitiveMembersRequest.newBuilder().setGroupId("g1").build()))
+                .stream().map(r -> r.getMember()).toList();
+        assertThat(members).hasSize(3);
+        assertThat(members.get(0).getUser().getId()).isEqualTo("u1");
+        assertThat(members.get(1).getGroup().getDisplayName()).isEqualTo("Nested");
+        assertThat(members.get(2).getOther().getType()).isEqualTo("device");
+
+        List<DirectoryMember> groups = drain(
+                appStub.listUserTransitiveMemberOf(ListUserTransitiveMemberOfRequest.newBuilder().setUserId("u1").build()))
+                .stream().map(r -> r.getMember()).toList();
+        assertThat(groups.get(0).getGroup().getId()).isEqualTo("g1");
+        assertThat(groups.get(1).getOther().getType()).isEqualTo("directoryRole");
+
+        assertThat(code(() -> drain(appStub.listGroupTransitiveMembers(ListGroupTransitiveMembersRequest.getDefaultInstance()))))
+                .isEqualTo(Status.Code.INVALID_ARGUMENT);
+    }
+
+    @Test
     void listSubsitesFillsTheParentSite() {
         fake.stub("/sites/" + SITE + "/sites", MicrosoftFixtures.sitesJson(
                 MicrosoftFixtures.siteJson("sub-1", "Team")));
@@ -289,6 +380,47 @@ class MicrosoftRpcSurfaceTest {
         int before = fake.requests().size();
         assertThat(code(() -> drain(appStub.deltaSites(DeltaSitesRequest.newBuilder()
                 .setDeltaLink("https://attacker.example/v1.0/sites/delta?token=x").build()))))
+                .isEqualTo(Status.Code.INVALID_ARGUMENT);
+        assertThat(fake.requests()).hasSize(before);
+    }
+
+    @Test
+    void deltaGroupsReportsGroupsMembersRemovalsAndTheLink() {
+        String d1 = fake.baseUrl() + "/groups/delta?$deltatoken=abc";
+        fake.stub("/groups/delta", MicrosoftFixtures.deltaJson(d1, """
+                {"id":"g1","displayName":"Research","securityEnabled":true,
+                 "members@delta":[{"@odata.type":"#microsoft.graph.user","id":"u1"},
+                   {"@odata.type":"#microsoft.graph.group","id":"g2","@removed":{"reason":"deleted"}}]}""", """
+                {"id":"g3","@removed":{"reason":"changed"}}"""));
+        List<DeltaGroupsResponse> full = drain(appStub.deltaGroups(DeltaGroupsRequest.newBuilder()
+                .setIncludeMembers(true).build()));
+        assertThat(fake.requestsTo("/groups/delta").get(0).query())
+                .isEqualTo("$select=" + GraphPaths.GROUP_SELECT + ",members");
+        assertThat(full).hasSize(3);
+        GroupChange first = full.get(0).getChange();
+        assertThat(first.getGroup().getDisplayName()).isEqualTo("Research");
+        assertThat(first.getRemoved()).isFalse();
+        assertThat(first.getMemberChangesList()).extracting(GroupMemberChange::getId,
+                GroupMemberChange::getType, GroupMemberChange::getRemoved)
+                .containsExactly(tuple("u1", "user", false), tuple("g2", "group", true));
+        assertThat(full.get(1).getChange().getGroup().getId()).isEqualTo("g3");
+        assertThat(full.get(1).getChange().getRemoved()).isTrue();
+        assertThat(full.get(2).getDeltaLink()).isEqualTo(d1);
+
+        fake.stub("/groups/delta?$deltatoken=abc", MicrosoftFixtures.deltaJson(d1));
+        List<DeltaGroupsResponse> resumed = drain(appStub.deltaGroups(DeltaGroupsRequest.newBuilder()
+                .setDeltaLink(d1).build()));
+        assertThat(resumed).hasSize(1);
+        assertThat(resumed.get(0).getDeltaLink()).isEqualTo(d1);
+
+        fake.stub("/groups/delta?$deltatoken=latest", MicrosoftFixtures.deltaJson(d1));
+        List<DeltaGroupsResponse> latest = drain(appStub.deltaGroups(DeltaGroupsRequest.newBuilder()
+                .setDeltaLink("latest").build()));
+        assertThat(latest).hasSize(1);
+
+        int before = fake.requests().size();
+        assertThat(code(() -> drain(appStub.deltaGroups(DeltaGroupsRequest.newBuilder()
+                .setDeltaLink(fake.baseUrl() + "/sites/delta?token=x").build()))))
                 .isEqualTo(Status.Code.INVALID_ARGUMENT);
         assertThat(fake.requests()).hasSize(before);
     }
@@ -822,7 +954,7 @@ class MicrosoftRpcSurfaceTest {
                 "{\"id\":\"1\",\"deleted\":{\"state\":\"deleted\"}}"));
         List<SyncResponse> second = drain(stub.sync(SyncRequest.newBuilder().addSiteIds(SITE)
                 .setIncludeLists(true).setSinceCursor(resume).build()));
-        List<ai.pipestream.microsoft.v1.MicrosoftChange> deletes = second.stream()
+        List<MicrosoftChange> deletes = second.stream()
                 .filter(SyncResponse::hasChange).map(SyncResponse::getChange)
                 .filter(c -> c.getOperation() == ChangeOperation.CHANGE_OPERATION_DELETE).toList();
         assertThat(deletes).extracting(c -> c.getEntity().getEntityId()).containsExactly("x1", "L1/1");
