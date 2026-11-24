@@ -112,6 +112,14 @@ for any other refusal. No resume cursor is sent, so the delta link never
 moves past a change the ledger did not record, and the ledger is not
 reconciled against a run whose rows did not all land.
 
+The ledger is reconciled (rows the run did not write are marked deleted)
+only after a complete run: no `since_cursor`, at least one drive or list
+swept, and no narrower scope in the request than the connection's own. A
+`Sync` that names some of the connection's drives or sites, or a folder,
+never looked at the rest, so it leaves their rows and the output mirror as
+they were. Naming exactly the configured drives, or the configured site,
+still counts as complete.
+
 Completed `Sync` runs write through the grpc-integration output SPI
 (`OUTPUT_DIR` / `OKF_DIR`, `OUTPUT_STORE`, `OUTPUT_FORMATS`, ...; see the
 grpc-integration README). This repo adds the `microsoft-connector` format

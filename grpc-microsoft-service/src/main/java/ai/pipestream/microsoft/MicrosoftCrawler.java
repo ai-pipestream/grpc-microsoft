@@ -26,6 +26,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.UUID;
 
@@ -118,12 +119,16 @@ public final class MicrosoftCrawler {
      * What a pass produced.
      *
      * @param runId the pass's run id (the cursor of its full-sweep changes)
-     * @param fullSweep true when every sweep in the pass was a full enumeration,
-     *        so a sink may delete what the pass did not emit
+     * @param fullSweep true when every sweep in the pass was a full enumeration
+     * @param complete true when the pass enumerated everything the connection
+     *        covers: every sweep was a full enumeration, at least one drive or
+     *        list was swept, and the options named no narrower scope (drives,
+     *        sites or folder) than the connection's own. Only then may a sink
+     *        treat what the pass did not emit as gone
      * @param cursor every delta link for the next pass (links of drives and lists
      *        outside this pass's scope are carried over unchanged)
      */
-    public record Result(String runId, boolean fullSweep, SyncCursor cursor) {
+    public record Result(String runId, boolean fullSweep, boolean complete, SyncCursor cursor) {
     }
 
     /** Gives the crawler the SharePoint REST API of a site. */
@@ -150,6 +155,8 @@ public final class MicrosoftCrawler {
     private final MicrosoftValidator validator = MicrosoftValidator.create();
     private final SiteWebs webs;
     private final Map<String, SiteSecurityReader> security = new HashMap<>();
+    /** Drive and list sweeps of the current pass; the pass runs them one after another. */
+    private int sweeps;
 
     /**
      * Creates a crawler with the first-revision defaults, without inlining bytes.
@@ -228,6 +235,7 @@ public final class MicrosoftCrawler {
         ChangeSource passSource = incrementalPass ? ChangeSource.CHANGE_SOURCE_DELTA
                 : ChangeSource.CHANGE_SOURCE_CRAWL;
         boolean fullSweep = true;
+        sweeps = 0;
 
         List<Site> sites = new ArrayList<>();
         for (String siteId : scopeSites()) {
@@ -257,7 +265,30 @@ public final class MicrosoftCrawler {
                 fullSweep &= sweepLists(site, runId, passSource, cursor);
             }
         }
-        return new Result(runId, fullSweep, cursor.build());
+        boolean complete = fullSweep && sweeps > 0 && coversConnectionScope();
+        return new Result(runId, fullSweep, complete, cursor.build());
+    }
+
+    /**
+     * Whether this pass sweeps everything the connection's configuration
+     * covers. Options that name the same drives, or the same site, as the
+     * configuration do; any other explicit drive or site list, or another
+     * folder, is a narrower pass that says nothing about the rest.
+     */
+    private boolean coversConnectionScope() {
+        if (!GraphPaths.encodePath(options.folderPath())
+                .equals(GraphPaths.encodePath(config.folderPath()))) {
+            return false;
+        }
+        if (options.driveIds().isEmpty() && options.siteIds().isEmpty()) {
+            return true;
+        }
+        if (config.hasDriveAllowlist()) {
+            return options.siteIds().isEmpty()
+                    && Set.copyOf(options.driveIds()).equals(Set.copyOf(config.driveIds()));
+        }
+        return !config.siteId().isBlank() && options.driveIds().isEmpty()
+                && Set.copyOf(options.siteIds()).equals(Set.of(config.siteId()));
     }
 
     private List<String> scopeSites() {
@@ -300,6 +331,7 @@ public final class MicrosoftCrawler {
     /** Returns whether the sweep was a full enumeration. */
     private boolean sweepDrive(Drive found, String runId, ChangeSource passSource,
             SyncCursor.Builder cursor) throws IOException, InterruptedException {
+        sweeps++;
         Instant started = Instant.now();
         Map<String, Long> counts = new TreeMap<>();
         SiteSecurityReader.ListSecurity acls = options.security() && !found.getSiteId().isEmpty()
@@ -410,6 +442,7 @@ public final class MicrosoftCrawler {
 
     private boolean sweepList(String siteId, SharePointList found, String runId,
             ChangeSource passSource, SyncCursor.Builder cursor) throws IOException, InterruptedException {
+        sweeps++;
         Instant started = Instant.now();
         Map<String, Long> counts = new TreeMap<>();
         SiteSecurityReader.ListSecurity acls = options.security()
