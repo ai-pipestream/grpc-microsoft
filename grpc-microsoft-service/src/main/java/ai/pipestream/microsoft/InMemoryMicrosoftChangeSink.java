@@ -1,9 +1,11 @@
 package ai.pipestream.microsoft;
 
 import ai.pipestream.microsoft.v1.MicrosoftChange;
+import ai.pipestream.microsoft.v1.MicrosoftEntity;
 import ai.pipestream.microsoft.v1.MicrosoftSnapshot;
 
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
@@ -15,7 +17,8 @@ public final class InMemoryMicrosoftChangeSink implements MicrosoftChangeSink {
     private final List<MicrosoftChange> changes = new CopyOnWriteArrayList<>();
     private final List<MicrosoftSnapshot> snapshots = new CopyOnWriteArrayList<>();
     private final List<String> completedRuns = new CopyOnWriteArrayList<>();
-    private final List<Boolean> fullSweeps = new CopyOnWriteArrayList<>();
+    private final List<Set<MicrosoftEntity.EntityCase>> enumeratedKinds =
+            new CopyOnWriteArrayList<>();
 
     /** Creates an empty collector. */
     public InMemoryMicrosoftChangeSink() {
@@ -50,27 +53,33 @@ public final class InMemoryMicrosoftChangeSink implements MicrosoftChangeSink {
     }
 
     @Override
-    public void completeRun(String runId) {
-        completeRun(runId, true);
-    }
-
-    @Override
-    public void completeRun(String runId, boolean fullSweep) {
+    public void completeRun(String runId, Set<MicrosoftEntity.EntityCase> enumerated) {
         completedRuns.add(runId);
-        fullSweeps.add(fullSweep);
+        enumeratedKinds.add(Set.copyOf(enumerated));
     }
 
     /**
-     * For each entry of {@link #completedRuns()}, whether that run was a full sweep.
+     * For each entry of {@link #completedRuns()}, whether that run enumerated
+     * any kind of entity in full.
      *
      * @return an immutable copy, in call order
      */
     public List<Boolean> fullSweeps() {
-        return List.copyOf(fullSweeps);
+        return enumeratedKinds.stream().map(kinds -> !kinds.isEmpty()).toList();
     }
 
     /**
-     * Run ids passed to {@link #completeRun(String)}, in call order.
+     * For each entry of {@link #completedRuns()}, the kinds of entity that
+     * run enumerated in full.
+     *
+     * @return an immutable copy, in call order
+     */
+    public List<Set<MicrosoftEntity.EntityCase>> enumeratedKinds() {
+        return List.copyOf(enumeratedKinds);
+    }
+
+    /**
+     * Run ids passed to {@link #completeRun(String, Set)}, in call order.
      *
      * @return an immutable copy
      */

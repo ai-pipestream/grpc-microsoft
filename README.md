@@ -120,6 +120,15 @@ never looked at the rest, so it leaves their rows and the output mirror as
 they were. Naming exactly the configured drives, or the configured site,
 still counts as complete.
 
+A complete run reconciles one kind of entity at a time, and only the kinds
+it read in full: sites, drives and drive items always; lists and list items
+only with `include_lists`; site groups and site admins only with
+`include_security`; ACLs only with `include_security` and `include_lists`
+together, because a site's lists hold ACLs too (a connection with a drive
+allowlist and no site has no lists, so there `include_security` is enough).
+A full `Sync` that leaves a flag out never read those rows and leaves them,
+and their records in the output mirror, as an earlier `Sync` wrote them.
+
 Completed `Sync` runs write through the grpc-integration output SPI
 (`OUTPUT_DIR` / `OKF_DIR`, `OUTPUT_STORE`, `OUTPUT_FORMATS`, ...; see the
 grpc-integration README). This repo adds the `microsoft-connector` format

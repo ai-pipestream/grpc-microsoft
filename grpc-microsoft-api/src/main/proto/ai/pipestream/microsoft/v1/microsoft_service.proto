@@ -1100,7 +1100,9 @@ message SyncRequest {
   // addition to drive_ids.
   repeated string site_ids = 8;
   // When true, non-library lists of the synced sites are swept too and
-  // their items emitted as list_item changes (list items delta).
+  // their items emitted as list_item changes (list items delta). A pass
+  // without it does not read lists, so it never reports a list or a list
+  // item as gone: what an earlier pass recorded for them stays as it is.
   bool include_lists = 9;
   // Per-item expansions to fetch for list items.
   ListItemInclude list_item_include = 10;
@@ -1115,7 +1117,10 @@ message SyncRequest {
   // site, list and item that has its own are emitted as `site_group` and
   // `site_acl` changes, and every emitted drive, list and item names the
   // `site_acl` that applies to it in `acl_owner_id`. Needs a certificate
-  // credential.
+  // credential. A pass without it does not read security, so what an
+  // earlier pass recorded for site groups, site admins and ACLs stays as it
+  // is. ACLs are found gone only by a pass that also sets include_lists,
+  // because the lists of a site hold ACLs too.
   bool include_security = 13;
   // Extensible key-value metadata (extension-metadata map - see convention).
   map<string, string> metadata = 99;

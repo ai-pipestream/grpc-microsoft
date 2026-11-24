@@ -101,6 +101,47 @@ class OutputMicrosoftChangeSinkTest {
                 "out=[a, b-, c]");
     }
 
+    @Test
+    void aPassThatDidNotSweepListsKeepsTheListRecordsInTheBundle() {
+        List<String> completes = new ArrayList<>();
+        OutputFormat recorder = new OutputFormat() {
+            @Override
+            public String id() {
+                return "recorder";
+            }
+
+            @Override
+            public boolean supports(Message record) {
+                return false;
+            }
+
+            @Override
+            public void complete(OutputStore store, List<Message> records, String prefix) {
+                completes.add(prefix + "=" + records.stream()
+                        .map(r -> ((MicrosoftChange) r).getEntity().getEntityId()).sorted().toList());
+            }
+        };
+        OutputMicrosoftChangeSink sink = new OutputMicrosoftChangeSink(nullStore(), List.of(recorder), "out");
+        MicrosoftChange listItem = MicrosoftChange.newBuilder().setChangeId("li")
+                .setEntity(MicrosoftEntity.newBuilder().setEntityId("site-1,list-1,7")
+                        .setListItem(ai.pipestream.microsoft.v1.ListItem.newBuilder().setId("7")
+                                .setSiteId("site-1").setListId("list-1")))
+                .build();
+
+        sink.emit(file("a", ChangeOperation.CHANGE_OPERATION_UPSERT));
+        sink.emit(file("b", ChangeOperation.CHANGE_OPERATION_UPSERT));
+        sink.emit(listItem);
+        sink.completeRun("with-lists", java.util.Set.of(MicrosoftEntity.EntityCase.DRIVE_ITEM,
+                MicrosoftEntity.EntityCase.LIST_ITEM));
+        // File b is gone, and this pass does not sweep lists.
+        sink.emit(file("a", ChangeOperation.CHANGE_OPERATION_UPSERT));
+        sink.completeRun("drives-only", java.util.Set.of(MicrosoftEntity.EntityCase.DRIVE_ITEM));
+
+        assertThat(completes).containsExactly(
+                "out=[a, b, site-1,list-1,7]",
+                "out=[a, site-1,list-1,7]");
+    }
+
     private static MicrosoftChange file(String id, ChangeOperation op) {
         return MicrosoftChange.newBuilder().setChangeId(id).setOperation(op)
                 .setEntity(MicrosoftEntity.newBuilder().setEntityId(id)

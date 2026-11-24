@@ -646,3 +646,12 @@ behaviour.
   `folder_path`). `ReconcileRequest` has no drive or folder scope, so the
   stale rows of the drives that were enumerated remain until the next
   complete run.
+- Reconcile is per entity kind (`ReconcileRequest.kind`), for the kinds a
+  complete run read in full. A run with `include_security` but without
+  `include_lists` on a site does not reconcile `site_acl` rows, since it
+  did not read the ACLs of the site's lists: stale ACL rows of deleted
+  library items remain until a complete run with both flags.
+- `include_system` narrows within a kind. A complete run without it still
+  reconciles drives, lists and their items, so the rows an earlier run with
+  `include_system` wrote for system drives and hidden lists are marked
+  deleted. `ReconcileRequest` has no scope finer than kind.

@@ -1,5 +1,6 @@
 package ai.pipestream.microsoft;
 
+import ai.pipestream.microsoft.v1.MicrosoftEntity;
 import ai.pipestream.microsoft.v1.MicrosoftServiceGrpc;
 import ai.pipestream.microsoft.v1.SyncRequest;
 import ai.pipestream.sync.AssetStore;
@@ -18,6 +19,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -164,6 +166,10 @@ class ScopedSyncReconcileTest {
 
         assertThat(fake.requestsTo("/drives/drive-b/root/delta")).hasSize(1);
         assertThat(sink.fullSweeps()).containsExactly(true);
+        // It asked for no lists and no security, so it says nothing about them.
+        assertThat(sink.enumeratedKinds()).containsExactly(Set.of(
+                MicrosoftEntity.EntityCase.SITE, MicrosoftEntity.EntityCase.DRIVE,
+                MicrosoftEntity.EntityCase.DRIVE_ITEM));
     }
 
     @Test

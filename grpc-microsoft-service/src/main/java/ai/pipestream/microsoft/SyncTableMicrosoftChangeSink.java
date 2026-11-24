@@ -22,6 +22,8 @@ import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 
 import java.util.Locale;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
@@ -218,28 +220,37 @@ public final class SyncTableMicrosoftChangeSink implements MicrosoftChangeSink, 
     }
 
     /**
-     * Reconciles by run id: rows of this connection the run did not write are
-     * marked deleted. Only called for full-sweep runs (see
-     * {@link MicrosoftChangeSink#completeRun(String, boolean)}); an incremental
-     * pass never reconciles, because unchanged rows keep their older run id.
+     * Reconciles by run id, one kind at a time: rows of this connection and
+     * of a kind in {@code enumerated} that the run did not write are marked
+     * deleted. Rows of every other kind are left as they are, because the
+     * pass did not read that kind. An incremental or narrowed pass names no
+     * kind and reconciles nothing: its unchanged rows keep their older run
+     * id.
      *
-     * @param runId identifier of the completed full-sweep run
+     * @param runId identifier of the completed run
+     * @param enumerated the kinds of entity the pass enumerated in full
      * @throws WriteFailedException if the sync-table refuses or cannot be reached
      */
     @Override
-    public void completeRun(String runId) {
+    public void completeRun(String runId, Set<MicrosoftEntity.EntityCase> enumerated) {
         if (runId == null || runId.isBlank()) {
             return;
         }
-        try {
-            stub.reconcile(ReconcileRequest.newBuilder()
-                    .setSource(SOURCE)
-                    .setConnectionId(connectionId)
-                    .setRunId(runId)
-                    .build());
-        } catch (StatusRuntimeException e) {
-            throw new WriteFailedException("Reconcile",
-                    "run " + runId + " of connection " + connectionId, e);
+        for (MicrosoftEntity.EntityCase kind : new TreeSet<>(enumerated)) {
+            if (kind == MicrosoftEntity.EntityCase.ENTITY_NOT_SET) {
+                continue;
+            }
+            try {
+                stub.reconcile(ReconcileRequest.newBuilder()
+                        .setSource(SOURCE)
+                        .setConnectionId(connectionId)
+                        .setRunId(runId)
+                        .setKind(kind(kind))
+                        .build());
+            } catch (StatusRuntimeException e) {
+                throw new WriteFailedException("Reconcile", "kind " + kind(kind) + " of run "
+                        + runId + " of connection " + connectionId, e);
+            }
         }
     }
 
@@ -304,7 +315,12 @@ public final class SyncTableMicrosoftChangeSink implements MicrosoftChangeSink, 
     }
 
     private static String kind(MicrosoftEntity entity) {
-        return entity.getEntityCase().name().toLowerCase(Locale.ROOT);
+        return kind(entity.getEntityCase());
+    }
+
+    /** The ledger's name for a kind of entity. */
+    static String kind(MicrosoftEntity.EntityCase kind) {
+        return kind.name().toLowerCase(Locale.ROOT);
     }
 
     private static AssetPhase phase(MicrosoftChange change) {
