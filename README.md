@@ -224,6 +224,12 @@ is a full enumeration, which reports no deletes. A full crawl never sends a
 cursor. A `Sync` stream that ends without its terminal resume cursor was
 cut short: the crawl ends with `DatasourceError` and no new checkpoint.
 
+Item ids: an item is indexed as `<drive id>/<item id>`, and a `DeletedItem`
+is sent under that same id, read from the drive item the delete carries. A
+delete that does not carry its drive item cannot name what it removes: the
+crawl ends with `DatasourceError` and no new checkpoint, since a delete
+sent under any other id would be acknowledged and remove nothing.
+
 Content: with `includeContent` on, a file's bytes become the item's content
 only when they are text. That is `text/*` (not RTF), JSON, XML, YAML,
 JavaScript and the `+json` / `+xml` types, with HTML and XHTML sent as
