@@ -1,54 +1,19 @@
 {
   "request" : {
     "method" : "GET",
-    "url" : "https://redacted.example/url/3/_api/web/lists(guid'00000000-0000-4000-8000-000000000008')/items?$select=Id,HasUniqueRoleAssignments,FileRef,FileDirRef&$top=1000",
+    "url" : "https://redacted.example/url/3/_api/web/lists(guid'00000000-0000-4000-8000-000000000008')?$select=HasUniqueRoleAssignments",
     "authorized" : true,
     "headers" : { }
   },
   "response" : {
     "status" : 200,
     "headers" : {
+      "etag" : "\"1\"",
       "content-type" : "application/json;odata=nometadata;streaming=true;charset=utf-8"
     },
     "body" : {
       "json" : {
-        "value" : [ {
-          "HasUniqueRoleAssignments" : true,
-          "Id" : 230,
-          "ID" : 230,
-          "FileRef" : "/sites/WelcomeToPipestream/Shared Documents/pipestream-live-write-20261124-180508-d9609f93",
-          "FileDirRef" : "/sites/WelcomeToPipestream/Shared Documents"
-        }, {
-          "HasUniqueRoleAssignments" : false,
-          "Id" : 231,
-          "ID" : 231,
-          "FileRef" : "/sites/WelcomeToPipestream/Shared Documents/pipestream-live-write-20261124-180508-d9609f93/renamed.txt",
-          "FileDirRef" : "/sites/WelcomeToPipestream/Shared Documents/pipestream-live-write-20261124-180508-d9609f93"
-        }, {
-          "HasUniqueRoleAssignments" : false,
-          "Id" : 232,
-          "ID" : 232,
-          "FileRef" : "/sites/WelcomeToPipestream/Shared Documents/pipestream-live-write-20261124-180508-d9609f93/large.bin",
-          "FileDirRef" : "/sites/WelcomeToPipestream/Shared Documents/pipestream-live-write-20261124-180508-d9609f93"
-        }, {
-          "HasUniqueRoleAssignments" : false,
-          "Id" : 233,
-          "ID" : 233,
-          "FileRef" : "/sites/WelcomeToPipestream/Shared Documents/pipestream-live-write-20261124-180508-d9609f93/resumed.bin",
-          "FileDirRef" : "/sites/WelcomeToPipestream/Shared Documents/pipestream-live-write-20261124-180508-d9609f93"
-        }, {
-          "HasUniqueRoleAssignments" : false,
-          "Id" : 234,
-          "ID" : 234,
-          "FileRef" : "/sites/WelcomeToPipestream/Shared Documents/pipestream-live-write-20261124-180508-d9609f93/copy.txt",
-          "FileDirRef" : "/sites/WelcomeToPipestream/Shared Documents/pipestream-live-write-20261124-180508-d9609f93"
-        }, {
-          "HasUniqueRoleAssignments" : false,
-          "Id" : 235,
-          "ID" : 235,
-          "FileRef" : "/sites/WelcomeToPipestream/Shared Documents/pipestream-live-write-20261124-180508-d9609f93/versioned.txt",
-          "FileDirRef" : "/sites/WelcomeToPipestream/Shared Documents/pipestream-live-write-20261124-180508-d9609f93"
-        } ]
+        "HasUniqueRoleAssignments" : true
       }
     }
   }

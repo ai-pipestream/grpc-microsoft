@@ -1,0 +1,96 @@
+{
+  "request" : {
+    "method" : "GET",
+    "url" : "https://redacted.example/url/3/_api/web/roledefinitions",
+    "authorized" : true,
+    "headers" : { }
+  },
+  "response" : {
+    "status" : 200,
+    "headers" : {
+      "content-type" : "application/json;odata=nometadata;streaming=true;charset=utf-8"
+    },
+    "body" : {
+      "json" : {
+        "value" : [ {
+          "BasePermissions" : {
+            "High" : "2147483647",
+            "Low" : "4294967295"
+          },
+          "Description" : "Has full control.",
+          "Hidden" : false,
+          "Id" : 1073741829,
+          "Name" : "Full Control",
+          "Order" : 1,
+          "RoleTypeKind" : 5
+        }, {
+          "BasePermissions" : {
+            "High" : "432",
+            "Low" : "1012866047"
+          },
+          "Description" : "Can view, add, update, delete, approve, and customize.",
+          "Hidden" : false,
+          "Id" : 1073741828,
+          "Name" : "Design",
+          "Order" : 32,
+          "RoleTypeKind" : 4
+        }, {
+          "BasePermissions" : {
+            "High" : "432",
+            "Low" : "1011030767"
+          },
+          "Description" : "Can add, edit and delete lists; can view, add, update and delete list items and documents.",
+          "Hidden" : false,
+          "Id" : 1073741830,
+          "Name" : "Edit",
+          "Order" : 48,
+          "RoleTypeKind" : 6
+        }, {
+          "BasePermissions" : {
+            "High" : "432",
+            "Low" : "1011028719"
+          },
+          "Description" : "Can view, add, update, and delete list items and documents.",
+          "Hidden" : false,
+          "Id" : 1073741827,
+          "Name" : "Contribute",
+          "Order" : 64,
+          "RoleTypeKind" : 3
+        }, {
+          "BasePermissions" : {
+            "High" : "176",
+            "Low" : "138612833"
+          },
+          "Description" : "Can view pages and list items and download documents.",
+          "Hidden" : false,
+          "Id" : 1073741826,
+          "Name" : "Read",
+          "Order" : 128,
+          "RoleTypeKind" : 2
+        }, {
+          "BasePermissions" : {
+            "High" : "48",
+            "Low" : "134287360"
+          },
+          "Description" : "Can view specific lists, document libraries, list items, folders, or documents when given permissions.",
+          "Hidden" : true,
+          "Id" : 1073741825,
+          "Name" : "Limited Access",
+          "Order" : 160,
+          "RoleTypeKind" : 1
+        }, {
+          "BasePermissions" : {
+            "High" : "560",
+            "Low" : "134221824"
+          },
+          "Description" : "Can only view the web when given permissions.",
+          "Hidden" : true,
+          "Id" : 1073741833,
+          "Name" : "Web-Only Limited Access",
+          "Order" : 176,
+          "RoleTypeKind" : 9
+        } ]
+      }
+    }
+  }
+}
