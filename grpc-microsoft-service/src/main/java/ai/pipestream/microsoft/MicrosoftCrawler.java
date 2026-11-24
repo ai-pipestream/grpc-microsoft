@@ -733,8 +733,9 @@ public final class MicrosoftCrawler {
             if (since.isEmpty()) {
                 token = SiteChanges.read(web, end, change -> { });
             } else {
+                String read = null;
                 try {
-                    token = SiteChanges.read(web, end.toBuilder().setChangeToken(since)
+                    read = SiteChanges.read(web, end.toBuilder().setChangeToken(since)
                             .addObjects(SiteChangeObject.SITE_CHANGE_OBJECT_ITEM)
                             .addObjects(SiteChangeObject.SITE_CHANGE_OBJECT_LIST)
                             .addTypes(SiteChangeType.SITE_CHANGE_TYPE_SCOPE_ADD)
@@ -755,17 +756,22 @@ public final class MicrosoftCrawler {
                                     }
                                 }
                             });
+                } catch (IllegalArgumentException e) {
+                    // The token is not one SharePoint can read.
                 } catch (GraphClient.GraphApiException e) {
                     if (!refusesToken(e)) {
                         throw e;
                     }
+                }
+                if (read == null) {
                     items.clear();
                     dropped.clear();
                     lists.clear();
                     droppedLists.clear();
                     everything = true;
-                    token = SiteChanges.read(web, end, change -> { });
+                    read = SiteChanges.read(web, end, change -> { });
                 }
+                token = read;
             }
         } catch (GraphClient.GraphApiException e) {
             if (e.status() != 401 && e.status() != 403) {
@@ -789,10 +795,14 @@ public final class MicrosoftCrawler {
         return read;
     }
 
-    /** Whether SharePoint refused the change token itself, not the caller or the load. */
+    /**
+     * Whether a failed read of the change log is put down to the token: any
+     * HTTP answer that is not about the caller or the load. The end of the
+     * log is read next, and that fails too when the site itself is down.
+     */
     private static boolean refusesToken(GraphClient.GraphApiException e) {
-        return e.status() >= 400 && e.status() < 500 && e.status() != 401 && e.status() != 403
-                && e.status() != 429;
+        return e.status() >= 400 && e.status() != 401 && e.status() != 403 && e.status() != 429
+                && e.status() != 503;
     }
 
     /** Whether a list's delta link is set aside so every item is read again. */

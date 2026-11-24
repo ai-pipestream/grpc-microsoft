@@ -251,6 +251,16 @@ class SiteChangesRpcTest {
         assertThat(fake.requests()).noneMatch(request -> request.path().contains("getchanges"));
     }
 
+    @Test
+    void aTokenSharePointCannotParseIsAnInvalidArgument() {
+        fake.stub("POST", WEB + "/web/getchanges", FakeGraphServer.json(500, """
+                {"odata.error":{"code":"-1, System.FormatException",
+                  "message":{"lang":"en-US","value":"Input string was not in a correct format."}}}""",
+                java.util.Map.of()));
+
+        assertInvalid(ListSiteChangesRequest.newBuilder().setChangeToken("not-a-change-token"));
+    }
+
     private void assertInvalid(ListSiteChangesRequest.Builder request) {
         assertThatThrownBy(() -> read(request)).isInstanceOfSatisfying(StatusRuntimeException.class,
                 e -> assertThat(e.getStatus().getCode()).isEqualTo(Status.Code.INVALID_ARGUMENT));

@@ -25,6 +25,9 @@ final class SiteChanges {
     /** The change token that asks for the end of the log and no entries. */
     static final String LATEST = "latest";
 
+    /** In the error code SharePoint answers, with HTTP 500, to a token it cannot parse. */
+    private static final String MALFORMED_TOKEN = "System.FormatException";
+
     /** The ChangeQuery flag that asks for each kind of object. */
     private static final Map<SiteChangeObject, String> OBJECT_FLAGS = objectFlags();
     /** The ChangeQuery flag that asks for each type of change; some types have none. */
@@ -45,6 +48,7 @@ final class SiteChanges {
      * @param request names the scope, the token and the filter
      * @param out receives each entry that passes the filter, oldest first
      * @return the change token to resume from
+     * @throws IllegalArgumentException if SharePoint cannot parse the token
      */
     static String read(SharePointRest.Web web, ListSiteChangesRequest request, Consumer<SiteChange> out)
             throws IOException, InterruptedException {
@@ -58,7 +62,15 @@ final class SiteChanges {
         Set<SiteChangeType> types = set(SiteChangeType.class, request.getTypesList(),
                 SiteChangeType.SITE_CHANGE_TYPE_UNSPECIFIED, SiteChangeType.UNRECOGNIZED);
         while (true) {
-            JsonNode page = web.postTyped(scope + "/getchanges", query(objects, types, token));
+            JsonNode page;
+            try {
+                page = web.postTyped(scope + "/getchanges", query(objects, types, token));
+            } catch (GraphClient.GraphApiException e) {
+                if (!token.isEmpty() && e.code().contains(MALFORMED_TOKEN)) {
+                    throw new IllegalArgumentException("change_token is not a change token of SharePoint");
+                }
+                throw e;
+            }
             String last = "";
             for (JsonNode node : page.path("value")) {
                 SiteChange change = toChange(node, web.host(), request.getSiteId());

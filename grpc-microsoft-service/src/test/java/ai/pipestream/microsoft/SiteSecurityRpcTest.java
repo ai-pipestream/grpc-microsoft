@@ -454,9 +454,9 @@ class SiteSecurityRpcTest {
         String cursor = drain(stub.sync(request)).getLast().getResumeCursor();
 
         fake.stub(WEB + "/web", "{\"CurrentChangeToken\":{\"StringValue\":\"t9\"}}");
-        fake.stub("POST", WEB + "/web/getchanges", FakeGraphServer.json(400, """
-                {"odata.error":{"code":"-2146232832, Microsoft.SharePoint.SPException",
-                  "message":{"lang":"en-US","value":"The changeToken refers to a time before the start of the current change log."}}}""",
+        fake.stub("POST", WEB + "/web/getchanges", FakeGraphServer.json(500, """
+                {"odata.error":{"code":"-1, System.FormatException",
+                  "message":{"lang":"en-US","value":"Input string was not in a correct format."}}}""",
                 Map.of()));
 
         List<SyncResponse> resumed = drain(stub.sync(request.toBuilder().setSinceCursor(cursor).build()));

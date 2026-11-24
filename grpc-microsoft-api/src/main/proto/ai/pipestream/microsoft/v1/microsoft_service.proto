@@ -264,7 +264,8 @@ service MicrosoftService {
   // What changed in a site, its site collection or one of its lists since a
   // change token, as a stream that ends with the token to resume from. Names
   // changes to role assignments, role inheritance, groups and group members.
-  // Needs a certificate credential. SharePoint REST: POST {scope}/getchanges.
+  // A token SharePoint cannot parse is INVALID_ARGUMENT. Needs a certificate
+  // credential. SharePoint REST: POST {scope}/getchanges.
   rpc ListSiteChanges(ListSiteChangesRequest) returns (stream ListSiteChangesResponse);
 
   // --- Sync ----------------------------------------------------------------

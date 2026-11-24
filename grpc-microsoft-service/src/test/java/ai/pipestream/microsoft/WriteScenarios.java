@@ -1994,13 +1994,14 @@ final class WriteScenarios {
 
     private String siteChangesFromABadToken() {
         try {
-            List<ListSiteChangesResponse> stream = new ArrayList<>();
             stub().listSiteChanges(changesOf(SiteChangeScope.SITE_CHANGE_SCOPE_WEB)
-                    .setChangeToken("not-a-change-token").build()).forEachRemaining(stream::add);
-            return "SharePoint accepted it: " + (stream.size() - 1) + " change(s)";
+                    .setChangeToken("not-a-change-token").build()).forEachRemaining(response -> { });
         } catch (StatusRuntimeException e) {
-            return "refused with " + e.getStatus().getCode() + ": " + e.getStatus().getDescription();
+            check(e.getStatus().getCode() == io.grpc.Status.Code.INVALID_ARGUMENT,
+                    "refused with " + e.getStatus().getCode() + ": " + e.getStatus().getDescription());
+            return "refused as INVALID_ARGUMENT: " + e.getStatus().getDescription();
         }
+        throw new AssertionError("SharePoint accepted a token that is not one");
     }
 
     private static String name(com.google.protobuf.ProtocolMessageEnum value) {
