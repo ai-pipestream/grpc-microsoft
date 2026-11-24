@@ -14,7 +14,7 @@
       "json" : {
         "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#subscriptions",
         "value" : [ {
-          "id" : "00000000-0000-4000-8000-000000000006",
+          "id" : "00000000-0000-4000-8000-000000000003",
           "resource" : "/drives/b%21drive-0001/root",
           "applicationId" : "00000000-0000-4000-8000-000000000004",
           "changeType" : "updated",
@@ -22,7 +22,7 @@
           "notificationUrl" : "https://redacted.example/url/1",
           "notificationQueryOptions" : null,
           "lifecycleNotificationUrl" : "https://redacted.example/url/2",
-          "expirationDateTime" : "2026-11-24T18:41:02Z",
+          "expirationDateTime" : "2026-11-25T18:24:07Z",
           "creatorId" : "00000000-0000-4000-8000-000000000005",
           "includeResourceData" : null,
           "latestSupportedTlsVersion" : null,
@@ -33,7 +33,7 @@
           "webPushEncryptionP256dhPublicKey" : null,
           "webPushEncryptionSecret" : null
         }, {
-          "id" : "00000000-0000-4000-8000-000000000003",
+          "id" : "00000000-0000-4000-8000-000000000006",
           "resource" : "/drives/b%21drive-0001/root",
           "applicationId" : "00000000-0000-4000-8000-000000000004",
           "changeType" : "updated",
@@ -41,7 +41,7 @@
           "notificationUrl" : "https://redacted.example/url/1",
           "notificationQueryOptions" : null,
           "lifecycleNotificationUrl" : "https://redacted.example/url/2",
-          "expirationDateTime" : "2026-11-25T17:51:02Z",
+          "expirationDateTime" : "2026-11-24T19:14:07Z",
           "creatorId" : "00000000-0000-4000-8000-000000000005",
           "includeResourceData" : null,
           "latestSupportedTlsVersion" : null,

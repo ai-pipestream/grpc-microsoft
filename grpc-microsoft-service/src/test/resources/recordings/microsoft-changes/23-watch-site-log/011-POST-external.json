@@ -38,7 +38,7 @@
           "SystemUpdate" : true,
           "Navigation" : true,
           "ChangeTokenStart" : {
-            "StringValue" : "1;2;00000000-0000-4000-8000-000000000002;639311396481430000;1675686213"
+            "StringValue" : "1;2;00000000-0000-4000-8000-000000000002;639311435323900000;1675701854"
           }
         }
       }
@@ -57,14 +57,14 @@
           "odata.id" : "https://redacted.example/url/20",
           "odata.editLink" : "SP.ChangeItem00000000-0000-4000-8000-000000000026",
           "ChangeToken" : {
-            "StringValue" : "1;2;00000000-0000-4000-8000-000000000002;639311396495670000;1675686214"
+            "StringValue" : "1;2;00000000-0000-4000-8000-000000000002;639311435327430000;1675701856"
           },
           "ChangeType" : 1,
           "SiteId" : "00000000-0000-4000-8000-000000000001",
-          "Time" : "2026-11-24T17:54:09Z",
+          "Time" : "2026-11-24T18:58:53Z",
           "Editor" : "",
           "EditorEmailHint" : null,
-          "ItemId" : 229,
+          "ItemId" : 239,
           "ListId" : "00000000-0000-4000-8000-000000000008",
           "ServerRelativeUrl" : "",
           "SharedByUser" : null,
@@ -76,14 +76,14 @@
           "odata.id" : "https://redacted.example/url/21",
           "odata.editLink" : "SP.ChangeItem00000000-0000-4000-8000-000000000027",
           "ChangeToken" : {
-            "StringValue" : "1;2;00000000-0000-4000-8000-000000000002;639311396499130000;1675686216"
+            "StringValue" : "1;2;00000000-0000-4000-8000-000000000002;639311435330900000;1675701859"
           },
           "ChangeType" : 1,
           "SiteId" : "00000000-0000-4000-8000-000000000001",
-          "Time" : "2026-11-24T17:54:10Z",
+          "Time" : "2026-11-24T18:58:53Z",
           "Editor" : "",
           "EditorEmailHint" : null,
-          "ItemId" : 18,
+          "ItemId" : 20,
           "ListId" : "00000000-0000-4000-8000-000000000028",
           "ServerRelativeUrl" : "",
           "SharedByUser" : null,
@@ -95,14 +95,14 @@
           "odata.id" : "https://redacted.example/url/22",
           "odata.editLink" : "SP.ChangeItem00000000-0000-4000-8000-000000000030",
           "ChangeToken" : {
-            "StringValue" : "1;2;00000000-0000-4000-8000-000000000002;639311396499570000;1675686217"
+            "StringValue" : "1;2;00000000-0000-4000-8000-000000000002;639311435331600000;1675701862"
           },
           "ChangeType" : 11,
           "SiteId" : "00000000-0000-4000-8000-000000000001",
-          "Time" : "2026-11-24T17:54:09.957Z",
+          "Time" : "2026-11-24T18:58:53.16Z",
           "Editor" : "",
           "EditorEmailHint" : null,
-          "ItemId" : 229,
+          "ItemId" : 239,
           "ListId" : "00000000-0000-4000-8000-000000000008",
           "ServerRelativeUrl" : "",
           "SharedByUser" : null,
@@ -114,14 +114,14 @@
           "odata.id" : "https://redacted.example/url/23",
           "odata.editLink" : "SP.ChangeItem00000000-0000-4000-8000-000000000031",
           "ChangeToken" : {
-            "StringValue" : "1;2;00000000-0000-4000-8000-000000000002;639311396499570000;1675686218"
+            "StringValue" : "1;2;00000000-0000-4000-8000-000000000002;639311435331600000;1675701863"
           },
           "ChangeType" : 17,
           "SiteId" : "00000000-0000-4000-8000-000000000001",
-          "Time" : "2026-11-24T17:54:09.957Z",
+          "Time" : "2026-11-24T18:58:53.16Z",
           "Editor" : "",
           "EditorEmailHint" : null,
-          "ItemId" : 229,
+          "ItemId" : 239,
           "ListId" : "00000000-0000-4000-8000-000000000008",
           "ServerRelativeUrl" : "",
           "SharedByUser" : null,
@@ -133,14 +133,14 @@
           "odata.id" : "https://redacted.example/url/24",
           "odata.editLink" : "SP.ChangeItem00000000-0000-4000-8000-000000000032",
           "ChangeToken" : {
-            "StringValue" : "1;2;00000000-0000-4000-8000-000000000002;639311396499930000;1675686219"
+            "StringValue" : "1;2;00000000-0000-4000-8000-000000000002;639311435332070000;1675701864"
           },
           "ChangeType" : 11,
           "SiteId" : "00000000-0000-4000-8000-000000000001",
-          "Time" : "2026-11-24T17:54:09.993Z",
+          "Time" : "2026-11-24T18:58:53.207Z",
           "Editor" : "",
           "EditorEmailHint" : null,
-          "ItemId" : 229,
+          "ItemId" : 239,
           "ListId" : "00000000-0000-4000-8000-000000000008",
           "ServerRelativeUrl" : "",
           "SharedByUser" : null,
@@ -152,14 +152,14 @@
           "odata.id" : "https://redacted.example/url/25",
           "odata.editLink" : "SP.ChangeItem00000000-0000-4000-8000-000000000033",
           "ChangeToken" : {
-            "StringValue" : "1;2;00000000-0000-4000-8000-000000000002;639311396500100000;1675686220"
+            "StringValue" : "1;2;00000000-0000-4000-8000-000000000002;639311435332270000;1675701865"
           },
           "ChangeType" : 11,
           "SiteId" : "00000000-0000-4000-8000-000000000001",
-          "Time" : "2026-11-24T17:54:10.01Z",
+          "Time" : "2026-11-24T18:58:53.227Z",
           "Editor" : "",
           "EditorEmailHint" : null,
-          "ItemId" : 229,
+          "ItemId" : 239,
           "ListId" : "00000000-0000-4000-8000-000000000008",
           "ServerRelativeUrl" : "",
           "SharedByUser" : null,
@@ -171,14 +171,14 @@
           "odata.id" : "https://redacted.example/url/26",
           "odata.editLink" : "SP.ChangeItem00000000-0000-4000-8000-000000000034",
           "ChangeToken" : {
-            "StringValue" : "1;2;00000000-0000-4000-8000-000000000002;639311396501900000;1675686221"
+            "StringValue" : "1;2;00000000-0000-4000-8000-000000000002;639311435333730000;1675701866"
           },
           "ChangeType" : 3,
           "SiteId" : "00000000-0000-4000-8000-000000000001",
-          "Time" : "2026-11-24T17:54:10Z",
+          "Time" : "2026-11-24T18:58:53Z",
           "Editor" : "",
           "EditorEmailHint" : null,
-          "ItemId" : 229,
+          "ItemId" : 239,
           "ListId" : "00000000-0000-4000-8000-000000000008",
           "ServerRelativeUrl" : "",
           "SharedByUser" : null,
