@@ -1,7 +1,7 @@
 {
   "request" : {
     "method" : "POST",
-    "url" : "https://redacted.example/url/6/_api/web/getchanges",
+    "url" : "https://redacted.example/url/6/_api/site/getchanges",
     "authorized" : true,
     "headers" : {
       "content-type" : "application/json"
@@ -38,7 +38,7 @@
           "SystemUpdate" : true,
           "Navigation" : true,
           "ChangeTokenStart" : {
-            "StringValue" : "1;2;00000000-0000-4000-8000-000000000002;639311435333730000;1675701866"
+            "StringValue" : "1;1;00000000-0000-4000-8000-000000000001;639311502199330000;1675728817"
           }
         }
       }
@@ -51,7 +51,7 @@
     },
     "body" : {
       "json" : {
-        "odata.metadata" : "https://redacted.example/url/19",
+        "odata.metadata" : "https://redacted.example/url/21",
         "value" : [ ]
       }
     }

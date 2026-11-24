@@ -3,7 +3,7 @@
     "lifecycleEvent" : "reauthorizationRequired",
     "subscriptionId" : "00000000-0000-4000-8000-000000000006",
     "resource" : "/drives/b%21drive-0001/root",
-    "clientState" : "pipestream-live-change-20261124-182407-b20ed453",
+    "clientState" : "pipestream-live-change-20261124-201539-f66a325e",
     "resourceData" : {
       "@odata.type" : "#microsoft.graph.subscription",
       "@odata.id" : "subscriptions/00000000-0000-4000-8000-000000000006",
@@ -11,7 +11,7 @@
     },
     "encryptedContent" : null,
     "organizationId" : "00000000-0000-4000-8000-000000000009",
-    "subscriptionExpirationDateTime" : "2026-11-24T19:14:07+00:00",
+    "subscriptionExpirationDateTime" : "2026-11-24T21:05:39+00:00",
     "resourceChangeType" : null
   } ]
 } ]
