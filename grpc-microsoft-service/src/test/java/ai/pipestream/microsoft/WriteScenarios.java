@@ -277,6 +277,13 @@ final class WriteScenarios {
     private String groupId;
     private Integer siteGroupId;
     private String userMail;
+    private String userPrincipalName;
+    /** The SharePoint group this run created and has not deleted yet. */
+    private Integer ownGroupId;
+    private Integer ownGroupMemberId;
+    /** The group this run created, kept after its deletion. */
+    private Integer createdGroupId;
+    private Long readRoleId;
     private boolean linkColumn;
     private String libraryId;
     private boolean libraryTried;
@@ -391,6 +398,22 @@ final class WriteScenarios {
                 new Scenario("sync-security", "Sync",
                         "Sync [site security: groups, role assignments, owner of every item]",
                         this::syncSecurity),
+                new Scenario("create-site-group", "CreateSiteGroup", "CreateSiteGroup",
+                        this::createSiteGroup),
+                new Scenario("list-site-role-definitions", "ListSiteRoleDefinitions",
+                        "ListSiteRoleDefinitions", this::roleDefinitions),
+                new Scenario("add-site-group-member", "AddSiteGroupMember",
+                        "AddSiteGroupMember [a directory user, by user principal name]",
+                        this::addSiteGroupMember),
+                new Scenario("add-site-role-assignment", "AddSiteRoleAssignment",
+                        "AddSiteRoleAssignment [the new group may read the list item]",
+                        this::addRoleAssignment),
+                new Scenario("remove-site-role-assignment", "RemoveSiteRoleAssignment",
+                        "RemoveSiteRoleAssignment", this::removeRoleAssignment),
+                new Scenario("remove-site-group-member", "RemoveSiteGroupMember",
+                        "RemoveSiteGroupMember", this::removeSiteGroupMember),
+                new Scenario("delete-site-group", "DeleteSiteGroup", "DeleteSiteGroup",
+                        this::deleteSiteGroup),
                 new Scenario("set-site-role-inheritance-reset", "SetSiteRoleInheritance",
                         "SetSiteRoleInheritance [list item and folder inherit again]",
                         this::restoreInheritance),
@@ -1309,6 +1332,8 @@ final class WriteScenarios {
         userId = users.get(0).getId();
         userMail = users.stream().map(GraphUser::getMail).filter(mail -> !mail.isEmpty())
                 .findFirst().orElse(null);
+        userPrincipalName = users.stream().map(GraphUser::getUserPrincipalName)
+                .filter(name -> !name.isEmpty()).findFirst().orElse(null);
         return users.size() + " user(s)";
     }
 
@@ -1640,6 +1665,139 @@ final class WriteScenarios {
                 + " user grantee(s) with a user principal name";
     }
 
+    private String createSiteGroup() {
+        String title = listName + "-group";
+        SiteGroup group;
+        try {
+            group = stub().createSiteGroup(ai.pipestream.microsoft.v1.CreateSiteGroupRequest.newBuilder().setSiteId(siteId)
+                    .setTitle(title).setDescription("Created by a live test run; safe to delete.").build())
+                    .getGroup();
+        } catch (StatusRuntimeException e) {
+            throw notGranted(e);
+        }
+        check(group.getId() > 0, "the new group has no id");
+        ownGroupId = group.getId();
+        createdGroupId = group.getId();
+        check(group.getTitle().equals(title), "the new group is called " + group.getTitle());
+        check(siteGroupIds().contains(group.getId()), "ListSiteGroups does not show the new group");
+        return "group " + title + " created; ListSiteGroups shows it";
+    }
+
+    private Set<Integer> siteGroupIds() {
+        Set<Integer> ids = new TreeSet<>();
+        stub().listSiteGroups(ListSiteGroupsRequest.newBuilder().setSiteId(siteId).build())
+                .forEachRemaining(response -> ids.add(response.getGroup().getId()));
+        return ids;
+    }
+
+    private String roleDefinitions() {
+        List<ai.pipestream.microsoft.v1.SiteRoleDefinition> roles = new ArrayList<>();
+        try {
+            stub().listSiteRoleDefinitions(ai.pipestream.microsoft.v1.ListSiteRoleDefinitionsRequest.newBuilder()
+                    .setSiteId(siteId).build()).forEachRemaining(response -> roles.add(response.getRole()));
+        } catch (StatusRuntimeException e) {
+            throw notGranted(e);
+        }
+        check(roles.stream().allMatch(role -> role.getId() > 0 && !role.getName().isEmpty()),
+                "a permission level has no id or no name");
+        check(roles.stream().map(ai.pipestream.microsoft.v1.SiteRoleDefinition::getId).distinct().count() == roles.size(),
+                "a permission level was listed twice");
+        // SharePoint's role type 2 is the reader.
+        readRoleId = roles.stream().filter(role -> role.getRoleTypeKind() == 2)
+                .map(ai.pipestream.microsoft.v1.SiteRoleDefinition::getId).findFirst().orElse(null);
+        check(readRoleId != null, "the site has no read permission level");
+        return roles.size() + " permission level(s): "
+                + roles.stream().map(ai.pipestream.microsoft.v1.SiteRoleDefinition::getName).sorted().toList();
+    }
+
+    private List<SitePrincipal> membersOfTheOwnGroup() {
+        List<SitePrincipal> members = new ArrayList<>();
+        stub().listSiteGroupMembers(ListSiteGroupMembersRequest.newBuilder().setSiteId(siteId)
+                .setGroupId(ownGroupId).build())
+                .forEachRemaining(response -> members.add(response.getMember()));
+        return members;
+    }
+
+    private String addSiteGroupMember() {
+        need(ownGroupId, "the group this run created");
+        need(userPrincipalName, "a directory user with a sign-in name");
+        SitePrincipal member = stub().addSiteGroupMember(ai.pipestream.microsoft.v1.AddSiteGroupMemberRequest.newBuilder()
+                .setSiteId(siteId).setGroupId(ownGroupId).setUserPrincipalName(userPrincipalName).build())
+                .getMember();
+        check(member.getId() > 0, "the new member has no id");
+        ownGroupMemberId = member.getId();
+        checkPrincipal(member);
+        check(member.getPrincipalType() == SitePrincipalType.SITE_PRINCIPAL_TYPE_USER,
+                "the new member is a " + member.getPrincipalType());
+        check(member.getUserPrincipalName().equalsIgnoreCase(userPrincipalName),
+                "the new member has another user principal name");
+        List<SitePrincipal> members = membersOfTheOwnGroup();
+        check(members.size() == 1 && members.get(0).getId() == member.getId(),
+                "ListSiteGroupMembers shows " + members.size() + " member(s), not the one added");
+        return "the user is a member; ListSiteGroupMembers shows it";
+    }
+
+    /** The permission levels the run's own group holds on the list item. */
+    private List<Long> rolesOfTheOwnGroupOnTheItem() {
+        List<Long> roles = new ArrayList<>();
+        stub().listSiteRoleAssignments(ListSiteRoleAssignmentsRequest.newBuilder()
+                .setSecurable(SiteSecurable.newBuilder().setListItem(listItemRef(itemId))).build())
+                .forEachRemaining(response -> {
+                    if (response.getAssignment().getPrincipalId() == ownGroupId) {
+                        response.getAssignment().getRolesList().forEach(role -> roles.add(role.getId()));
+                    }
+                });
+        return roles;
+    }
+
+    private String addRoleAssignment() {
+        need(ownGroupId, "the group this run created");
+        need(readRoleId, "the read permission level");
+        if (!inheritanceBroken) {
+            throw new Skip("needs the list item with its own role assignments");
+        }
+        stub().addSiteRoleAssignment(ai.pipestream.microsoft.v1.AddSiteRoleAssignmentRequest.newBuilder()
+                .setSecurable(SiteSecurable.newBuilder().setListItem(listItemRef(itemId)))
+                .setPrincipalId(ownGroupId).setRoleDefinitionId(readRoleId).build());
+        check(rolesOfTheOwnGroupOnTheItem().equals(List.of(readRoleId)),
+                "ListSiteRoleAssignments does not show the group with the read level alone");
+        return "the group holds the read level on the list item; ListSiteRoleAssignments shows it";
+    }
+
+    private String removeRoleAssignment() {
+        need(ownGroupId, "the group this run created");
+        need(readRoleId, "the read permission level");
+        if (!inheritanceBroken) {
+            throw new Skip("needs the list item with its own role assignments");
+        }
+        stub().removeSiteRoleAssignment(ai.pipestream.microsoft.v1.RemoveSiteRoleAssignmentRequest.newBuilder()
+                .setSecurable(SiteSecurable.newBuilder().setListItem(listItemRef(itemId)))
+                .setPrincipalId(ownGroupId).setRoleDefinitionId(readRoleId).build());
+        check(rolesOfTheOwnGroupOnTheItem().isEmpty(),
+                "ListSiteRoleAssignments still shows the group on the list item");
+        return "the group holds nothing on the list item any more";
+    }
+
+    private String removeSiteGroupMember() {
+        need(ownGroupId, "the group this run created");
+        need(ownGroupMemberId, "the member this run added");
+        stub().removeSiteGroupMember(ai.pipestream.microsoft.v1.RemoveSiteGroupMemberRequest.newBuilder().setSiteId(siteId)
+                .setGroupId(ownGroupId).setMemberId(ownGroupMemberId).build());
+        check(membersOfTheOwnGroup().isEmpty(), "ListSiteGroupMembers still shows a member");
+        ownGroupMemberId = null;
+        return "the group has no member any more";
+    }
+
+    private String deleteSiteGroup() {
+        need(ownGroupId, "the group this run created");
+        int id = ownGroupId;
+        stub().deleteSiteGroup(ai.pipestream.microsoft.v1.DeleteSiteGroupRequest.newBuilder().setSiteId(siteId)
+                .setGroupId(id).build());
+        ownGroupId = null;
+        check(!siteGroupIds().contains(id), "ListSiteGroups still shows the group");
+        return "the group is gone from ListSiteGroups";
+    }
+
     private String restoreInheritance() {
         if (!inheritanceBroken) {
             throw new Skip("nothing stopped inheriting");
@@ -1702,6 +1860,7 @@ final class WriteScenarios {
         }
         need(itemId, "the list item");
         List<String> seen = new ArrayList<>();
+        List<String> groups = new ArrayList<>();
         for (SiteChangeScope scope : CHANGE_SCOPES) {
             List<ListSiteChangesResponse> stream = changes(changesOf(scope)
                     .setChangeToken(changeTokens.get(scope)).build());
@@ -1709,6 +1868,7 @@ final class WriteScenarios {
             check(!end.equals(changeTokens.get(scope)), "the log did not move");
             Map<String, Integer> kinds = new TreeMap<>();
             Set<SiteChangeType> onTheItem = new TreeSet<>();
+            Set<SiteChangeType> onTheGroup = new TreeSet<>();
             for (ListSiteChangesResponse response : stream.subList(0, stream.size() - 1)) {
                 SiteChange change = response.getChange();
                 check(change.hasTime() && !change.getChangeToken().isEmpty(),
@@ -1724,6 +1884,20 @@ final class WriteScenarios {
                             "the change on the list item does not name it as a securable");
                     onTheItem.add(change.getType());
                 }
+                if (change.getObject() == SiteChangeObject.SITE_CHANGE_OBJECT_GROUP
+                        && createdGroupId != null && change.getGroupId() == createdGroupId) {
+                    onTheGroup.add(change.getType());
+                }
+            }
+            // Groups belong to the site collection; only its log reports them.
+            if (scope == SiteChangeScope.SITE_CHANGE_SCOPE_SITE_COLLECTION && createdGroupId != null
+                    && ownGroupId == null) {
+                check(onTheGroup.containsAll(List.of(SiteChangeType.SITE_CHANGE_TYPE_ADD,
+                        SiteChangeType.SITE_CHANGE_TYPE_GROUP_MEMBER_ADD,
+                        SiteChangeType.SITE_CHANGE_TYPE_GROUP_MEMBER_DELETE,
+                        SiteChangeType.SITE_CHANGE_TYPE_DELETE)),
+                        "the site collection log does not show the run's group created, given and "
+                        + "losing a member, and deleted: " + onTheGroup + " of " + kinds);
             }
             check(onTheItem.contains(SiteChangeType.SITE_CHANGE_TYPE_SCOPE_ADD)
                     && onTheItem.contains(SiteChangeType.SITE_CHANGE_TYPE_SCOPE_DELETE),
@@ -1737,8 +1911,11 @@ final class WriteScenarios {
                     "a filter for items answered another object");
             seen.add(name(scope) + ": " + kinds + ", on the list item "
                     + onTheItem.stream().map(WriteScenarios::name).toList());
+            Map<String, Integer> ofGroups = new TreeMap<>(kinds);
+            ofGroups.keySet().removeIf(kind -> !kind.startsWith("GROUP ") && !kind.startsWith("USER "));
+            groups.add(name(scope) + " " + ofGroups);
         }
-        return String.join("; ", seen);
+        return "groups and users: " + String.join(", ", groups) + "; " + String.join("; ", seen);
     }
 
     private String siteChangesFromAnOldToken() {
@@ -1873,10 +2050,20 @@ final class WriteScenarios {
 
     // ------------------------------------------------------------ cleanup
 
-    /** Removes the test folder and the test list, and nothing else. */
+    /** Removes the test folder, the test list and a group the run left behind, and nothing else. */
     private String cleanUp() throws InterruptedException {
         List<String> lines = new ArrayList<>();
         boolean clean = true;
+        if (ownGroupId != null) {
+            try {
+                stub().deleteSiteGroup(ai.pipestream.microsoft.v1.DeleteSiteGroupRequest.newBuilder().setSiteId(siteId)
+                        .setGroupId(ownGroupId).build());
+                lines.add("group " + listName + "-group deleted");
+            } catch (StatusRuntimeException e) {
+                clean = false;
+                lines.add("group " + listName + "-group NOT CLEANED UP, " + e.getStatus());
+            }
+        }
         try {
             String id = folderId;
             if (id == null) {

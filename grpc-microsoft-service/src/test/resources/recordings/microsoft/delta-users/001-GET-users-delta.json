@@ -13,7 +13,7 @@
     "body" : {
       "json" : {
         "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#users(id,displayName,userPrincipalName,mail,givenName,surname,jobTitle,department,officeLocation,userType,accountEnabled,preferredLanguage,proxyAddresses,otherMails)",
-        "@odata.nextLink" : "https://graph.microsoft.com/v1.0/users/delta?$skiptoken=cursor-0066",
+        "@odata.nextLink" : "https://graph.microsoft.com/v1.0/users/delta?$skiptoken=cursor-0004",
         "value" : [ {
           "displayName" : "Directory value 1",
           "userPrincipalName" : "email-1@example.invalid",

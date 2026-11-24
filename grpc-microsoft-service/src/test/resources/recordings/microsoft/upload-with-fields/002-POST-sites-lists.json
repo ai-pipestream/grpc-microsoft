@@ -8,7 +8,7 @@
     },
     "body" : {
       "json" : {
-        "displayName" : "pipestream-live-write-20261124-180508-d9609f93-lib",
+        "displayName" : "pipestream-live-write-20261124-191715-910a14fd-lib",
         "description" : "Created by the live write test; safe to delete.",
         "list" : {
           "template" : "documentLibrary"
@@ -19,22 +19,22 @@
   "response" : {
     "status" : 201,
     "headers" : {
-      "etag" : "00000000-0000-4000-8000-000000000181,0",
-      "location" : "https://redacted.example/url/143",
+      "etag" : "00000000-0000-4000-8000-000000000207,0",
+      "location" : "https://redacted.example/url/170",
       "content-type" : "application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8"
     },
     "body" : {
       "json" : {
         "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#sites('tenant-1.example%2C00000000-0000-4000-8000-000000000001%2C00000000-0000-4000-8000-000000000002')/lists/$entity",
-        "@odata.etag" : "00000000-0000-4000-8000-000000000181,0",
-        "eTag" : "00000000-0000-4000-8000-000000000181,0",
-        "lastModifiedDateTime" : "2026-11-24T18:06:16Z",
-        "createdDateTime" : "2026-11-24T18:06:16Z",
+        "@odata.etag" : "00000000-0000-4000-8000-000000000207,0",
+        "eTag" : "00000000-0000-4000-8000-000000000207,0",
+        "lastModifiedDateTime" : "2026-11-24T19:18:13Z",
+        "createdDateTime" : "2026-11-24T19:18:13Z",
         "description" : "Created by the live write test; safe to delete.",
-        "id" : "00000000-0000-4000-8000-000000000181",
-        "name" : "pipestreamlivewrite20261124180508d9609f93lib",
-        "webUrl" : "https://redacted.example/url/144",
-        "displayName" : "pipestream-live-write-20261124-180508-d9609f93-lib",
+        "id" : "00000000-0000-4000-8000-000000000207",
+        "name" : "pipestreamlivewrite20261124191715910a14fdlib",
+        "webUrl" : "https://redacted.example/url/171",
+        "displayName" : "pipestream-live-write-20261124-191715-910a14fd-lib",
         "parentReference" : {
           "siteId" : "tenant-1.example,00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000002"
         },

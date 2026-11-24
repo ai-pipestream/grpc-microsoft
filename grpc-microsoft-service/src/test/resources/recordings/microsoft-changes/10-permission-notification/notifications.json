@@ -1,13 +1,13 @@
 [ {
   "value" : [ {
     "subscriptionId" : "00000000-0000-4000-8000-000000000003",
-    "clientState" : "pipestream-live-change-20261124-175102-bd26f688",
+    "clientState" : "pipestream-live-change-20261124-201539-f66a325e",
     "resource" : "/drives/b%21drive-0001/root",
     "tenantId" : "00000000-0000-4000-8000-000000000009",
     "resourceData" : {
       "@odata.type" : "#Microsoft.Graph.DriveItem"
     },
-    "subscriptionExpirationDateTime" : "2026-11-26T17:51:02.001+00:00",
+    "subscriptionExpirationDateTime" : "2026-11-26T20:15:39.001+00:00",
     "changeType" : "updated"
   } ]
 } ]

@@ -94,8 +94,12 @@ site's groups with their members (`site_group`), the role assignments of the
 site and of every list and item that has its own (`site_acl`), and on every
 drive, list and item the id of the `site_acl` that applies to it
 (`acl_owner_id`). `SetSiteRoleInheritance` makes a list or list item stop
-inheriting, or inherit again. Both need the certificate credential and the
-site grant `fullcontrol`.
+inheriting, or inherit again. `CreateSiteGroup` and `DeleteSiteGroup`,
+`AddSiteGroupMember` and `RemoveSiteGroupMember` change SharePoint groups;
+`AddSiteRoleAssignment` and `RemoveSiteRoleAssignment` grant or take one
+permission level (`ListSiteRoleDefinitions` lists them) on a site, list or
+list item that has its own role assignments. All need the certificate
+credential and the site grant `fullcontrol`.
 
 Point the proxy at a running sync-table (from grpc-integration) to record
 crawl / update / delete rows:
@@ -241,8 +245,10 @@ sites to every pass: one `site_change` per entry, then one
 security webhooks only hints at: the list item, list or site whose role
 assignments or inheritance changed, and the group whose members changed. The
 first pass of a site takes only the end of its log; the resume cursor carries
-the change token of each site. `ListSiteChanges` reads the same log on its
-own. Both need the certificate credential.
+the change token of each site. Changes to SharePoint groups and their members
+are only in the site collection's log (`scope`), and name the group, not the
+member. `ListSiteChanges` reads the same log on its own. Both need the
+certificate credential.
 
 ## Permissions
 
@@ -257,6 +263,7 @@ All are application permissions with admin consent.
 | `ListSiteGroups`, `GetSiteRoleInheritance` | SharePoint `Sites.Selected` plus a grant on the site, certificate credential | site grant `manage` |
 | `ListSiteGroupMembers`, `ListSiteRoleAssignments` | SharePoint `Sites.Selected` plus site grant `fullcontrol`, certificate credential (refused with `manage`) | site grant `fullcontrol`; also SharePoint `Sites.FullControl.All` |
 | `ListSiteChanges`, `WatchChanges` with `site_changes` | SharePoint `Sites.Selected` plus a grant on the site, certificate credential | site grant `fullcontrol` (not tried with `manage`) |
+| `CreateSiteGroup`, `DeleteSiteGroup`, `AddSiteGroupMember`, `RemoveSiteGroupMember`, `ListSiteRoleDefinitions`, `AddSiteRoleAssignment`, `RemoveSiteRoleAssignment`, `SetSiteRoleInheritance` | SharePoint `Sites.Selected` plus a grant on the site, certificate credential | site grant `fullcontrol` (not tried with `manage`) |
 | `ListPermissions` on a site | Graph `Sites.FullControl.All` | that |
 | `MicrosoftAdminService` | Graph `Sites.FullControl.All` | that (grant created, changed and revoked) |
 

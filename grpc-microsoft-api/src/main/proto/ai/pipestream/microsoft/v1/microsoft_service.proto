@@ -229,6 +229,38 @@ service MicrosoftService {
   // parent's again.
   rpc SetSiteRoleInheritance(SetSiteRoleInheritanceRequest) returns (SetSiteRoleInheritanceResponse);
 
+  // Creates a SharePoint group in a site. Needs a certificate credential.
+  // SharePoint REST: POST {web}/_api/web/sitegroups.
+  rpc CreateSiteGroup(CreateSiteGroupRequest) returns (CreateSiteGroupResponse);
+
+  // Deletes a SharePoint group of a site, and with it every role assignment
+  // the group holds. Needs a certificate credential.
+  // SharePoint REST: POST {web}/_api/web/sitegroups/removebyid({id}).
+  rpc DeleteSiteGroup(DeleteSiteGroupRequest) returns (DeleteSiteGroupResponse);
+
+  // Adds a user or a directory group to a SharePoint group. Needs a
+  // certificate credential.
+  // SharePoint REST: POST {web}/_api/web/sitegroups/getbyid({id})/users.
+  rpc AddSiteGroupMember(AddSiteGroupMemberRequest) returns (AddSiteGroupMemberResponse);
+
+  // Removes a member from a SharePoint group. Needs a certificate credential.
+  // SharePoint REST: POST {web}/_api/web/sitegroups/getbyid({id})/users/removebyid({member id}).
+  rpc RemoveSiteGroupMember(RemoveSiteGroupMemberRequest) returns (RemoveSiteGroupMemberResponse);
+
+  // The permission levels of a site, as a stream. Needs a certificate
+  // credential. SharePoint REST: GET {web}/_api/web/roledefinitions.
+  rpc ListSiteRoleDefinitions(ListSiteRoleDefinitionsRequest) returns (stream ListSiteRoleDefinitionsResponse);
+
+  // Grants a principal a permission level on a site, list or list item that
+  // has its own role assignments. Needs a certificate credential. SharePoint
+  // REST: POST {securable}/roleassignments/addroleassignment(principalid,roledefid).
+  rpc AddSiteRoleAssignment(AddSiteRoleAssignmentRequest) returns (AddSiteRoleAssignmentResponse);
+
+  // Takes a permission level from a principal on a site, list or list item
+  // that has its own role assignments. Needs a certificate credential.
+  // SharePoint REST: POST {securable}/roleassignments/removeroleassignment(principalid,roledefid).
+  rpc RemoveSiteRoleAssignment(RemoveSiteRoleAssignmentRequest) returns (RemoveSiteRoleAssignmentResponse);
+
   // What changed in a site, its site collection or one of its lists since a
   // change token, as a stream that ends with the token to resume from. Names
   // changes to role assignments, role inheritance, groups and group members.
@@ -1205,6 +1237,133 @@ message SetSiteRoleInheritanceResponse {
   // True when the securable now has its own role assignments.
   bool has_unique_role_assignments = 1;
 }
+
+// Request to create a SharePoint group in a site.
+message CreateSiteGroupRequest {
+  // Site id.
+  string site_id = 1;
+  // Name of the group; must be new in the site collection.
+  string title = 2;
+  // Description; empty = none.
+  string description = 3;
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 4;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// The group that was created.
+message CreateSiteGroupResponse {
+  // The new group.
+  SiteGroup group = 1;
+}
+
+// Request to delete a SharePoint group of a site.
+message DeleteSiteGroupRequest {
+  // Site id.
+  string site_id = 1;
+  // Id of the SharePoint group within the site collection.
+  int32 group_id = 2;
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 3;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// Empty: the group is gone.
+message DeleteSiteGroupResponse {}
+
+// Request to add a member to a SharePoint group.
+message AddSiteGroupMemberRequest {
+  // Site id.
+  string site_id = 1;
+  // Id of the SharePoint group within the site collection.
+  int32 group_id = 2;
+  // Exactly one arm names the member.
+  oneof member {
+    // Login name, the claims-encoded identity of a user or directory group.
+    string login_name = 3;
+    // User principal name of an Entra user.
+    string user_principal_name = 4;
+  }
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 5;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// The member as the site knows it after the add.
+message AddSiteGroupMemberResponse {
+  // The member, with its id within the site collection.
+  SitePrincipal member = 1;
+}
+
+// Request to remove a member from a SharePoint group.
+message RemoveSiteGroupMemberRequest {
+  // Site id.
+  string site_id = 1;
+  // Id of the SharePoint group within the site collection.
+  int32 group_id = 2;
+  // Id of the member within the site collection (`SitePrincipal.id`).
+  int32 member_id = 3;
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 4;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// Empty: the principal is no longer a member.
+message RemoveSiteGroupMemberResponse {}
+
+// Request to list the permission levels of a site.
+message ListSiteRoleDefinitionsRequest {
+  // Site id.
+  string site_id = 1;
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 2;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// One permission level of the site.
+message ListSiteRoleDefinitionsResponse {
+  // The permission level.
+  SiteRoleDefinition role = 1;
+}
+
+// Request to grant a principal a permission level.
+message AddSiteRoleAssignmentRequest {
+  // The site, list or list item; it must have its own role assignments.
+  SiteSecurable securable = 1;
+  // Id of the user, directory group or SharePoint group within the site collection.
+  int32 principal_id = 2;
+  // Id of the permission level (`SiteRoleDefinition.id`).
+  int64 role_definition_id = 3;
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 4;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// Empty: the principal holds the permission level.
+message AddSiteRoleAssignmentResponse {}
+
+// Request to take a permission level from a principal.
+message RemoveSiteRoleAssignmentRequest {
+  // The site, list or list item; it must have its own role assignments.
+  SiteSecurable securable = 1;
+  // Id of the user, directory group or SharePoint group within the site collection.
+  int32 principal_id = 2;
+  // Id of the permission level (`SiteRoleDefinition.id`).
+  int64 role_definition_id = 3;
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 4;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// Empty: the principal no longer holds the permission level.
+message RemoveSiteRoleAssignmentResponse {}
 
 // Request to list the SharePoint groups of a site.
 message ListSiteGroupsRequest {

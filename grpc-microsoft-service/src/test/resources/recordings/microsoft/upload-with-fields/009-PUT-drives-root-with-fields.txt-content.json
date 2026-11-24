@@ -7,7 +7,7 @@
       "content-type" : "application/octet-stream"
     },
     "body" : {
-      "sha256" : "8a3b9768308425e6183fcaaf431112527e5bc39e7f127693642f1be7c4f16eed",
+      "sha256" : "33a4ee7e1c948d78c0a563acc21b1acda5476323ecc11ce4db9f6e5d101804ff",
       "length" : 59
     }
   },
@@ -19,14 +19,14 @@
     "body" : {
       "json" : {
         "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#drives('b%21drive-0013')/root/$entity",
-        "@microsoft.graph.downloadUrl" : "https://redacted.example/url/146",
-        "createdDateTime" : "2026-11-24T18:06:18Z",
-        "eTag" : "\"{00000000-0000-4000-8000-000000000197},1\"",
+        "@microsoft.graph.downloadUrl" : "https://redacted.example/url/173",
+        "createdDateTime" : "2026-11-24T19:18:14Z",
+        "eTag" : "\"{00000000-0000-4000-8000-000000000223},1\"",
         "id" : "item-0010",
-        "lastModifiedDateTime" : "2026-11-24T18:06:18Z",
+        "lastModifiedDateTime" : "2026-11-24T19:18:14Z",
         "name" : "with-fields.txt",
-        "webUrl" : "https://redacted.example/url/147",
-        "cTag" : "\"c:{00000000-0000-4000-8000-000000000197},1\"",
+        "webUrl" : "https://redacted.example/url/174",
+        "cTag" : "\"c:{00000000-0000-4000-8000-000000000223},1\"",
         "isAuthoritative" : false,
         "size" : 59,
         "createdBy" : {
@@ -51,19 +51,19 @@
           "driveType" : "documentLibrary",
           "driveId" : "b!drive-0013",
           "id" : "item-0002",
-          "name" : "pipestreamlivewrite20261124180508d9609f93lib",
+          "name" : "pipestreamlivewrite20261124191715910a14fdlib",
           "path" : "/drives/b!drive-0013/root:",
           "siteId" : "00000000-0000-4000-8000-000000000001"
         },
         "file" : {
           "mimeType" : "text/plain",
           "hashes" : {
-            "quickXorHash" : "bePpZzZycUdDrsmX0ZJO8bWl1yQ="
+            "quickXorHash" : "fWPpbxZyfEcDudn3Ubpusb/6byY="
           }
         },
         "fileSystemInfo" : {
-          "createdDateTime" : "2026-11-24T18:06:18Z",
-          "lastModifiedDateTime" : "2026-11-24T18:06:18Z"
+          "createdDateTime" : "2026-11-24T19:18:14Z",
+          "lastModifiedDateTime" : "2026-11-24T19:18:14Z"
         },
         "shared" : {
           "scope" : "users"

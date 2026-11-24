@@ -106,8 +106,8 @@ class MicrosoftChangeReplayTest {
                 serviceBus, true, backend.clientState(), Clock.systemUTC());
         executor = Executors.newVirtualThreadPerTaskExecutor();
         String name = InProcessServerBuilder.generateName();
-        server = InProcessServerBuilder.forName(name).executor(executor).addService(service).build()
-                .start();
+        server = InProcessServerBuilder.forName(name).executor(executor).addService(service)
+                .addService(microsoft).build().start();
         channel = InProcessChannelBuilder.forName(name).build();
         HttpClient http = HttpClient.newHttpClient();
         String local = "http://127.0.0.1:" + receiver.port();
@@ -141,7 +141,8 @@ class MicrosoftChangeReplayTest {
             }
         };
         scenarios = new ChangeScenarios(MicrosoftChangeServiceGrpc.newBlockingStub(channel),
-                MicrosoftChangeServiceGrpc.newStub(channel), client, backend, receiverBus,
+                MicrosoftChangeServiceGrpc.newStub(channel),
+                    ai.pipestream.microsoft.v1.MicrosoftServiceGrpc.newBlockingStub(channel), client, backend, receiverBus,
                 serviceBus, replay, renewer, () -> ChangeScenarios.renewer(service::subscriptions,
                         new NotificationBus(), backend));
         NotificationBus.Listener listener = scenarios.listen();

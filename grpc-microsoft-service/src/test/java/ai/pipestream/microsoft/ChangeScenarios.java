@@ -13,12 +13,15 @@ import ai.pipestream.microsoft.v1.ListSubscriptionRenewalsRequest;
 import ai.pipestream.microsoft.v1.ListSubscriptionsRequest;
 import ai.pipestream.microsoft.v1.MicrosoftChange;
 import ai.pipestream.microsoft.v1.MicrosoftChangeServiceGrpc;
+import ai.pipestream.microsoft.v1.MicrosoftServiceGrpc;
 import ai.pipestream.microsoft.v1.PassTrigger;
 import ai.pipestream.microsoft.v1.ReauthorizeSubscriptionRequest;
 import ai.pipestream.microsoft.v1.RenewalAction;
 import ai.pipestream.microsoft.v1.SiteChange;
 import ai.pipestream.microsoft.v1.SiteChangeObject;
+import ai.pipestream.microsoft.v1.SiteChangeScope;
 import ai.pipestream.microsoft.v1.SiteChangeSnapshot;
+import ai.pipestream.microsoft.v1.SiteChangeType;
 import ai.pipestream.microsoft.v1.SiteChangeWatch;
 import ai.pipestream.microsoft.v1.Subscription;
 import ai.pipestream.microsoft.v1.SubscriptionChangeType;
@@ -114,6 +117,7 @@ final class ChangeScenarios {
 
     private final MicrosoftChangeServiceGrpc.MicrosoftChangeServiceBlockingStub blocking;
     private final MicrosoftChangeServiceGrpc.MicrosoftChangeServiceStub async;
+    private final MicrosoftServiceGrpc.MicrosoftServiceBlockingStub microsoft;
     private final GraphClient graph;
     private final Backend backend;
     private final NotificationBus receiverBus;
@@ -129,17 +133,20 @@ final class ChangeScenarios {
     private long shortLivedCreated;
     private Duration lifecycleWait = LIFECYCLE_WAIT;
     private String directoryCursor;
+    private String userPrincipalName;
     private String fileId;
     private Context.CancellableContext watch;
     private final BlockingQueue<WatchChangesResponse> watched = new LinkedBlockingQueue<>();
 
     ChangeScenarios(MicrosoftChangeServiceGrpc.MicrosoftChangeServiceBlockingStub blocking,
-            MicrosoftChangeServiceGrpc.MicrosoftChangeServiceStub async, GraphClient graph,
+            MicrosoftChangeServiceGrpc.MicrosoftChangeServiceStub async,
+            MicrosoftServiceGrpc.MicrosoftServiceBlockingStub microsoft, GraphClient graph,
             Backend backend, NotificationBus receiverBus, NotificationBus serviceBus,
             Notifications notifications, SubscriptionRenewer renewer,
             Supplier<SubscriptionRenewer> restarted) {
         this.blocking = blocking;
         this.async = async;
+        this.microsoft = microsoft;
         this.graph = graph;
         this.backend = backend;
         this.receiverBus = receiverBus;
@@ -222,7 +229,7 @@ final class ChangeScenarios {
                         "CreateSubscription (the members of one Entra group)",
                         this::subscribeToGroupMembers),
                 new Scenario("23-watch-site-log", "WatchChanges",
-                        "WatchChanges (the site's change log after a sharing link is added)",
+                        "WatchChanges (the site collection's change log: a sharing link, a group member)",
                         this::watchSiteLog));
     }
 
@@ -550,6 +557,9 @@ final class ChangeScenarios {
         check(last.getPassCompleted().getChangeCount() >= users + groups,
                 "the pass counted " + last.getPassCompleted().getChangeCount() + " change(s)");
         directoryCursor = last.getResumeCursor();
+        userPrincipalName = pass.stream().filter(WatchChangesResponse::hasUserChange)
+                .map(message -> message.getUserChange().getUser().getUserPrincipalName())
+                .filter(name -> !name.isBlank()).findFirst().orElse(null);
         return users + " user(s), " + groups + " group(s) with " + members + " member change(s)";
     }
 
@@ -568,8 +578,10 @@ final class ChangeScenarios {
         if (backend.siteId().isBlank()) {
             throw new Skip("the run does not know the site of the drive");
         }
+        need(userPrincipalName, "a directory user with a sign-in name");
         WatchChangesRequest.Builder request = WatchChangesRequest.newBuilder()
-                .setSiteChanges(SiteChangeWatch.newBuilder().addSiteIds(backend.siteId()));
+                .setSiteChanges(SiteChangeWatch.newBuilder().addSiteIds(backend.siteId())
+                        .setScope(SiteChangeScope.SITE_CHANGE_SCOPE_SITE_COLLECTION));
         List<WatchChangesResponse> first;
         try {
             first = firstPass(request.build());
@@ -600,6 +612,20 @@ final class ChangeScenarios {
             graph.delete("/drives/" + backend.driveId() + "/items/" + id);
         }
 
+        int groupId = microsoft.createSiteGroup(ai.pipestream.microsoft.v1.CreateSiteGroupRequest.newBuilder()
+                .setSiteId(backend.siteId()).setTitle("pipestream-live-change-" + backend.suffix() + "-group")
+                .setDescription("Created by a live test run; safe to delete.").build()).getGroup().getId();
+        try {
+            int memberId = microsoft.addSiteGroupMember(ai.pipestream.microsoft.v1.AddSiteGroupMemberRequest.newBuilder()
+                    .setSiteId(backend.siteId()).setGroupId(groupId)
+                    .setUserPrincipalName(userPrincipalName).build()).getMember().getId();
+            microsoft.removeSiteGroupMember(ai.pipestream.microsoft.v1.RemoveSiteGroupMemberRequest.newBuilder()
+                    .setSiteId(backend.siteId()).setGroupId(groupId).setMemberId(memberId).build());
+        } finally {
+            microsoft.deleteSiteGroup(ai.pipestream.microsoft.v1.DeleteSiteGroupRequest.newBuilder()
+                    .setSiteId(backend.siteId()).setGroupId(groupId).build());
+        }
+
         List<WatchChangesResponse> next = firstPass(request.setResumeCursor(cursor).build());
         SiteChangeSnapshot read = siteSnapshot(next);
         List<SiteChange> changes = next.stream().filter(WatchChangesResponse::hasSiteChange)
@@ -614,7 +640,15 @@ final class ChangeScenarios {
         check(changes.stream().anyMatch(change -> change.getObject()
                 == SiteChangeObject.SITE_CHANGE_OBJECT_ITEM && change.getSecurable().hasListItem()),
                 "the log holds no list item change: " + kinds);
-        return "first pass took the end of the log; after a file was shared: " + kinds;
+        for (SiteChangeType membership : List.of(SiteChangeType.SITE_CHANGE_TYPE_GROUP_MEMBER_ADD,
+                SiteChangeType.SITE_CHANGE_TYPE_GROUP_MEMBER_DELETE)) {
+            check(changes.stream().anyMatch(change -> change.getType() == membership
+                    && change.getObject() == SiteChangeObject.SITE_CHANGE_OBJECT_GROUP
+                    && change.getGroupId() == groupId),
+                    "the log holds no " + membership + " of the run's group: " + kinds);
+        }
+        return "first pass took the end of the log; after a file was shared and a group got and lost "
+                + "a member: " + kinds;
     }
 
     private static SiteChangeSnapshot siteSnapshot(List<WatchChangesResponse> pass) {

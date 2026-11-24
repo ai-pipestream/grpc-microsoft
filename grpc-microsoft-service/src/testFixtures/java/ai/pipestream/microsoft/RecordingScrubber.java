@@ -46,6 +46,8 @@ final class RecordingScrubber {
     /** Properties of a directory object that say nothing about who it is. */
     private static final Set<String> DIRECTORY_KEPT = Set.of("id", "@odata.type", "userType",
             "visibility", "groupTypes", "preferredLanguage");
+    /** Starts the name of everything a live run creates. */
+    static final String LIVE_RUN_PREFIX = "pipestream-live-";
     /** Properties of a SharePoint principal that hold its name. */
     private static final Set<String> PRINCIPAL_NAMES = Set.of("Title", "Description", "OwnerTitle");
     /** Properties of a SharePoint change log entry that name no person, place or title. */
@@ -113,7 +115,9 @@ final class RecordingScrubber {
                     out.set(entry.getKey(), changeValue(value));
                 } else if (principal && value.isTextual() && (PRINCIPAL_NAMES.contains(entry.getKey())
                         || (entry.getKey().equals("LoginName") && value.asText().indexOf('|') < 0))) {
-                    out.put(entry.getKey(), name("principal", value.asText(), "Principal %d"));
+                    // A principal a live run created carries the run's own name.
+                    out.put(entry.getKey(), value.asText().startsWith(LIVE_RUN_PREFIX) ? value.asText()
+                            : name("principal", value.asText(), "Principal %d"));
                 } else if (value.isTextual() && (node.has(entry.getKey() + "LookupId")
                         || (entry.getKey().equals("LookupValue") && node.has("LookupId")))) {
                     // The shown value of a lookup or person column can be a person's name.

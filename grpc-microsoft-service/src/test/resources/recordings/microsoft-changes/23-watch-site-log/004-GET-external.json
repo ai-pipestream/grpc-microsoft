@@ -1,7 +1,7 @@
 {
   "request" : {
     "method" : "GET",
-    "url" : "https://redacted.example/url/6/_api/web?$select=CurrentChangeToken",
+    "url" : "https://redacted.example/url/6/_api/site?$select=CurrentChangeToken",
     "authorized" : true,
     "headers" : { }
   },
@@ -13,7 +13,7 @@
     "body" : {
       "json" : {
         "CurrentChangeToken" : {
-          "StringValue" : "1;2;00000000-0000-4000-8000-000000000002;639311396481430000;1675686213"
+          "StringValue" : "1;1;00000000-0000-4000-8000-000000000001;639311502174230000;1675728790"
         }
       }
     }
