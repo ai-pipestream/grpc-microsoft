@@ -41,6 +41,7 @@ public final class OutputMicrosoftChangeSink implements MicrosoftChangeSink, Aut
     private final List<OutputFormat> formats;
     private final String prefix;
     private final RunMirror<Message> mirror = new RunMirror<>();
+    private final RunMirror<Message>.Pass own = mirror.pass("");
 
     /**
      * Creates a sink.
@@ -101,8 +102,51 @@ public final class OutputMicrosoftChangeSink implements MicrosoftChangeSink, Aut
 
     @Override
     public void emit(MicrosoftChange change) {
+        emit(own, change);
+    }
+
+    @Override
+    public void snapshot(MicrosoftSnapshot snapshot) {
+        // Snapshots are crawl markers; artifacts come from emit/complete.
+    }
+
+    @Override
+    public void completeRun(String runId, Set<MicrosoftEntity.EntityCase> enumerated) {
+        complete(own, runId, enumerated);
+    }
+
+    /**
+     * This sink for the Sync passes of one connection. The view collects
+     * that Sync's records on its own, and a pass of it replaces only that
+     * connection's records in the bundle.
+     *
+     * @param connectionId the catalog connection id
+     * @return the view; one per Sync
+     */
+    @Override
+    public MicrosoftChangeSink forConnection(String connectionId) {
+        RunMirror<Message>.Pass pass = mirror.pass(connectionId);
+        return new MicrosoftChangeSink() {
+            @Override
+            public void emit(MicrosoftChange change) {
+                OutputMicrosoftChangeSink.this.emit(pass, change);
+            }
+
+            @Override
+            public void snapshot(MicrosoftSnapshot snapshot) {
+                OutputMicrosoftChangeSink.this.snapshot(snapshot);
+            }
+
+            @Override
+            public void completeRun(String runId, Set<MicrosoftEntity.EntityCase> enumerated) {
+                complete(pass, runId, enumerated);
+            }
+        };
+    }
+
+    private void emit(RunMirror<Message>.Pass pass, MicrosoftChange change) {
         String relative = MicrosoftObjectKeys.of(change);
-        mirror.put(relative, change.getEntity().getEntityCase(), change);
+        pass.put(relative, change.getEntity().getEntityCase(), change);
         String key = ObjectKeys.under(prefix, relative);
         try {
             for (OutputFormat format : formats) {
@@ -115,27 +159,28 @@ public final class OutputMicrosoftChangeSink implements MicrosoftChangeSink, Aut
         }
     }
 
-    @Override
-    public void snapshot(MicrosoftSnapshot snapshot) {
-        // Snapshots are crawl markers; artifacts come from emit/complete.
-    }
-
-    @Override
-    public synchronized void completeRun(String runId,
+    private void complete(RunMirror<Message>.Pass pass, String runId,
             Set<MicrosoftEntity.EntityCase> enumerated) {
-        RunMirror.Completed<Message> completed = mirror.complete(enumerated);
-        String target = completed.increment()
-                ? ObjectKeys.under(prefix, ObjectKeys.join("increments", ObjectKeys.segment(runId)))
-                : prefix;
-        try {
-            for (OutputFormat format : formats) {
-                format.complete(store, completed.values(), target);
+        // One pass at a time writes the end-of-run artifacts.
+        synchronized (mirror) {
+            RunMirror.Completed<Message> completed = pass.complete(enumerated);
+            String target = completed.increment()
+                    ? ObjectKeys.under(prefix, ObjectKeys.join("increments",
+                            pass.connectionId().isEmpty()
+                                    ? "" : ObjectKeys.segment(pass.connectionId()),
+                            ObjectKeys.segment(runId)))
+                    : prefix;
+            try {
+                for (OutputFormat format : formats) {
+                    format.complete(store, completed.values(), target);
+                }
+                LOG.log(System.Logger.Level.INFO, "microsoft-proxy output wrote {0} records "
+                        + "store={1} prefix={2} connection={3} enumerated={4}",
+                        completed.values().size(), store.id(), target, pass.connectionId(),
+                        enumerated);
+            } catch (IOException e) {
+                throw new UncheckedIOException("output complete failed for run " + runId, e);
             }
-            LOG.log(System.Logger.Level.INFO,
-                    "microsoft-proxy output wrote {0} records store={1} prefix={2} enumerated={3}",
-                    completed.values().size(), store.id(), target, enumerated);
-        } catch (IOException e) {
-            throw new UncheckedIOException("output complete failed for run " + runId, e);
         }
     }
 

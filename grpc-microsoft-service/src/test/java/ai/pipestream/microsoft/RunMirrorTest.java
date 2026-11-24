@@ -70,4 +70,82 @@ class RunMirrorTest {
         assertThat(second.increment()).isTrue();
         assertThat(second.values()).containsExactly("b");
     }
+
+    @Test
+    void aFullRunOfOneConnectionKeepsTheEntriesOfAnother() {
+        RunMirror<String> mirror = new RunMirror<>();
+        RunMirror<String>.Pass x = mirror.pass("x");
+        RunMirror<String>.Pass y = mirror.pass("y");
+        x.put("x/1", EntityCase.DRIVE_ITEM, "x1");
+        x.complete(MicrosoftChangeSink.ALL_KINDS);
+        y.put("y/1", EntityCase.DRIVE_ITEM, "y1");
+
+        RunMirror.Completed<String> completed = y.complete(MicrosoftChangeSink.ALL_KINDS);
+
+        assertThat(completed.increment()).isFalse();
+        assertThat(completed.values()).containsExactly("x1", "y1");
+    }
+
+    @Test
+    void aFullRunDropsOnlyItsOwnConnectionsUnseenEntries() {
+        RunMirror<String> mirror = new RunMirror<>();
+        RunMirror<String>.Pass x = mirror.pass("x");
+        RunMirror<String>.Pass y = mirror.pass("y");
+        x.put("x/1", EntityCase.DRIVE_ITEM, "x1");
+        x.put("x/2", EntityCase.DRIVE_ITEM, "x2");
+        x.put("x/l", EntityCase.LIST_ITEM, "x-list");
+        x.complete(MicrosoftChangeSink.ALL_KINDS);
+        y.put("y/1", EntityCase.DRIVE_ITEM, "y1");
+        y.complete(MicrosoftChangeSink.ALL_KINDS);
+        // x/2 is gone; this run of x did not sweep lists.
+        x.put("x/1", EntityCase.DRIVE_ITEM, "x1b");
+
+        RunMirror.Completed<String> completed =
+                x.complete(Set.of(EntityCase.DRIVE_ITEM));
+
+        assertThat(completed.values()).containsExactlyInAnyOrder("x1b", "x-list", "y1");
+    }
+
+    @Test
+    void aBaselineOfOneConnectionIsNotABaselineForAnother() {
+        RunMirror<String> mirror = new RunMirror<>();
+        RunMirror<String>.Pass x = mirror.pass("x");
+        RunMirror<String>.Pass y = mirror.pass("y");
+        x.put("x/1", EntityCase.DRIVE_ITEM, "x1");
+        x.complete(MicrosoftChangeSink.ALL_KINDS);
+        y.put("y/1", EntityCase.DRIVE_ITEM, "y1");
+
+        // y has never been enumerated: its incremental run is not the
+        // connection's bundle, so it is written apart.
+        RunMirror.Completed<String> completed = y.complete(Set.of());
+
+        assertThat(completed.increment()).isTrue();
+        assertThat(completed.values()).containsExactly("y1");
+        assertThat(x.complete(Set.of()).values()).containsExactly("x1");
+    }
+
+    @Test
+    void twoPassesAtOnceCompleteWithTheirOwnValues() {
+        RunMirror<String> mirror = new RunMirror<>();
+        RunMirror<String>.Pass x = mirror.pass("x");
+        RunMirror<String>.Pass alsoX = mirror.pass("x");
+        x.put("a", EntityCase.DRIVE_ITEM, "a");
+        alsoX.put("b", EntityCase.DRIVE_ITEM, "b");
+
+        assertThat(x.complete(Set.of()).values()).containsExactly("a");
+        assertThat(alsoX.complete(Set.of()).values()).containsExactly("b");
+    }
+
+    @Test
+    void theUnnamedPassIsTheProcessDefaultConnection() {
+        RunMirror<String> mirror = new RunMirror<>();
+        mirror.put("a", EntityCase.DRIVE_ITEM, "a");
+        mirror.complete(MicrosoftChangeSink.ALL_KINDS);
+        RunMirror<String>.Pass unnamed = mirror.pass(null);
+
+        assertThat(unnamed.connectionId()).isEmpty();
+        // Same owner: its full run replaces what the default pass wrote.
+        unnamed.put("b", EntityCase.DRIVE_ITEM, "b");
+        assertThat(unnamed.complete(MicrosoftChangeSink.ALL_KINDS).values()).containsExactly("b");
+    }
 }

@@ -129,6 +129,14 @@ allowlist and no site has no lists, so there `include_security` is enough).
 A full `Sync` that leaves a flag out never read those rows and leaves them,
 and their records in the output mirror, as an earlier `Sync` wrote them.
 
+The output and OKF bundle is one for the process, shared by every
+connection. Each record in it belongs to the connection whose `Sync` wrote
+it: a complete `Sync` of one connection replaces that connection's records
+and leaves the others in the bundle, and two `Sync` calls running at once
+each write their own records when they finish. A connection with no
+complete `Sync` yet in this process writes an incremental pass beside the
+bundle, under `increments/<connection id>/<run id>`.
+
 Completed `Sync` runs write through the grpc-integration output SPI
 (`OUTPUT_DIR` / `OKF_DIR`, `OUTPUT_STORE`, `OUTPUT_FORMATS`, ...; see the
 grpc-integration README). This repo adds the `microsoft-connector` format
