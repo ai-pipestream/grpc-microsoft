@@ -1078,7 +1078,7 @@ public final class MicrosoftGrpcService
                             downstream.forConnection(session.connectionId())));
             MicrosoftCrawler.Result result = new MicrosoftCrawler(session.config(), session.files(), sink,
                     options, siteId -> sharePoint.web(session, siteId)).crawl();
-            sink.completeRun(result.runId(), result.complete());
+            sink.completeRun(result.runId(), result.enumerated());
             synchronized (lock) {
                 observer.onNext(SyncResponse.newBuilder()
                         .setResumeCursor(SyncCursors.encode(result.cursor())).build());

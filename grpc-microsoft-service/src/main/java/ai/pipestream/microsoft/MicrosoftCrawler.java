@@ -20,6 +20,8 @@ import com.google.protobuf.Timestamp;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -124,10 +126,34 @@ public final class MicrosoftCrawler {
      *        list was swept, and the options named no narrower scope (drives,
      *        sites or folder) than the connection's own. Only then may a sink
      *        treat what the pass did not emit as gone
+     * @param enumerated the kinds of entity a complete pass enumerated in
+     *        full, and so the only kinds for which a sink may treat what the
+     *        pass did not emit as gone; empty when the pass was not complete.
+     *        Sites, drives and drive items are always among them. Lists and
+     *        list items are only when the pass swept the lists of a site;
+     *        site groups and admins only when it read the security of a
+     *        site; ACLs only when it read security and left out no list that
+     *        could hold one
      * @param cursor every delta link for the next pass (links of drives and lists
      *        outside this pass's scope are carried over unchanged)
      */
-    public record Result(String runId, boolean fullSweep, boolean complete, SyncCursor cursor) {
+    public record Result(String runId, boolean fullSweep, boolean complete,
+            Set<MicrosoftEntity.EntityCase> enumerated, SyncCursor cursor) {
+
+        /**
+         * Copies the set of kinds.
+         *
+         * @param runId the pass's run id
+         * @param fullSweep whether every sweep was a full enumeration
+         * @param complete whether the pass covered the whole connection in full
+         * @param enumerated the kinds enumerated in full
+         * @param cursor the delta links for the next pass
+         */
+        public Result {
+            enumerated = Collections.unmodifiableSet(enumerated.isEmpty()
+                    ? EnumSet.noneOf(MicrosoftEntity.EntityCase.class)
+                    : EnumSet.copyOf(enumerated));
+        }
     }
 
     /** Gives the crawler the SharePoint REST API of a site. */
@@ -265,7 +291,43 @@ public final class MicrosoftCrawler {
             }
         }
         boolean complete = fullSweep && sweeps > 0 && coversConnectionScope();
-        return new Result(runId, fullSweep, complete, cursor.build());
+        return new Result(runId, fullSweep, complete,
+                complete ? enumeratedKinds(!sites.isEmpty(), options.includeLists(),
+                        options.security()) : Set.of(),
+                cursor.build());
+    }
+
+    /**
+     * The kinds of entity a complete pass reads in full. Lists and security
+     * are read per site and only on request, so a pass without a site in
+     * scope, or without the flag, says nothing about them. ACLs hang off
+     * sites, libraries and lists alike: with a site in scope they were all
+     * read only when its lists were swept too.
+     *
+     * @param sitesInScope whether the pass read at least one site
+     * @param includeLists whether the pass swept the lists of its sites
+     * @param security whether the pass read SharePoint security
+     * @return the kinds; sites, drives and drive items always
+     */
+    static Set<MicrosoftEntity.EntityCase> enumeratedKinds(boolean sitesInScope,
+            boolean includeLists, boolean security) {
+        Set<MicrosoftEntity.EntityCase> kinds = EnumSet.of(MicrosoftEntity.EntityCase.SITE,
+                MicrosoftEntity.EntityCase.DRIVE, MicrosoftEntity.EntityCase.DRIVE_ITEM);
+        boolean lists = includeLists && sitesInScope;
+        if (lists) {
+            kinds.add(MicrosoftEntity.EntityCase.LIST);
+            kinds.add(MicrosoftEntity.EntityCase.LIST_ITEM);
+        }
+        if (security) {
+            if (sitesInScope) {
+                kinds.add(MicrosoftEntity.EntityCase.SITE_GROUP);
+                kinds.add(MicrosoftEntity.EntityCase.SITE_ADMINS);
+            }
+            if (lists || !sitesInScope) {
+                kinds.add(MicrosoftEntity.EntityCase.SITE_ACL);
+            }
+        }
+        return kinds;
     }
 
     /**

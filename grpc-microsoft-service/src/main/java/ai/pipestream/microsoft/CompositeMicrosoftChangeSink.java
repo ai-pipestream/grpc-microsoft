@@ -1,9 +1,11 @@
 package ai.pipestream.microsoft;
 
 import ai.pipestream.microsoft.v1.MicrosoftChange;
+import ai.pipestream.microsoft.v1.MicrosoftEntity;
 import ai.pipestream.microsoft.v1.MicrosoftSnapshot;
 
 import java.util.List;
+import java.util.Set;
 
 /**
  * Fans one emission out to several sinks, in list order. An exception from an
@@ -40,14 +42,9 @@ public final class CompositeMicrosoftChangeSink implements MicrosoftChangeSink {
     }
 
     @Override
-    public void completeRun(String runId) {
-        completeRun(runId, true);
-    }
-
-    @Override
-    public void completeRun(String runId, boolean fullSweep) {
+    public void completeRun(String runId, Set<MicrosoftEntity.EntityCase> enumerated) {
         for (MicrosoftChangeSink sink : sinks) {
-            sink.completeRun(runId, fullSweep);
+            sink.completeRun(runId, enumerated);
         }
     }
 

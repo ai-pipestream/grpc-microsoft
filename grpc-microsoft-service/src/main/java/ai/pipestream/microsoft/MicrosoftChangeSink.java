@@ -1,7 +1,12 @@
 package ai.pipestream.microsoft;
 
 import ai.pipestream.microsoft.v1.MicrosoftChange;
+import ai.pipestream.microsoft.v1.MicrosoftEntity;
 import ai.pipestream.microsoft.v1.MicrosoftSnapshot;
+
+import java.util.Collections;
+import java.util.EnumSet;
+import java.util.Set;
 
 /**
  * Where the Microsoft crawler's output goes. Implementations must be
@@ -9,13 +14,14 @@ import ai.pipestream.microsoft.v1.MicrosoftSnapshot;
  * {@link OkfMicrosoftChangeSink} writes OKF + WARC when {@code OKF_DIR}
  * or {@code OKF_SPO_DRIVE_ID} is set.
  *
- * <p>A pass ends with {@link #completeRun(String, boolean)}. Only a complete
- * pass ({@code fullSweep}: every sweep was a full enumeration and the pass
- * covered everything the connection covers) lets a sink treat entities it
+ * <p>A pass ends with {@link #completeRun(String, Set)}, which names the
+ * kinds of entity the pass enumerated in full over everything the
+ * connection covers. Only for those kinds may a sink treat an entity it
  * holds but the pass did not emit as gone. After an incremental (delta)
- * pass unseen entities are unchanged, and after a pass narrowed to some
- * drives, some sites or a folder they were never looked at; both must be
- * kept.</p>
+ * pass unseen entities are unchanged; after a pass narrowed to some drives,
+ * some sites or a folder they were never looked at; and a pass that did not
+ * ask for lists or for security never read those kinds at all. In each case
+ * the entities must be kept.</p>
  */
 public interface MicrosoftChangeSink {
 
@@ -35,29 +41,46 @@ public interface MicrosoftChangeSink {
     void snapshot(MicrosoftSnapshot snapshot);
 
     /**
-     * A full-sweep run finished. Sync-table sinks reconcile rows not seen in
-     * {@code runId}; others ignore.
+     * Every kind of entity a change can carry.
+     */
+    Set<MicrosoftEntity.EntityCase> ALL_KINDS = Collections.unmodifiableSet(
+            EnumSet.complementOf(EnumSet.of(MicrosoftEntity.EntityCase.ENTITY_NOT_SET)));
+
+    /**
+     * A run that enumerated every kind of entity in full finished. Forwards
+     * to {@link #completeRun(String, Set)} with {@link #ALL_KINDS}.
      *
      * @param runId identifier of the completed run
      */
     default void completeRun(String runId) {
+        completeRun(runId, ALL_KINDS);
     }
 
     /**
-     * A run finished. The default forwards complete passes to
-     * {@link #completeRun(String)} and ignores incremental and narrowed
-     * passes, so a sink that reconciles by run id never deletes entities
-     * that are unchanged or were outside the pass.
+     * A run finished. Forwards to {@link #completeRun(String, Set)} with
+     * {@link #ALL_KINDS} for a complete pass and with no kind otherwise.
      *
      * @param runId identifier of the completed run
-     * @param fullSweep whether the pass was complete: every sweep a full
-     *        enumeration, over everything the connection covers
-     *        ({@link MicrosoftCrawler.Result#complete()})
+     * @param fullSweep whether the pass enumerated every kind of entity in
+     *        full, over everything the connection covers
      */
     default void completeRun(String runId, boolean fullSweep) {
-        if (fullSweep) {
-            completeRun(runId);
-        }
+        completeRun(runId, fullSweep ? ALL_KINDS : Set.of());
+    }
+
+    /**
+     * A run finished. Sync-table sinks reconcile, for each kind in
+     * {@code enumerated}, the rows the run did not write; mirrors drop the
+     * entities of those kinds the run did not emit. Entities of every other
+     * kind are kept. The default does nothing.
+     *
+     * @param runId identifier of the completed run
+     * @param enumerated the kinds of entity the pass enumerated in full over
+     *        everything the connection covers
+     *        ({@link MicrosoftCrawler.Result#enumerated()}); empty after an
+     *        incremental or a narrowed pass
+     */
+    default void completeRun(String runId, Set<MicrosoftEntity.EntityCase> enumerated) {
     }
 
     /**

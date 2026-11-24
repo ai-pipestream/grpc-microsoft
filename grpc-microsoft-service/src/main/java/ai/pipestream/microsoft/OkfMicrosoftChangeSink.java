@@ -1,6 +1,7 @@
 package ai.pipestream.microsoft;
 
 import ai.pipestream.microsoft.v1.MicrosoftChange;
+import ai.pipestream.microsoft.v1.MicrosoftEntity;
 import ai.pipestream.microsoft.v1.MicrosoftSnapshot;
 import ai.pipestream.okf.CatalogEntry;
 import ai.pipestream.okf.KnowledgeBundle;
@@ -12,24 +13,23 @@ import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.Set;
 
 /**
  * Accumulates Microsoft Graph changes into an OKF v0.2 directory tree, zip,
  * and sibling WARC 1.1 file. Optionally uploads that payload to a SharePoint
  * library ({@code OKF_SPO_DRIVE_ID}). Materializes on
- * {@link #completeRun(String, boolean)}.
+ * {@link #completeRun(String, Set)}.
  *
- * <p>The bundle is a mirror: a full-sweep run replaces it with exactly the
- * entries it emitted, an incremental run merges its entries (deletes become
- * {@code status: deprecated}) into the last full sweep's, so unchanged entities
- * are never dropped. An incremental run with no full sweep earlier in this
- * process writes only its own entries, beside the configured bundle under an
- * {@code increments} name, never over it.</p>
+ * <p>The bundle is a mirror: a run replaces the entries of the kinds of
+ * entity it enumerated in full with exactly the entries it emitted and keeps
+ * the entries of every other kind, an incremental run merges its entries
+ * (deletes become {@code status: deprecated}) into the mirror, so unchanged
+ * entities are never dropped. An incremental run with nothing enumerated in
+ * full earlier in this process writes only its own entries, beside the
+ * configured bundle under an {@code increments} name, never over it (see
+ * {@link RunMirror}).</p>
  */
 public final class OkfMicrosoftChangeSink implements MicrosoftChangeSink {
 
@@ -37,9 +37,7 @@ public final class OkfMicrosoftChangeSink implements MicrosoftChangeSink {
 
     private final OkfOutput output;
     private final SharePointOkfPublisher publisher;
-    private final Map<String, CatalogEntry> run = new ConcurrentHashMap<>();
-    private final Map<String, CatalogEntry> mirror = new LinkedHashMap<>();
-    private boolean baseline;
+    private final RunMirror<CatalogEntry> mirror = new RunMirror<>();
 
     /**
      * Creates a sink.
@@ -78,7 +76,8 @@ public final class OkfMicrosoftChangeSink implements MicrosoftChangeSink {
      */
     @Override
     public void emit(MicrosoftChange change) {
-        MicrosoftCatalog.from(change).ifPresent(entry -> run.put(entry.path(), entry));
+        MicrosoftCatalog.from(change).ifPresent(entry ->
+                mirror.put(entry.path(), change.getEntity().getEntityCase(), entry));
     }
 
     /**
@@ -93,31 +92,10 @@ public final class OkfMicrosoftChangeSink implements MicrosoftChangeSink {
      * {@inheritDoc}
      */
     @Override
-    public void completeRun(String runId) {
-        completeRun(runId, true);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public synchronized void completeRun(String runId, boolean fullSweep) {
-        List<CatalogEntry> captured;
-        boolean increment = false;
-        if (fullSweep) {
-            mirror.clear();
-            mirror.putAll(run);
-            baseline = true;
-            captured = new ArrayList<>(mirror.values());
-        } else if (baseline) {
-            mirror.putAll(run);
-            captured = new ArrayList<>(mirror.values());
-        } else {
-            captured = new ArrayList<>(run.values());
-            increment = true;
-        }
-        run.clear();
-        write(runId, captured, increment);
+    public synchronized void completeRun(String runId,
+            Set<MicrosoftEntity.EntityCase> enumerated) {
+        RunMirror.Completed<CatalogEntry> completed = mirror.complete(enumerated);
+        write(runId, completed.values(), completed.increment());
     }
 
     private void write(String runId, List<CatalogEntry> captured, boolean increment) {
