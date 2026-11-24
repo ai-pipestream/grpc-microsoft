@@ -1,0 +1,456 @@
+{
+  "request" : {
+    "method" : "GET",
+    "url" : "https://graph.microsoft.com/v1.0/sites/tenant-1.example,00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000002/drives?$select=id,name,driveType,description,webUrl,eTag,createdDateTime,lastModifiedDateTime,createdBy,lastModifiedBy,owner,quota,sharePointIds,system",
+    "authorized" : true,
+    "headers" : { }
+  },
+  "response" : {
+    "status" : 200,
+    "headers" : {
+      "content-type" : "application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8"
+    },
+    "body" : {
+      "json" : {
+        "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#drives(id,name,driveType,description,webUrl,eTag,createdDateTime,lastModifiedDateTime,createdBy,lastModifiedBy,owner,quota,sharePointIds,system)",
+        "value" : [ {
+          "createdDateTime" : "2026-10-10T02:58:54Z",
+          "description" : "",
+          "id" : "b!drive-0002",
+          "lastModifiedDateTime" : "2026-11-08T22:18:35Z",
+          "name" : "Site Pages",
+          "webUrl" : "https://redacted.example/url/43",
+          "driveType" : "documentLibrary",
+          "createdBy" : {
+            "user" : {
+              "displayName" : "Identity 7"
+            }
+          },
+          "lastModifiedBy" : {
+            "user" : {
+              "displayName" : "Identity 7"
+            }
+          },
+          "owner" : {
+            "user" : {
+              "email" : "email-1@example.invalid",
+              "id" : "00000000-0000-4000-8000-000000000016",
+              "displayName" : "Identity 6"
+            }
+          },
+          "quota" : {
+            "deleted" : 10682927,
+            "remaining" : 27487767298906,
+            "state" : "normal",
+            "total" : 27487790694400,
+            "used" : 12712567
+          },
+          "sharePointIds" : {
+            "listId" : "00000000-0000-4000-8000-000000000064",
+            "siteId" : "00000000-0000-4000-8000-000000000001",
+            "siteUrl" : "https://redacted.example/url/3",
+            "tenantId" : "00000000-0000-4000-8000-000000000010",
+            "webId" : "00000000-0000-4000-8000-000000000002"
+          },
+          "system" : { }
+        }, {
+          "createdDateTime" : "2026-10-10T02:58:46Z",
+          "description" : "Use the style library to store style sheets, such as CSS or XSL files. The style sheets in this gallery can be used by this site or any of its subsites.",
+          "id" : "b!drive-0003",
+          "lastModifiedDateTime" : "2026-10-10T02:58:46Z",
+          "name" : "Style Library",
+          "webUrl" : "https://redacted.example/url/44",
+          "driveType" : "documentLibrary",
+          "createdBy" : {
+            "user" : {
+              "displayName" : "Identity 7"
+            }
+          },
+          "owner" : {
+            "user" : {
+              "email" : "email-1@example.invalid",
+              "id" : "00000000-0000-4000-8000-000000000016",
+              "displayName" : "Identity 6"
+            }
+          },
+          "quota" : {
+            "deleted" : 10682927,
+            "remaining" : 27487767298906,
+            "state" : "normal",
+            "total" : 27487790694400,
+            "used" : 12712567
+          },
+          "sharePointIds" : {
+            "listId" : "00000000-0000-4000-8000-000000000065",
+            "siteId" : "00000000-0000-4000-8000-000000000001",
+            "siteUrl" : "https://redacted.example/url/3",
+            "tenantId" : "00000000-0000-4000-8000-000000000010",
+            "webId" : "00000000-0000-4000-8000-000000000002"
+          },
+          "system" : { }
+        }, {
+          "createdDateTime" : "2026-10-10T02:58:46Z",
+          "description" : "Make a template available for use in list creation by adding it to this gallery. The templates in this gallery are available to this site and all sites under it. Default list templates are not shown.",
+          "id" : "b!drive-0004",
+          "lastModifiedDateTime" : "2026-10-10T02:58:46Z",
+          "name" : "List Template Gallery",
+          "webUrl" : "https://redacted.example/url/45",
+          "driveType" : "documentLibrary",
+          "createdBy" : {
+            "user" : {
+              "displayName" : "Identity 7"
+            }
+          },
+          "owner" : {
+            "user" : {
+              "email" : "email-1@example.invalid",
+              "id" : "00000000-0000-4000-8000-000000000016",
+              "displayName" : "Identity 6"
+            }
+          },
+          "quota" : {
+            "deleted" : 10682927,
+            "remaining" : 27487767298906,
+            "state" : "normal",
+            "total" : 27487790694400,
+            "used" : 12712567
+          },
+          "sharePointIds" : {
+            "listId" : "00000000-0000-4000-8000-000000000066",
+            "siteId" : "00000000-0000-4000-8000-000000000001",
+            "siteUrl" : "https://redacted.example/url/3",
+            "tenantId" : "00000000-0000-4000-8000-000000000010",
+            "webId" : "00000000-0000-4000-8000-000000000002"
+          },
+          "system" : { }
+        }, {
+          "createdDateTime" : "2026-10-10T02:58:54Z",
+          "description" : "",
+          "id" : "b!drive-0001",
+          "lastModifiedDateTime" : "2026-11-24T21:22:05Z",
+          "name" : "Documents",
+          "webUrl" : "https://redacted.example/url/42",
+          "driveType" : "documentLibrary",
+          "createdBy" : {
+            "user" : {
+              "displayName" : "Identity 7"
+            }
+          },
+          "owner" : {
+            "user" : {
+              "email" : "email-1@example.invalid",
+              "id" : "00000000-0000-4000-8000-000000000016",
+              "displayName" : "Identity 6"
+            }
+          },
+          "quota" : {
+            "deleted" : 10682927,
+            "remaining" : 27487767298906,
+            "state" : "normal",
+            "total" : 27487790694400,
+            "used" : 12712567
+          },
+          "sharePointIds" : {
+            "listId" : "00000000-0000-4000-8000-000000000008",
+            "siteId" : "00000000-0000-4000-8000-000000000001",
+            "siteUrl" : "https://redacted.example/url/3",
+            "tenantId" : "00000000-0000-4000-8000-000000000010",
+            "webId" : "00000000-0000-4000-8000-000000000002"
+          }
+        }, {
+          "createdDateTime" : "2026-10-10T02:58:45Z",
+          "description" : "Use the Solution Gallery to track user solutions.",
+          "id" : "b!drive-0005",
+          "lastModifiedDateTime" : "2026-10-10T02:58:45Z",
+          "name" : "Solution Gallery",
+          "webUrl" : "https://redacted.example/url/46",
+          "driveType" : "documentLibrary",
+          "createdBy" : {
+            "user" : {
+              "displayName" : "Identity 7"
+            }
+          },
+          "owner" : {
+            "user" : {
+              "email" : "email-1@example.invalid",
+              "id" : "00000000-0000-4000-8000-000000000016",
+              "displayName" : "Identity 6"
+            }
+          },
+          "quota" : {
+            "deleted" : 10682927,
+            "remaining" : 27487767298906,
+            "state" : "normal",
+            "total" : 27487790694400,
+            "used" : 12712567
+          },
+          "sharePointIds" : {
+            "listId" : "00000000-0000-4000-8000-000000000067",
+            "siteId" : "00000000-0000-4000-8000-000000000001",
+            "siteUrl" : "https://redacted.example/url/3",
+            "tenantId" : "00000000-0000-4000-8000-000000000010",
+            "webId" : "00000000-0000-4000-8000-000000000002"
+          },
+          "system" : { }
+        }, {
+          "createdDateTime" : "2026-10-10T02:58:45Z",
+          "description" : "Use the master page gallery to store master pages. The master pages in this gallery are available to this site and any sites underneath it.",
+          "id" : "b!drive-0006",
+          "lastModifiedDateTime" : "2026-11-08T22:18:14Z",
+          "name" : "Master Page Gallery",
+          "webUrl" : "https://redacted.example/url/47",
+          "driveType" : "documentLibrary",
+          "createdBy" : {
+            "user" : {
+              "displayName" : "Identity 7"
+            }
+          },
+          "lastModifiedBy" : {
+            "user" : {
+              "displayName" : "Identity 7"
+            }
+          },
+          "owner" : {
+            "user" : {
+              "email" : "email-1@example.invalid",
+              "id" : "00000000-0000-4000-8000-000000000016",
+              "displayName" : "Identity 6"
+            }
+          },
+          "quota" : {
+            "deleted" : 10682927,
+            "remaining" : 27487767298906,
+            "state" : "normal",
+            "total" : 27487790694400,
+            "used" : 12712567
+          },
+          "sharePointIds" : {
+            "listId" : "00000000-0000-4000-8000-000000000068",
+            "siteId" : "00000000-0000-4000-8000-000000000001",
+            "siteUrl" : "https://redacted.example/url/3",
+            "tenantId" : "00000000-0000-4000-8000-000000000010",
+            "webId" : "00000000-0000-4000-8000-000000000002"
+          },
+          "system" : { }
+        }, {
+          "createdDateTime" : "2026-11-08T22:18:09Z",
+          "description" : "List of user browser-enabled form templates on this site collection.",
+          "id" : "b!drive-0007",
+          "lastModifiedDateTime" : "2026-11-08T22:18:09Z",
+          "name" : "Converted Forms",
+          "webUrl" : "https://redacted.example/url/48",
+          "driveType" : "documentLibrary",
+          "createdBy" : {
+            "user" : {
+              "displayName" : "Identity 7"
+            }
+          },
+          "owner" : {
+            "user" : {
+              "email" : "email-1@example.invalid",
+              "id" : "00000000-0000-4000-8000-000000000016",
+              "displayName" : "Identity 6"
+            }
+          },
+          "quota" : {
+            "deleted" : 10682927,
+            "remaining" : 27487767298906,
+            "state" : "normal",
+            "total" : 27487790694400,
+            "used" : 12712567
+          },
+          "sharePointIds" : {
+            "listId" : "00000000-0000-4000-8000-000000000069",
+            "siteId" : "00000000-0000-4000-8000-000000000001",
+            "siteUrl" : "https://redacted.example/url/3",
+            "tenantId" : "00000000-0000-4000-8000-000000000010",
+            "webId" : "00000000-0000-4000-8000-000000000002"
+          },
+          "system" : { }
+        }, {
+          "createdDateTime" : "2026-10-10T02:58:47Z",
+          "description" : "",
+          "id" : "b!drive-0008",
+          "lastModifiedDateTime" : "2026-10-10T02:58:47Z",
+          "name" : "appfiles",
+          "webUrl" : "https://redacted.example/url/49",
+          "driveType" : "documentLibrary",
+          "createdBy" : {
+            "user" : {
+              "displayName" : "Identity 7"
+            }
+          },
+          "owner" : {
+            "user" : {
+              "email" : "email-1@example.invalid",
+              "id" : "00000000-0000-4000-8000-000000000016",
+              "displayName" : "Identity 6"
+            }
+          },
+          "quota" : {
+            "deleted" : 10682927,
+            "remaining" : 27487767298906,
+            "state" : "normal",
+            "total" : 27487790694400,
+            "used" : 12712567
+          },
+          "sharePointIds" : {
+            "listId" : "00000000-0000-4000-8000-000000000070",
+            "siteId" : "00000000-0000-4000-8000-000000000001",
+            "siteUrl" : "https://redacted.example/url/3",
+            "tenantId" : "00000000-0000-4000-8000-000000000010",
+            "webId" : "00000000-0000-4000-8000-000000000002"
+          },
+          "system" : { }
+        }, {
+          "createdDateTime" : "2026-10-10T02:58:46Z",
+          "description" : "Use this Web Part Gallery to store and retrieve Web Parts. The Web Parts in this gallery are available to this site and all sites under it. To preview a Web Part, click its title.",
+          "id" : "b!drive-0009",
+          "lastModifiedDateTime" : "2026-11-08T22:18:32Z",
+          "name" : "Web Part Gallery",
+          "webUrl" : "https://redacted.example/url/50",
+          "driveType" : "documentLibrary",
+          "createdBy" : {
+            "user" : {
+              "displayName" : "Identity 7"
+            }
+          },
+          "owner" : {
+            "user" : {
+              "email" : "email-1@example.invalid",
+              "id" : "00000000-0000-4000-8000-000000000016",
+              "displayName" : "Identity 6"
+            }
+          },
+          "quota" : {
+            "deleted" : 10682927,
+            "remaining" : 27487767298906,
+            "state" : "normal",
+            "total" : 27487790694400,
+            "used" : 12712567
+          },
+          "sharePointIds" : {
+            "listId" : "00000000-0000-4000-8000-000000000071",
+            "siteId" : "00000000-0000-4000-8000-000000000001",
+            "siteUrl" : "https://redacted.example/url/3",
+            "tenantId" : "00000000-0000-4000-8000-000000000010",
+            "webId" : "00000000-0000-4000-8000-000000000002"
+          },
+          "system" : { }
+        }, {
+          "createdDateTime" : "2026-10-10T02:58:46Z",
+          "description" : "Use the theme gallery to store themes. The themes in this gallery can be used by this site or any of its subsites.",
+          "id" : "b!drive-0010",
+          "lastModifiedDateTime" : "2026-11-08T22:18:06Z",
+          "name" : "Theme Gallery",
+          "webUrl" : "https://redacted.example/url/51",
+          "driveType" : "documentLibrary",
+          "createdBy" : {
+            "user" : {
+              "displayName" : "Identity 7"
+            }
+          },
+          "owner" : {
+            "user" : {
+              "email" : "email-1@example.invalid",
+              "id" : "00000000-0000-4000-8000-000000000016",
+              "displayName" : "Identity 6"
+            }
+          },
+          "quota" : {
+            "deleted" : 10682927,
+            "remaining" : 27487767298906,
+            "state" : "normal",
+            "total" : 27487790694400,
+            "used" : 12712567
+          },
+          "sharePointIds" : {
+            "listId" : "00000000-0000-4000-8000-000000000072",
+            "siteId" : "00000000-0000-4000-8000-000000000001",
+            "siteUrl" : "https://redacted.example/url/3",
+            "tenantId" : "00000000-0000-4000-8000-000000000010",
+            "webId" : "00000000-0000-4000-8000-000000000002"
+          },
+          "system" : { }
+        }, {
+          "createdDateTime" : "2026-11-08T22:18:08Z",
+          "description" : "This library contains administrator-approved form templates that were activated to this site collection.",
+          "id" : "b!drive-0011",
+          "lastModifiedDateTime" : "2026-11-08T22:18:08Z",
+          "name" : "Form Templates",
+          "webUrl" : "https://redacted.example/url/52",
+          "driveType" : "documentLibrary",
+          "createdBy" : {
+            "user" : {
+              "displayName" : "Identity 7"
+            }
+          },
+          "owner" : {
+            "user" : {
+              "email" : "email-1@example.invalid",
+              "id" : "00000000-0000-4000-8000-000000000016",
+              "displayName" : "Identity 6"
+            }
+          },
+          "quota" : {
+            "deleted" : 10682927,
+            "remaining" : 27487767298906,
+            "state" : "normal",
+            "total" : 27487790694400,
+            "used" : 12712567
+          },
+          "sharePointIds" : {
+            "listId" : "00000000-0000-4000-8000-000000000073",
+            "siteId" : "00000000-0000-4000-8000-000000000001",
+            "siteUrl" : "https://redacted.example/url/3",
+            "tenantId" : "00000000-0000-4000-8000-000000000010",
+            "webId" : "00000000-0000-4000-8000-000000000002"
+          },
+          "system" : { }
+        }, {
+          "createdDateTime" : "2026-11-08T22:18:09Z",
+          "description" : "Use this library to store files which are included on pages within this site, such as images on Wiki pages.",
+          "id" : "b!drive-0012",
+          "lastModifiedDateTime" : "2026-11-08T22:18:30Z",
+          "name" : "Site Assets",
+          "webUrl" : "https://redacted.example/url/53",
+          "driveType" : "documentLibrary",
+          "createdBy" : {
+            "user" : {
+              "email" : "email-1@example.invalid",
+              "id" : "00000000-0000-4000-8000-000000000016",
+              "displayName" : "Identity 6"
+            }
+          },
+          "lastModifiedBy" : {
+            "user" : {
+              "displayName" : "Identity 2"
+            }
+          },
+          "owner" : {
+            "user" : {
+              "email" : "email-1@example.invalid",
+              "id" : "00000000-0000-4000-8000-000000000016",
+              "displayName" : "Identity 6"
+            }
+          },
+          "quota" : {
+            "deleted" : 10682927,
+            "remaining" : 27487767298906,
+            "state" : "normal",
+            "total" : 27487790694400,
+            "used" : 12712567
+          },
+          "sharePointIds" : {
+            "listId" : "00000000-0000-4000-8000-000000000074",
+            "siteId" : "00000000-0000-4000-8000-000000000001",
+            "siteUrl" : "https://redacted.example/url/3",
+            "tenantId" : "00000000-0000-4000-8000-000000000010",
+            "webId" : "00000000-0000-4000-8000-000000000002"
+          },
+          "system" : { }
+        } ]
+      }
+    }
+  }
+}

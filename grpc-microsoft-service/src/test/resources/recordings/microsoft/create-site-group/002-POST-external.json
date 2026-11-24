@@ -8,7 +8,7 @@
     },
     "body" : {
       "json" : {
-        "Title" : "pipestream-live-write-20261124-191715-910a14fd-group",
+        "Title" : "pipestream-live-write-20261124-212204-980f52a8-group",
         "Description" : "Created by a live test run; safe to delete."
       }
     }
@@ -21,17 +21,17 @@
     },
     "body" : {
       "json" : {
-        "Id" : 21,
+        "Id" : 26,
         "IsHiddenInUI" : false,
-        "LoginName" : "pipestream-live-write-20261124-191715-910a14fd-group",
-        "Title" : "pipestream-live-write-20261124-191715-910a14fd-group",
+        "LoginName" : "pipestream-live-write-20261124-212204-980f52a8-group",
+        "Title" : "pipestream-live-write-20261124-212204-980f52a8-group",
         "PrincipalType" : 8,
         "AllowMembersEditMembership" : false,
         "AllowRequestToJoinLeave" : false,
         "AutoAcceptRequestToJoinLeave" : false,
-        "Description" : "Principal 18",
+        "Description" : "Principal 20",
         "OnlyAllowMembersViewMembership" : true,
-        "OwnerTitle" : "Principal 19",
+        "OwnerTitle" : "Principal 21",
         "RequestToJoinLeaveEmailSetting" : null
       }
     }

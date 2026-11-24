@@ -1,7 +1,7 @@
 {
   "request" : {
     "method" : "GET",
-    "url" : "https://graph.microsoft.com/v1.0/users/delta?$skiptoken=cursor-0005",
+    "url" : "https://graph.microsoft.com/v1.0/users/delta?$deltatoken=cursor-0005",
     "authorized" : true,
     "headers" : { }
   },
@@ -13,7 +13,7 @@
     "body" : {
       "json" : {
         "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#users",
-        "@odata.nextLink" : "https://graph.microsoft.com/v1.0/users/delta?$skiptoken=cursor-0006",
+        "@odata.deltaLink" : "https://graph.microsoft.com/v1.0/users/delta?$deltatoken=cursor-0006",
         "value" : [ ]
       }
     }

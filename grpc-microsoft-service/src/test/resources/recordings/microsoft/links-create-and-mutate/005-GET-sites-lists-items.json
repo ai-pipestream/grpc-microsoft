@@ -8,18 +8,18 @@
   "response" : {
     "status" : 200,
     "headers" : {
-      "etag" : "\"00000000-0000-4000-8000-000000000202,2\"",
+      "etag" : "\"00000000-0000-4000-8000-000000000213,2\"",
       "content-type" : "application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8"
     },
     "body" : {
       "json" : {
         "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#sites('tenant-1.example%2C00000000-0000-4000-8000-000000000001%2C00000000-0000-4000-8000-000000000002')/lists('00000000-0000-4000-8000-000000000022')/items(id,name,webUrl,description,eTag,createdDateTime,lastModifiedDateTime,createdBy,lastModifiedBy,contentType,sharepointIds,parentReference,deleted,fields())/$entity",
-        "@odata.etag" : "\"00000000-0000-4000-8000-000000000202,2\"",
-        "createdDateTime" : "2026-11-24T19:18:10Z",
-        "eTag" : "\"00000000-0000-4000-8000-000000000202,2\"",
+        "@odata.etag" : "\"00000000-0000-4000-8000-000000000213,2\"",
+        "createdDateTime" : "2026-11-24T21:22:55Z",
+        "eTag" : "\"00000000-0000-4000-8000-000000000213,2\"",
         "id" : "4",
-        "lastModifiedDateTime" : "2026-11-24T19:18:11Z",
-        "webUrl" : "https://redacted.example/url/167",
+        "lastModifiedDateTime" : "2026-11-24T21:22:55Z",
+        "webUrl" : "https://redacted.example/url/178",
         "createdBy" : {
           "user" : {
             "displayName" : "Identity 2"
@@ -39,13 +39,13 @@
           "siteId" : "tenant-1.example,00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000002"
         },
         "contentType" : {
-          "id" : "0x01000442FA1083F05C49B980B28C94749853",
+          "id" : "0x010069D3B95A0F86A9439AE46DA06A0277B8",
           "name" : "Item"
         },
         "sharepointIds" : {
           "listId" : "00000000-0000-4000-8000-000000000022",
           "listItemId" : "4",
-          "listItemUniqueId" : "00000000-0000-4000-8000-000000000202",
+          "listItemUniqueId" : "00000000-0000-4000-8000-000000000213",
           "siteId" : "00000000-0000-4000-8000-000000000001",
           "siteUrl" : "https://redacted.example/url/3",
           "tenantId" : "00000000-0000-4000-8000-000000000010",
@@ -53,7 +53,7 @@
         },
         "fields@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#sites('tenant-1.example%2C00000000-0000-4000-8000-000000000001%2C00000000-0000-4000-8000-000000000002')/lists('00000000-0000-4000-8000-000000000022')/items('4')/fields/$entity",
         "fields" : {
-          "@odata.etag" : "\"00000000-0000-4000-8000-000000000202,2\"",
+          "@odata.etag" : "\"00000000-0000-4000-8000-000000000213,2\"",
           "Title" : "with link",
           "PsLink" : {
             "Description" : "A page",
@@ -63,8 +63,8 @@
           "PsTerms" : [ ],
           "id" : "4",
           "ContentType" : "Item",
-          "Modified" : "2026-11-24T19:18:11Z",
-          "Created" : "2026-11-24T19:18:10Z",
+          "Modified" : "2026-11-24T21:22:55Z",
+          "Created" : "2026-11-24T21:22:55Z",
           "AuthorLookupId" : "1073741822",
           "EditorLookupId" : "1073741822",
           "_UIVersionString" : "2.0",

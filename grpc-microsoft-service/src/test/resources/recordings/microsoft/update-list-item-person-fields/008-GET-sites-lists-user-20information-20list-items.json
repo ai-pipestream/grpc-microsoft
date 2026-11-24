@@ -16,7 +16,7 @@
       "json" : {
         "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#sites('tenant-1.example%2C00000000-0000-4000-8000-000000000001%2C00000000-0000-4000-8000-000000000002')/lists('User%20Information%20List')/items(id)",
         "value" : [ {
-          "@odata.etag" : "\"00000000-0000-4000-8000-000000000090,16\"",
+          "@odata.etag" : "\"00000000-0000-4000-8000-000000000086,22\"",
           "id" : "6"
         } ]
       }
