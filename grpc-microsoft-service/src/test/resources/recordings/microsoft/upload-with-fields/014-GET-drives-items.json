@@ -13,8 +13,8 @@
     "body" : {
       "json" : {
         "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#Collection(driveItem)/$entity",
-        "@microsoft.graph.downloadUrl" : "https://redacted.example/url/88",
-        "@microsoft.graph.downloadUrlNoAuth" : "https://redacted.example/url/89",
+        "@microsoft.graph.downloadUrl" : "https://redacted.example/url/150",
+        "@microsoft.graph.downloadUrlNoAuth" : "https://redacted.example/url/151",
         "createdBy" : {
           "application" : {
             "id" : "00000000-0000-4000-8000-000000000007",
@@ -24,8 +24,8 @@
             "displayName" : "Identity 2"
           }
         },
-        "createdDateTime" : "2026-11-23T02:27:11Z",
-        "eTag" : "\"{00000000-0000-4000-8000-000000000132},3\"",
+        "createdDateTime" : "2026-11-24T17:39:58Z",
+        "eTag" : "\"{00000000-0000-4000-8000-000000000197},3\"",
         "id" : "item-0010",
         "lastModifiedBy" : {
           "application" : {
@@ -36,28 +36,28 @@
             "displayName" : "Identity 2"
           }
         },
-        "lastModifiedDateTime" : "2026-11-23T02:27:12Z",
+        "lastModifiedDateTime" : "2026-11-24T17:39:59Z",
         "name" : "with-fields.txt",
         "parentReference" : {
           "driveType" : "documentLibrary",
           "driveId" : "b!drive-0013",
           "id" : "item-0002",
-          "name" : "pipestreamlivewrite20261123022631a8adaf87lib",
+          "name" : "pipestreamlivewrite20261124173858edda7a66lib",
           "path" : "/drives/b!drive-0013/root:",
           "siteId" : "00000000-0000-4000-8000-000000000001"
         },
-        "webUrl" : "https://redacted.example/url/87",
-        "cTag" : "\"c:{00000000-0000-4000-8000-000000000132},1\"",
+        "webUrl" : "https://redacted.example/url/149",
+        "cTag" : "\"c:{00000000-0000-4000-8000-000000000197},1\"",
         "file" : {
           "fileExtension" : ".txt",
           "hashes" : {
-            "quickXorHash" : "zePoa1ZyeEcDr8vn1Lgu8I2k9yY="
+            "quickXorHash" : "nWPoU5ZycUcDrnO3VLp2EbWq/yQ="
           },
           "mimeType" : "text/plain"
         },
         "fileSystemInfo" : {
-          "createdDateTime" : "2026-11-23T02:27:11Z",
-          "lastModifiedDateTime" : "2026-11-23T02:27:12Z"
+          "createdDateTime" : "2026-11-24T17:39:58Z",
+          "lastModifiedDateTime" : "2026-11-24T17:39:59Z"
         },
         "isAuthoritative" : false,
         "shared" : {

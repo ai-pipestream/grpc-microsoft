@@ -19,7 +19,7 @@
   "response" : {
     "status" : 201,
     "headers" : {
-      "location" : "https://redacted.example/url/66",
+      "location" : "https://redacted.example/url/128",
       "content-type" : "application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8"
     },
     "body" : {
@@ -30,7 +30,7 @@
         "displayName" : "PsOwner",
         "enforceUniqueValues" : false,
         "hidden" : false,
-        "id" : "00000000-0000-4000-8000-000000000089",
+        "id" : "00000000-0000-4000-8000-000000000154",
         "indexed" : false,
         "name" : "PsOwner",
         "readOnly" : false,
