@@ -8,12 +8,11 @@ specific to the Microsoft (SharePoint Online, OneDrive, Entra) connector.
 
 ## Which branch this describes
 
-On `main` this repository is the read side only. Writes, Entra and
-SharePoint security reads, the admin service, the recordings and the change
-stream are on open pull requests (#2 writes and security, #4 changes, #20
-ledger failures; see the workspace guide). The sections below describe the
-write branch `claude/project-thread-i7updt` unless they say "change
-branch".
+`main` has the reads, the write rpcs, the Entra and SharePoint security
+reads, term columns and the admin service. The change stream
+(`MicrosoftChangeService`) is still on open PR #4, branch
+`claude/project-thread-sbyfoc`; the parts below marked "change branch"
+describe that branch.
 
 ## Build
 
@@ -93,9 +92,10 @@ Reviewers do not dispatch them.
 
 ## Review hot spots
 
-- `MicrosoftCrawler` and `SyncTableMicrosoftChangeSink`: ledger failures,
-  scoped syncs treated as full sweeps, 410 on one drive's delta link
-  (issues #10, #11, #14; PR #20).
+- `MicrosoftCrawler`: scoped syncs treated as full sweeps, 410 on one
+  drive's delta link, a full Sync without lists or security reconciling
+  those rows as deleted (issues #10, #14, #23). Ledger write failures now
+  fail the `Sync` (PR #20); check new sinks follow the same rule.
 - `GraphPager`: silent fallback to Graph's default projection on 400 (#16).
 - Output and OKF sinks shared across connections (#17), file names stored
   as payloads (#18).
