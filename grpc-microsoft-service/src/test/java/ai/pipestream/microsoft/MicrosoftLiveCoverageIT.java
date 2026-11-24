@@ -142,10 +142,12 @@ class MicrosoftLiveCoverageIT {
             Map.entry("ListSiteGroupMembers", "GET {web}/_api/web/sitegroups/getbyid({id})/users"),
             Map.entry("ListSiteRoleAssignments", "GET {web}/_api/{securable}/roleassignments"),
             Map.entry("GetSiteRoleInheritance", "GET {web}/_api/{securable}?$select=HasUniqueRoleAssignments"),
+            Map.entry("ListSiteChanges", "POST {web}/_api/{scope}/getchanges"),
             Map.entry("SetSiteRoleInheritance", "POST {web}/_api/{securable}/breakroleinheritance"),
             Map.entry("ListUsers", "GET /users"),
             Map.entry("ListGroups", "GET /groups"),
             Map.entry("DeltaGroups", "GET /groups/delta"),
+            Map.entry("DeltaUsers", "GET /users/delta"),
             Map.entry("ListGroupTransitiveMembers", "GET /groups/{group-id}/transitiveMembers"),
             Map.entry("ListGroupOwners", "GET /groups/{group-id}/owners"),
             Map.entry("ListUserTransitiveMemberOf", "GET /users/{user-id}/transitiveMemberOf"),
@@ -529,6 +531,12 @@ class MicrosoftLiveCoverageIT {
                         .setIncludeMembers(true).build()),
                 r -> r.getEventCase() == DeltaGroupsResponse.EventCase.DELTA_LINK ? r.getDeltaLink() : null,
                 r -> r.getEventCase() == DeltaGroupsResponse.EventCase.RESYNC);
+        delta("DeltaUsers", "tenant", LIST_CAP,
+                link -> s -> s.deltaUsers(ai.pipestream.microsoft.v1.DeltaUsersRequest.newBuilder()
+                        .setDeltaLink(link).build()),
+                r -> r.getEventCase() == ai.pipestream.microsoft.v1.DeltaUsersResponse.EventCase.DELTA_LINK
+                        ? r.getDeltaLink() : null,
+                r -> r.getEventCase() == ai.pipestream.microsoft.v1.DeltaUsersResponse.EventCase.RESYNC);
         if (groups == null || groups.isEmpty()) {
             skip("ListGroupTransitiveMembers", "no group was listed");
             skip("ListGroupOwners", "no group was listed");
@@ -578,6 +586,11 @@ class MicrosoftLiveCoverageIT {
                 s -> s.getSiteRoleInheritance(GetSiteRoleInheritanceRequest.newBuilder()
                         .setSecurable(siteSecurable).build()),
                 r -> "unique " + r.getHasUniqueRoleAssignments());
+        stream("ListSiteChanges", "ListSiteChanges [the end of the site's change log]", LIST_CAP,
+                s -> s.listSiteChanges(ai.pipestream.microsoft.v1.ListSiteChangesRequest.newBuilder()
+                        .setSiteId(chosenSite).setChangeToken("latest").build()),
+                l -> l.size() == 1 && !l.get(0).getChangeToken().isEmpty() ? "a change token"
+                        : l.size() + " message(s) and no change token");
 
         // --------------------------------------------------- term store --
         termStoreLine = termStoreRoutes(chosenSite);

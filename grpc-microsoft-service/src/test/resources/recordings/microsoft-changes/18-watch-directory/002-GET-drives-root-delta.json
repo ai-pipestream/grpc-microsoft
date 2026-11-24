@@ -1,0 +1,52 @@
+{
+  "request" : {
+    "method" : "GET",
+    "url" : "https://graph.microsoft.com/v1.0/drives/b!drive-0001/root/delta?$select=id,name,eTag,cTag,createdBy,createdDateTime,lastModifiedBy,lastModifiedDateTime,parentReference,webUrl,webDavUrl,description,size,file,folder,fileSystemInfo,deleted,root,package,remoteItem,shared,specialFolder,image,photo,video,audio,location,malware,sharepointIds,pendingOperations,@microsoft.graph.downloadUrl",
+    "authorized" : true,
+    "headers" : { }
+  },
+  "response" : {
+    "status" : 200,
+    "headers" : {
+      "content-type" : "application/json; odata.metadata=minimal; odata.streaming=true; IEEE754Compatible=false; charset=utf-8"
+    },
+    "body" : {
+      "json" : {
+        "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#Collection(driveItem)",
+        "@odata.deltaLink" : "https://graph.microsoft.com/v1.0/drives/b!drive-0001/root/delta?$select=id,name,eTag,cTag,createdBy,createdDateTime,lastModifiedBy,lastModifiedDateTime,parentReference,webUrl,webDavUrl,description,size,file,folder,fileSystemInfo,deleted,root,package,remoteItem,shared,specialFolder,image,photo,video,audio,location,malware,sharepointIds,pendingOperations,@microsoft.graph.downloadUrl&token=NDslMjM0OyUyMzE7MztjNjAzNDAwYS1jMTEyLTQ3ZjItYjBkZS02NmRlZDRiNGJhYWM7NjM5MzExMzk2MzkzMDAwMDAwOzE2NzU2ODYxODI7JTIzOyUyMzslMjMwOyUyMw",
+        "@microsoft.graph.hasMoreData" : false,
+        "@microsoft.graph.syncStatus" : "FullData",
+        "value" : [ {
+          "@odata.type" : "#microsoft.graph.driveItem",
+          "createdDateTime" : "2026-10-10T02:58:54Z",
+          "id" : "item-0001",
+          "lastModifiedDateTime" : "2026-11-24T17:53:52Z",
+          "name" : "root",
+          "parentReference" : {
+            "driveType" : "documentLibrary",
+            "driveId" : "b!drive-0001"
+          },
+          "webUrl" : "https://redacted.example/url/5",
+          "fileSystemInfo" : {
+            "createdDateTime" : "2026-10-10T02:58:54Z",
+            "lastModifiedDateTime" : "2026-11-24T17:53:52Z"
+          },
+          "folder" : {
+            "childCount" : 0
+          },
+          "root" : { },
+          "sharepointIds" : {
+            "listId" : "00000000-0000-4000-8000-000000000008",
+            "listItemUniqueId" : "00000000-0000-4000-8000-000000000010",
+            "siteId" : "00000000-0000-4000-8000-000000000001",
+            "siteUrl" : "https://redacted.example/url/6",
+            "tenantId" : "00000000-0000-4000-8000-000000000009",
+            "webId" : "00000000-0000-4000-8000-000000000002"
+          },
+          "size" : 0,
+          "webDavUrl" : "https://redacted.example/url/5"
+        } ]
+      }
+    }
+  }
+}

@@ -63,6 +63,12 @@ public final class SyncCursors {
         if (!cursor.getSitesDeltaLink().isEmpty()) {
             GraphLinks.requireDeltaLink(graphBaseUrl, cursor.getSitesDeltaLink(), "sites");
         }
+        if (!cursor.getUsersDeltaLink().isEmpty()) {
+            GraphLinks.requireDeltaLink(graphBaseUrl, cursor.getUsersDeltaLink(), "users");
+        }
+        if (!cursor.getGroupsDeltaLink().isEmpty()) {
+            GraphLinks.requireDeltaLink(graphBaseUrl, cursor.getGroupsDeltaLink(), "groups");
+        }
         return cursor;
     }
 

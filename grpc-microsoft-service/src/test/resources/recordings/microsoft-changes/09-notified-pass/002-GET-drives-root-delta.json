@@ -1,7 +1,7 @@
 {
   "request" : {
     "method" : "GET",
-    "url" : "https://graph.microsoft.com/v1.0/drives/b!drive-0001/root/delta?$select=id,name,eTag,cTag,createdBy,createdDateTime,lastModifiedBy,lastModifiedDateTime,parentReference,webUrl,webDavUrl,description,size,file,folder,fileSystemInfo,deleted,root,package,remoteItem,shared,specialFolder,image,photo,video,audio,location,malware,sharepointIds,pendingOperations,@microsoft.graph.downloadUrl&token=NDslMjM0OyUyMzE7MztjNjAzNDAwYS1jMTEyLTQ3ZjItYjBkZS02NmRlZDRiNGJhYWM7NjM5MzExMzc1NTQwODcwMDAwOzE2NzU2NzQ2NDM7JTIzOyUyMzslMjMwOyUyMw",
+    "url" : "https://graph.microsoft.com/v1.0/drives/b!drive-0001/root/delta?$select=id,name,eTag,cTag,createdBy,createdDateTime,lastModifiedBy,lastModifiedDateTime,parentReference,webUrl,webDavUrl,description,size,file,folder,fileSystemInfo,deleted,root,package,remoteItem,shared,specialFolder,image,photo,video,audio,location,malware,sharepointIds,pendingOperations,@microsoft.graph.downloadUrl&token=NDslMjM0OyUyMzE7MztjNjAzNDAwYS1jMTEyLTQ3ZjItYjBkZS02NmRlZDRiNGJhYWM7NjM5MzExMzk0Njg1MTcwMDAwOzE2NzU2ODU0ODg7JTIzOyUyMzslMjMwOyUyMw",
     "authorized" : true,
     "headers" : { }
   },
@@ -13,15 +13,15 @@
     "body" : {
       "json" : {
         "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#Collection(driveItem)",
-        "@odata.deltaLink" : "https://graph.microsoft.com/v1.0/drives/b!drive-0001/root/delta?$select=id,name,eTag,cTag,createdBy,createdDateTime,lastModifiedBy,lastModifiedDateTime,parentReference,webUrl,webDavUrl,description,size,file,folder,fileSystemInfo,deleted,root,package,remoteItem,shared,specialFolder,image,photo,video,audio,location,malware,sharepointIds,pendingOperations,@microsoft.graph.downloadUrl&token=NDslMjM0OyUyMzE7MztjNjAzNDAwYS1jMTEyLTQ3ZjItYjBkZS02NmRlZDRiNGJhYWM7NjM5MzExMzc1ODk4NzcwMDAwOzE2NzU2NzQ4MjU7JTIzOyUyMzslMjMwOyUyMw",
+        "@odata.deltaLink" : "https://graph.microsoft.com/v1.0/drives/b!drive-0001/root/delta?$select=id,name,eTag,cTag,createdBy,createdDateTime,lastModifiedBy,lastModifiedDateTime,parentReference,webUrl,webDavUrl,description,size,file,folder,fileSystemInfo,deleted,root,package,remoteItem,shared,specialFolder,image,photo,video,audio,location,malware,sharepointIds,pendingOperations,@microsoft.graph.downloadUrl&token=NDslMjM0OyUyMzE7MztjNjAzNDAwYS1jMTEyLTQ3ZjItYjBkZS02NmRlZDRiNGJhYWM7NjM5MzExMzk1MDc5ODMwMDAwOzE2NzU2ODU3MDQ7JTIzOyUyMzslMjMwOyUyMw",
         "@microsoft.graph.hasMoreData" : false,
-        "@microsoft.graph.lastProcessedChange" : "1;3;00000000-0000-4000-8000-000000000006;639311375546230000;1675674645",
+        "@microsoft.graph.lastProcessedChange" : "1;3;00000000-0000-4000-8000-000000000008;639311394695400000;1675685489",
         "@microsoft.graph.syncStatus" : "Incremental",
         "value" : [ {
           "@odata.type" : "#microsoft.graph.driveItem",
           "createdDateTime" : "2026-10-10T02:58:54Z",
           "id" : "item-0001",
-          "lastModifiedDateTime" : "2026-11-24T17:19:15Z",
+          "lastModifiedDateTime" : "2026-11-24T17:51:10Z",
           "name" : "root",
           "parentReference" : {
             "driveType" : "documentLibrary",
@@ -30,21 +30,21 @@
           "webUrl" : "https://redacted.example/url/5",
           "fileSystemInfo" : {
             "createdDateTime" : "2026-10-10T02:58:54Z",
-            "lastModifiedDateTime" : "2026-11-24T17:19:15Z"
+            "lastModifiedDateTime" : "2026-11-24T17:51:10Z"
           },
           "folder" : {
             "childCount" : 1
           },
           "root" : { },
           "sharepointIds" : {
-            "listId" : "00000000-0000-4000-8000-000000000006",
+            "listId" : "00000000-0000-4000-8000-000000000008",
             "listItemUniqueId" : "00000000-0000-4000-8000-000000000010",
-            "siteId" : "00000000-0000-4000-8000-000000000007",
+            "siteId" : "00000000-0000-4000-8000-000000000001",
             "siteUrl" : "https://redacted.example/url/6",
-            "tenantId" : "00000000-0000-4000-8000-000000000008",
-            "webId" : "00000000-0000-4000-8000-000000000009"
+            "tenantId" : "00000000-0000-4000-8000-000000000009",
+            "webId" : "00000000-0000-4000-8000-000000000002"
           },
-          "size" : 47,
+          "size" : 0,
           "webDavUrl" : "https://redacted.example/url/5"
         }, {
           "@odata.type" : "#microsoft.graph.driveItem",
@@ -57,7 +57,7 @@
               "displayName" : "Identity 4"
             }
           },
-          "createdDateTime" : "2026-11-24T17:19:15Z",
+          "createdDateTime" : "2026-11-24T17:51:09Z",
           "eTag" : "\"{00000000-0000-4000-8000-000000000011},1\"",
           "id" : "item-0002",
           "lastModifiedBy" : {
@@ -68,46 +68,46 @@
               "displayName" : "Identity 4"
             }
           },
-          "lastModifiedDateTime" : "2026-11-24T17:19:15Z",
-          "name" : "pipestream-live-change-20261124-171908-e6200964.txt",
+          "lastModifiedDateTime" : "2026-11-24T17:51:09Z",
+          "name" : "pipestream-live-change-20261124-175102-bd26f688.txt",
           "parentReference" : {
             "driveType" : "documentLibrary",
             "driveId" : "b!drive-0001",
             "id" : "item-0001",
             "path" : "/drives/b!drive-0001/root:",
             "sharepointIds" : {
-              "listId" : "00000000-0000-4000-8000-000000000006",
+              "listId" : "00000000-0000-4000-8000-000000000008",
               "listItemUniqueId" : "00000000-0000-4000-8000-000000000010",
-              "siteId" : "00000000-0000-4000-8000-000000000007",
+              "siteId" : "00000000-0000-4000-8000-000000000001",
               "siteUrl" : "https://redacted.example/url/6",
-              "webId" : "00000000-0000-4000-8000-000000000009"
+              "webId" : "00000000-0000-4000-8000-000000000002"
             },
-            "siteId" : "00000000-0000-4000-8000-000000000007"
+            "siteId" : "00000000-0000-4000-8000-000000000001"
           },
           "webUrl" : "https://redacted.example/url/8",
           "cTag" : "\"c:{00000000-0000-4000-8000-000000000011},1\"",
           "file" : {
             "fileExtension" : ".txt",
             "hashes" : {
-              "quickXorHash" : "+J/bibiQmkY8k4899ZOUbw1lJ/c="
+              "quickXorHash" : "CJ/cubiQmkcsk4849XOUPQ3lJls="
             },
             "mimeType" : "text/plain"
           },
           "fileSystemInfo" : {
-            "createdDateTime" : "2026-11-24T17:19:15Z",
-            "lastModifiedDateTime" : "2026-11-24T17:19:15Z"
+            "createdDateTime" : "2026-11-24T17:51:09Z",
+            "lastModifiedDateTime" : "2026-11-24T17:51:09Z"
           },
           "shared" : {
             "scope" : "users"
           },
           "sharepointIds" : {
-            "listId" : "00000000-0000-4000-8000-000000000006",
-            "listItemId" : "219",
+            "listId" : "00000000-0000-4000-8000-000000000008",
+            "listItemId" : "228",
             "listItemUniqueId" : "00000000-0000-4000-8000-000000000011",
-            "siteId" : "00000000-0000-4000-8000-000000000007",
+            "siteId" : "00000000-0000-4000-8000-000000000001",
             "siteUrl" : "https://redacted.example/url/6",
-            "tenantId" : "00000000-0000-4000-8000-000000000008",
-            "webId" : "00000000-0000-4000-8000-000000000009"
+            "tenantId" : "00000000-0000-4000-8000-000000000009",
+            "webId" : "00000000-0000-4000-8000-000000000002"
           },
           "size" : 47,
           "webDavUrl" : "https://redacted.example/url/8"

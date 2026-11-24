@@ -3,12 +3,15 @@ package ai.pipestream.microsoft;
 import ai.pipestream.microsoft.v1.AuthMode;
 import ai.pipestream.microsoft.v1.GetSiteRoleInheritanceRequest;
 import ai.pipestream.microsoft.v1.GetSiteRoleInheritanceResponse;
+import ai.pipestream.microsoft.v1.ListSiteChangesRequest;
+import ai.pipestream.microsoft.v1.ListSiteChangesResponse;
 import ai.pipestream.microsoft.v1.ListSiteGroupMembersRequest;
 import ai.pipestream.microsoft.v1.ListSiteGroupMembersResponse;
 import ai.pipestream.microsoft.v1.ListSiteGroupsRequest;
 import ai.pipestream.microsoft.v1.ListSiteGroupsResponse;
 import ai.pipestream.microsoft.v1.ListSiteRoleAssignmentsRequest;
 import ai.pipestream.microsoft.v1.ListSiteRoleAssignmentsResponse;
+import ai.pipestream.microsoft.v1.SiteChange;
 import ai.pipestream.microsoft.v1.SiteSecurable;
 import ai.pipestream.microsoft.v1.ColumnDefinition;
 import ai.pipestream.microsoft.v1.DeltaDriveItemsRequest;
@@ -20,6 +23,9 @@ import ai.pipestream.microsoft.v1.DeltaListItemsResponse;
 import ai.pipestream.microsoft.v1.DeltaResync;
 import ai.pipestream.microsoft.v1.DeltaSitesRequest;
 import ai.pipestream.microsoft.v1.DeltaSitesResponse;
+import ai.pipestream.microsoft.v1.DeltaUsersRequest;
+import ai.pipestream.microsoft.v1.DeltaUsersResponse;
+import ai.pipestream.microsoft.v1.GroupChange;
 import ai.pipestream.microsoft.v1.DownloadContentRequest;
 import ai.pipestream.microsoft.v1.DownloadContentResponse;
 import ai.pipestream.microsoft.v1.DownloadItemRequest;
@@ -111,6 +117,7 @@ import ai.pipestream.microsoft.v1.UpdateListItemFieldsRequest;
 import ai.pipestream.microsoft.v1.UpdateListItemFieldsResponse;
 import ai.pipestream.microsoft.v1.UploadItemRequest;
 import ai.pipestream.microsoft.v1.UploadItemResponse;
+import ai.pipestream.microsoft.v1.UserChange;
 import ai.pipestream.sync.v1.ConnectionServiceGrpc;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -129,6 +136,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Consumer;
 
 /**
  * {@code MicrosoftService} over Microsoft Graph v1.0: every rpc of the contract,
@@ -480,31 +488,86 @@ public final class MicrosoftGrpcService
     public void deltaGroups(DeltaGroupsRequest request, StreamObserver<DeltaGroupsResponse> observer) {
         stream(observer, () -> {
             MicrosoftSessions.Session session = sessions.resolve(request.getConnectionId());
-            String base = "/groups/delta";
-            String link = request.getDeltaLink().trim();
-            List<String> fresh = List.of(base + "?$select=" + GraphPaths.GROUP_SELECT
-                    + (request.getIncludeMembers() ? ",members" : ""));
-            if (link.equalsIgnoreCase("latest")) {
-                // Directory deltas spell the "from now" token differently from drives and sites.
-                fresh = List.of(base + "?$deltatoken=latest");
-                link = "";
-            } else if (!link.isEmpty()) {
-                GraphLinks.requireDeltaLink(session.graph().baseUrl(), link, "groups");
-            }
-            GraphPager.DeltaOutcome outcome = session.pager().delta(fresh, link, Map.of(),
-                    new GraphPager.DeltaVisitor() {
-                        @Override
-                        public void resync(DeltaResync resync) {
-                            observer.onNext(DeltaGroupsResponse.newBuilder().setResync(resync).build());
-                        }
-
-                        @Override
-                        public void item(JsonNode node) {
-                            observer.onNext(DeltaGroupsResponse.newBuilder()
-                                    .setChange(valid(mapper.toGroupChange(node))).build());
-                        }
-                    });
+            GraphPager.DeltaOutcome outcome = groupsDelta(session, request.getDeltaLink(),
+                    request.getIncludeMembers(),
+                    resync -> observer.onNext(DeltaGroupsResponse.newBuilder().setResync(resync).build()),
+                    change -> observer.onNext(DeltaGroupsResponse.newBuilder().setChange(change).build()));
             observer.onNext(DeltaGroupsResponse.newBuilder().setDeltaLink(outcome.deltaLink()).build());
+        });
+    }
+
+    @Override
+    public void deltaUsers(DeltaUsersRequest request, StreamObserver<DeltaUsersResponse> observer) {
+        stream(observer, () -> {
+            MicrosoftSessions.Session session = sessions.resolve(request.getConnectionId());
+            GraphPager.DeltaOutcome outcome = usersDelta(session, request.getDeltaLink(),
+                    resync -> observer.onNext(DeltaUsersResponse.newBuilder().setResync(resync).build()),
+                    change -> observer.onNext(DeltaUsersResponse.newBuilder().setChange(change).build()));
+            observer.onNext(DeltaUsersResponse.newBuilder().setDeltaLink(outcome.deltaLink()).build());
+        });
+    }
+
+    /**
+     * Reads {@code /groups/delta}.
+     *
+     * @param session the connection
+     * @param deltaLink where to resume; empty = every group, {@code latest} = only the link
+     * @param includeMembers whether member changes are read too
+     * @param resync told when Graph rejected the link and everything follows
+     * @param change receives each group change
+     * @return the terminal delta link and whether Graph rejected the starting one
+     * @throws IOException if Graph fails
+     * @throws InterruptedException if interrupted
+     */
+    GraphPager.DeltaOutcome groupsDelta(MicrosoftSessions.Session session, String deltaLink,
+            boolean includeMembers, Consumer<DeltaResync> resync, Consumer<GroupChange> change)
+            throws IOException, InterruptedException {
+        return directoryDelta(session, "groups", GraphPaths.GROUP_SELECT
+                + (includeMembers ? ",members" : ""), deltaLink, resync,
+                node -> change.accept(valid(mapper.toGroupChange(node))));
+    }
+
+    /**
+     * Reads {@code /users/delta}.
+     *
+     * @param session the connection
+     * @param deltaLink where to resume; empty = every user, {@code latest} = only the link
+     * @param resync told when Graph rejected the link and everything follows
+     * @param change receives each user change
+     * @return the terminal delta link and whether Graph rejected the starting one
+     * @throws IOException if Graph fails
+     * @throws InterruptedException if interrupted
+     */
+    GraphPager.DeltaOutcome usersDelta(MicrosoftSessions.Session session, String deltaLink,
+            Consumer<DeltaResync> resync, Consumer<UserChange> change)
+            throws IOException, InterruptedException {
+        return directoryDelta(session, "users", GraphPaths.USER_SELECT, deltaLink, resync,
+                node -> change.accept(valid(mapper.toUserChange(node))));
+    }
+
+    private static GraphPager.DeltaOutcome directoryDelta(MicrosoftSessions.Session session,
+            String collection, String select, String deltaLink, Consumer<DeltaResync> resync,
+            Consumer<JsonNode> item) throws IOException, InterruptedException {
+        String base = "/" + collection + "/delta";
+        String link = deltaLink.trim();
+        List<String> fresh = List.of(base + "?$select=" + select);
+        if (link.equalsIgnoreCase("latest")) {
+            // Directory deltas spell the "from now" token differently from drives and sites.
+            fresh = List.of(base + "?$deltatoken=latest");
+            link = "";
+        } else if (!link.isEmpty()) {
+            GraphLinks.requireDeltaLink(session.graph().baseUrl(), link, collection);
+        }
+        return session.pager().delta(fresh, link, Map.of(), new GraphPager.DeltaVisitor() {
+            @Override
+            public void resync(DeltaResync notice) {
+                resync.accept(notice);
+            }
+
+            @Override
+            public void item(JsonNode node) {
+                item.accept(node);
+            }
         });
     }
 
@@ -1013,6 +1076,31 @@ public final class MicrosoftGrpcService
                     .setHasUniqueRoleAssignments(node.path("HasUniqueRoleAssignments").asBoolean(false))
                     .build();
         });
+    }
+
+    @Override
+    public void listSiteChanges(ListSiteChangesRequest request,
+            StreamObserver<ListSiteChangesResponse> observer) {
+        stream(observer, () -> {
+            MicrosoftSessions.Session session = sessions.resolve(request.getConnectionId());
+            String token = siteChanges(session, request, change -> observer.onNext(
+                    ListSiteChangesResponse.newBuilder().setChange(change).build()));
+            observer.onNext(ListSiteChangesResponse.newBuilder().setChangeToken(token).build());
+        });
+    }
+
+    /**
+     * Reads a change log of a site.
+     *
+     * @param session the connection
+     * @param request names the site, the scope, the token and the filter
+     * @param out receives each change, oldest first
+     * @return the change token to resume from
+     */
+    String siteChanges(MicrosoftSessions.Session session, ListSiteChangesRequest request,
+            Consumer<SiteChange> out) throws IOException, InterruptedException {
+        SiteChanges.scopePath(request);
+        return SiteChanges.read(sharePoint.web(session, request.getSiteId()), request, out);
     }
 
     @Override

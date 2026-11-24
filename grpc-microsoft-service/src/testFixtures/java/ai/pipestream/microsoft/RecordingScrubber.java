@@ -48,6 +48,8 @@ final class RecordingScrubber {
             "visibility", "groupTypes", "preferredLanguage");
     /** Properties of a SharePoint principal that hold its name. */
     private static final Set<String> PRINCIPAL_NAMES = Set.of("Title", "Description", "OwnerTitle");
+    /** Properties of a SharePoint change log entry that name no person, place or title. */
+    private static final Set<String> CHANGE_KEPT = Set.of("odata.type", "Time");
     /** Query parameters whose value is a paging or delta token. */
     private static final List<String> CURSOR_KEYS = List.of("deltatoken=", "skiptoken=");
     /** Host suffixes that name the tenant. */
@@ -59,6 +61,8 @@ final class RecordingScrubber {
     private final Map<String, Integer> counters = new HashMap<>();
     /** Real permission ids long enough to be an encoded grantee, to their placeholders. */
     private final Map<String, String> permissionIds = new HashMap<>();
+    /** Whether the body being scrubbed is a Graph listing of users, groups or directory objects. */
+    private boolean directoryListing;
 
     /**
      * Creates a scrubber.
@@ -81,20 +85,32 @@ final class RecordingScrubber {
 
     /** Scrubs every string value of a JSON tree; keys stay. */
     synchronized JsonNode json(JsonNode node) {
-        return json(node, "");
+        String context = node.path("@odata.context").asText("");
+        directoryListing = context.contains("$metadata#users") || context.contains("$metadata#groups")
+                || context.contains("$metadata#directoryObjects");
+        try {
+            return json(node, "");
+        } finally {
+            directoryListing = false;
+        }
     }
 
     private JsonNode json(JsonNode node, String parentKey) {
         if (node.isObject()) {
             ObjectNode out = JsonNodeFactory.instance.objectNode();
-            boolean directory = directoryObject(node);
+            // A delta of users or groups can hold only an id and the changed properties.
+            boolean directory = directoryObject(node)
+                    || (directoryListing && parentKey.equals("value") && node.has("id"));
             boolean principal = node.has("LoginName");
+            boolean change = node.has("ChangeToken") && node.has("ChangeType");
             for (Map.Entry<String, JsonNode> entry : node.properties()) {
                 JsonNode value = entry.getValue();
                 if (directory && !DIRECTORY_KEPT.contains(entry.getKey())
                         && !entry.getKey().endsWith("DateTime") && (value.isTextual()
                         || (value.isArray() && !value.isEmpty() && value.get(0).isTextual()))) {
                     out.set(entry.getKey(), directoryValue(value));
+                } else if (change && !CHANGE_KEPT.contains(entry.getKey())) {
+                    out.set(entry.getKey(), changeValue(value));
                 } else if (principal && value.isTextual() && (PRINCIPAL_NAMES.contains(entry.getKey())
                         || (entry.getKey().equals("LoginName") && value.asText().indexOf('|') < 0))) {
                     out.put(entry.getKey(), name("principal", value.asText(), "Principal %d"));
@@ -151,6 +167,29 @@ final class RecordingScrubber {
         String scrubbed = text(text);
         return JsonNodeFactory.instance.textNode(scrubbed.equals(text)
                 ? name("directory", text, "Directory value %d") : scrubbed);
+    }
+
+    /**
+     * A property of a change log entry: editors, titles and paths become numbered values; ids are
+     * GUIDs and keep their placeholders.
+     */
+    private JsonNode changeValue(JsonNode value) {
+        if (value.isObject()) {
+            ObjectNode out = JsonNodeFactory.instance.objectNode();
+            value.properties().forEach(entry -> out.set(entry.getKey(), changeValue(entry.getValue())));
+            return out;
+        }
+        if (value.isArray()) {
+            ArrayNode out = JsonNodeFactory.instance.arrayNode();
+            value.forEach(element -> out.add(changeValue(element)));
+            return out;
+        }
+        if (!value.isTextual()) {
+            return value;
+        }
+        String scrubbed = text(value.asText());
+        return JsonNodeFactory.instance.textNode(scrubbed.equals(value.asText())
+                ? name("change", scrubbed, "Change value %d") : scrubbed);
     }
 
     private String name(String kind, String real, String format) {
@@ -351,11 +390,16 @@ final class RecordingScrubber {
         return run(text, at, c -> !Character.isWhitespace(c) && c != '"' && c != '<' && c != '>');
     }
 
-    /** Where {@code /_api/web} starts in the URL of a site's REST API; -1 in any other URL. */
+    /** Where {@code /_api/web} or {@code /_api/site} starts in the URL of a site's REST API; -1 in any other URL. */
     static int apiStart(String url) {
-        int at = url.indexOf("/_api/web");
-        int end = at + 9;
-        return at > 0 && (end == url.length() || "/?".indexOf(url.charAt(end)) >= 0) ? at : -1;
+        for (String root : List.of("/_api/web", "/_api/site")) {
+            int at = url.indexOf(root);
+            int end = at + root.length();
+            if (at > 0 && (end == url.length() || "/?".indexOf(url.charAt(end)) >= 0)) {
+                return at;
+            }
+        }
+        return -1;
     }
 
     /** Where the value of a {@code deltatoken=} or {@code skiptoken=} parameter starts; {@code at} when none starts here. */

@@ -78,6 +78,15 @@ message GroupMemberChange {
   bool removed = 3;
 }
 
+// One change of a user, as a delta query reports it.
+message UserChange {
+  // The user. On a later delta only the id and the changed properties are
+  // set; on a removal only the id.
+  GraphUser user = 1;
+  // True when the user was deleted.
+  bool removed = 2;
+}
+
 // One change of a group, as a delta query reports it.
 message GroupChange {
   // The group. On a later delta only the id and the changed properties are

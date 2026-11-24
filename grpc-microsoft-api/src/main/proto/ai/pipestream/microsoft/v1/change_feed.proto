@@ -3,8 +3,10 @@ syntax = "proto3";
 package ai.pipestream.microsoft.v1;
 
 import "ai/pipestream/microsoft/v1/common.proto";
+import "ai/pipestream/microsoft/v1/directory.proto";
 import "ai/pipestream/microsoft/v1/events.proto";
 import "ai/pipestream/microsoft/v1/microsoft_service.proto";
+import "ai/pipestream/microsoft/v1/site_change.proto";
 import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";
 
@@ -15,7 +17,8 @@ option java_package = "ai.pipestream.microsoft.v1";
 // MICROSOFT CHANGE SERVICE - a continuous change feed and the Graph
 // change-notification subscriptions that speed it up.
 //
-// WatchChanges runs Sync passes back to back: one at start, then one each
+// WatchChanges runs Sync passes back to back, each followed by a read of the
+// Entra users and groups when the request asks for them: one at start, then one each
 // poll interval, and one early whenever a Graph change notification for a
 // watched drive or list arrives, or a "missed" or "subscriptionRemoved"
 // lifecycle notification. Polling is the baseline; notifications only
@@ -90,6 +93,74 @@ message WatchChangesRequest {
   // Shortest wait between two passes, so a burst of notifications runs one
   // pass, not many; unset = 5 seconds.
   google.protobuf.Duration min_interval = 4;
+  // The Entra directory to watch next to the Sync scope; unset = none.
+  DirectoryWatch directory = 5;
+  // The SharePoint change logs to read next to the Sync scope; unset = none.
+  SiteChangeWatch site_changes = 6;
+}
+
+// What of the Entra directory a WatchChanges stream watches. Every pass
+// reads the changes since the pass before (`/users/delta`, `/groups/delta`);
+// the first pass of a stream without a resume cursor lists everything.
+message DirectoryWatch {
+  // Watch users. Application permission User.Read.All.
+  bool users = 1;
+  // Watch groups. Application permission GroupMember.Read.All.
+  bool groups = 2;
+  // With groups: also report the direct members added to and removed from
+  // each group. The first pass then lists every direct member of every
+  // group. Keep the value for the life of a resume cursor.
+  bool group_members = 3;
+}
+
+// Which SharePoint change logs a WatchChanges stream reads. The first pass
+// of a site takes only the end of its log; every later pass streams the
+// entries since the pass before. Needs a certificate credential.
+message SiteChangeWatch {
+  // The sites whose log is read.
+  repeated string site_ids = 1;
+  // Which log of each site: its own or its site collection's. The list
+  // scope is not allowed. Keep the value for the life of a resume cursor.
+  SiteChangeScope scope = 2;
+  // Only entries about these objects. Empty = every object.
+  repeated SiteChangeObject objects = 3;
+  // Only entries of these types. Empty = every type.
+  repeated SiteChangeType types = 4;
+}
+
+// Marker sent after a pass read the change log of a site.
+message SiteChangeSnapshot {
+  // The site, as the request named it.
+  string site_id = 1;
+  // CHANGE_SOURCE_CRAWL when the pass only took the end of the log (the
+  // first pass of the site): what changed before is not reported.
+  // CHANGE_SOURCE_DELTA when the entries since the pass before were read.
+  ChangeSource source = 2;
+  // Entries the read emitted.
+  int64 change_count = 3;
+}
+
+// Which part of the directory a snapshot is about.
+enum DirectoryKind {
+  // Zero value; not set.
+  DIRECTORY_KIND_UNSPECIFIED = 0;
+  // Users.
+  DIRECTORY_KIND_USERS = 1;
+  // Groups.
+  DIRECTORY_KIND_GROUPS = 2;
+}
+
+// Marker sent after a pass read the users or the groups.
+message DirectorySnapshot {
+  // What was read.
+  DirectoryKind kind = 1;
+  // CHANGE_SOURCE_CRAWL when everything was listed (the first pass, or
+  // after Graph rejected the delta link): a user or group the consumer
+  // holds that was not listed is gone. CHANGE_SOURCE_DELTA when only the
+  // changes since the pass before were read.
+  ChangeSource source = 2;
+  // Changes the read emitted.
+  int64 change_count = 3;
 }
 
 // What started a pass.
@@ -112,7 +183,7 @@ message PassCompleted {
   PassTrigger trigger = 2;
   // Notifications that arrived since the previous pass started.
   int32 notification_count = 3;
-  // Changes the pass emitted.
+  // Changes the pass emitted; user, group and site log changes included.
   int64 change_count = 4;
   // When the pass started.
   google.protobuf.Timestamp started_at = 5;
@@ -137,6 +208,17 @@ message WatchChangesResponse {
     MicrosoftSnapshot snapshot = 4;
     // The end of a pass.
     PassCompleted pass_completed = 5;
+    // One created, changed or deleted user; only with directory.users.
+    UserChange user_change = 6;
+    // One created, changed or deleted group, with its member changes when
+    // asked for; only with directory.groups.
+    GroupChange group_change = 7;
+    // The end of the users or of the groups of a pass.
+    DirectorySnapshot directory_snapshot = 8;
+    // One entry of a site's change log; only with site_changes.
+    SiteChange site_change = 9;
+    // The end of one site's change log in a pass.
+    SiteChangeSnapshot site_change_snapshot = 10;
   }
 }
 

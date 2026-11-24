@@ -125,6 +125,12 @@ class RecordingScrubberTest {
                 + GUID_A + "')/roleassignments?$expand=Member"))
                 .isEqualTo(site + "/_api/web/lists(guid'" + RecordingScrubber.GUID_PREFIX
                         + "000000000001')/roleassignments?$expand=Member");
+        assertThat(scrubber.text("https://contoso.sharepoint.com/sites/Team/_api/site/getchanges"))
+                .isEqualTo(site + "/_api/site/getchanges");
+        assertThat(scrubber.text("https://contoso.sharepoint.com/sites/Team/_api/site?$select=CurrentChangeToken"))
+                .isEqualTo(site + "/_api/site?$select=CurrentChangeToken");
+        assertThat(scrubber.text("https://contoso.sharepoint.com/sites/Team/_api/sitepages/pages"))
+                .isEqualTo(RecordingScrubber.URL_PREFIX + "2");
     }
 
     @Test
@@ -156,6 +162,27 @@ class RecordingScrubberTest {
                 .isEqualTo("i:0#.f|membership|email-1@example.invalid");
         assertThat(member.path("Title").asText()).isEqualTo("Principal 3");
         assertThat(member.path("UserId").path("NameId").asText()).isEqualTo("nameid-0001");
+    }
+
+    @Test
+    void aChangedUserOrGroupOfADeltaLosesItsNameWithoutItsOtherProperties() throws Exception {
+        JsonNode users = scrubber.json(Recordings.JSON.readTree("""
+                {"@odata.context":"https://graph.microsoft.com/v1.0/$metadata#users(id,displayName)",
+                 "value":[{"id":"u1","displayName":"Ada Lovelace"},
+                          {"id":"u2","@removed":{"reason":"changed"}}]}"""));
+        assertThat(users.path("value").path(0).path("displayName").asText())
+                .isEqualTo("Directory value 1");
+        assertThat(users.path("value").path(1).path("@removed").path("reason").asText())
+                .isEqualTo("changed");
+        JsonNode groups = scrubber.json(Recordings.JSON.readTree("""
+                {"@odata.context":"https://graph.microsoft.com/v1.0/$metadata#groups",
+                 "value":[{"id":"g1","description":"Payroll team"}]}"""));
+        assertThat(groups.path("value").path(0).path("description").asText())
+                .isEqualTo("Directory value 2");
+        JsonNode drives = scrubber.json(Recordings.JSON.readTree("""
+                {"@odata.context":"https://graph.microsoft.com/v1.0/$metadata#drives",
+                 "value":[{"id":"d1","name":"Documents"}]}"""));
+        assertThat(drives.path("value").path(0).path("name").asText()).isEqualTo("Documents");
     }
 
     @Test
@@ -235,6 +262,32 @@ class RecordingScrubberTest {
         assertThat(scrubber.text("PROOF.PERSON@CONTOSO.COM")).isEqualTo(RecordingScrubber.JOIN_PROOF);
         assertThat(scrubber.text("someone.else@contoso.com")).isEqualTo("email-1@example.invalid");
         assertThat(RecordingScrubber.violations(RecordingScrubber.JOIN_PROOF)).isEmpty();
+    }
+
+    @Test
+    void aChangeLogEntryKeepsItsKindAndIdsAndLosesNamesTitlesAndPaths() throws Exception {
+        JsonNode scrubbed = scrubber.json(Recordings.JSON.readTree("""
+                {"value":[{"odata.type":"SP.ChangeItem",
+                  "ChangeToken":{"StringValue":"1;3;0f8fad5b-d9cb-469f-a165-70867728950e;638000000000000000;42"},
+                  "ChangeType":17,"Time":"2026-11-24T17:00:00Z","ItemId":4,
+                  "ListId":"0f8fad5b-d9cb-469f-a165-70867728950e","Editor":"Ada Lovelace",
+                  "EditorEmailHint":"ada@contoso.com","ListTitle":"Board papers",
+                  "ServerRelativeUrl":"/sites/Board/Lists/Papers/4_.000",
+                  "ContentTypeId":{"StringValue":"0x0100AB"},
+                  "SharedWithUsers":[{"Name":"Grace Hopper","Email":"grace@contoso.com"}]}]}"""));
+
+        JsonNode change = scrubbed.path("value").get(0);
+        String list = change.path("ListId").asText();
+        assertThat(change.path("odata.type").asText()).isEqualTo("SP.ChangeItem");
+        assertThat(change.path("Time").asText()).isEqualTo("2026-11-24T17:00:00Z");
+        assertThat(change.path("ChangeType").asInt()).isEqualTo(17);
+        assertThat(change.path("ItemId").asInt()).isEqualTo(4);
+        assertThat(list).startsWith(RecordingScrubber.GUID_PREFIX);
+        assertThat(change.path("ChangeToken").path("StringValue").asText())
+                .isEqualTo("1;3;" + list + ";638000000000000000;42");
+        assertThat(change.path("EditorEmailHint").asText()).isEqualTo("email-1@example.invalid");
+        assertThat(scrubbed.toString()).doesNotContain("Ada", "Board", "Papers", "Grace", "contoso", "0x0100AB");
+        assertThat(RecordingScrubber.violations(scrubbed.toString())).isEmpty();
     }
 
     @Test

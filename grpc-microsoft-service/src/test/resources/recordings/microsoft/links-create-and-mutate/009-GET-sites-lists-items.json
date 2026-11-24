@@ -8,18 +8,18 @@
   "response" : {
     "status" : 200,
     "headers" : {
-      "etag" : "\"00000000-0000-4000-8000-000000000114,2\"",
+      "etag" : "\"00000000-0000-4000-8000-000000000179,2\"",
       "content-type" : "application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8"
     },
     "body" : {
       "json" : {
         "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#sites('tenant-1.example%2C00000000-0000-4000-8000-000000000001%2C00000000-0000-4000-8000-000000000002')/lists('00000000-0000-4000-8000-000000000022')/items(fields())/$entity",
-        "@odata.etag" : "\"00000000-0000-4000-8000-000000000114,2\"",
-        "createdDateTime" : "2026-11-23T02:27:10Z",
-        "eTag" : "\"00000000-0000-4000-8000-000000000114,2\"",
+        "@odata.etag" : "\"00000000-0000-4000-8000-000000000179,2\"",
+        "createdDateTime" : "2026-11-24T18:06:15Z",
+        "eTag" : "\"00000000-0000-4000-8000-000000000179,2\"",
         "id" : "5",
-        "lastModifiedDateTime" : "2026-11-23T02:27:09Z",
-        "webUrl" : "https://redacted.example/url/82",
+        "lastModifiedDateTime" : "2026-11-24T18:06:15Z",
+        "webUrl" : "https://redacted.example/url/142",
         "createdBy" : {
           "user" : {
             "displayName" : "Identity 2"
@@ -39,12 +39,12 @@
           "siteId" : "tenant-1.example,00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000002"
         },
         "contentType" : {
-          "id" : "0x0100FEDD189D210AE648B9221B2670468CF6",
+          "id" : "0x0100988D7D1E8452124D858BAEA46D94D7CE",
           "name" : "Item"
         },
         "fields@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#sites('tenant-1.example%2C00000000-0000-4000-8000-000000000001%2C00000000-0000-4000-8000-000000000002')/lists('00000000-0000-4000-8000-000000000022')/items('5')/fields/$entity",
         "fields" : {
-          "@odata.etag" : "\"00000000-0000-4000-8000-000000000114,2\"",
+          "@odata.etag" : "\"00000000-0000-4000-8000-000000000179,2\"",
           "Title" : "batch link",
           "PsLink" : {
             "Description" : "A page",
@@ -54,8 +54,8 @@
           "PsTerms" : [ ],
           "id" : "5",
           "ContentType" : "Item",
-          "Modified" : "2026-11-23T02:27:09Z",
-          "Created" : "2026-11-23T02:27:10Z",
+          "Modified" : "2026-11-24T18:06:15Z",
+          "Created" : "2026-11-24T18:06:15Z",
           "AuthorLookupId" : "1073741822",
           "EditorLookupId" : "1073741822",
           "_UIVersionString" : "2.0",

@@ -227,6 +227,23 @@ for a reauthorization, and creates a subscription again when Graph no longer
 has it. `ListSubscriptionRenewals` shows what it keeps and the last error. A
 subscription that expires while the server is down is not created again.
 
+`WatchChangesRequest.directory` adds Entra users and groups to every pass:
+`user_change` and `group_change` messages (a group change carries its member
+changes when `group_members` is set), then one `directory_snapshot` per
+kind. The first pass lists every user and group; later passes read
+`/users/delta` and `/groups/delta` from the links the resume cursor carries.
+Subscriptions on `/users`, `/groups` and `/groups/{id}/members` shorten the
+wait the same way as the ones on drives and lists.
+
+`WatchChangesRequest.site_changes` adds the SharePoint change log of the named
+sites to every pass: one `site_change` per entry, then one
+`site_change_snapshot` per site. The log names what a drive notification with
+security webhooks only hints at: the list item, list or site whose role
+assignments or inheritance changed, and the group whose members changed. The
+first pass of a site takes only the end of its log; the resume cursor carries
+the change token of each site. `ListSiteChanges` reads the same log on its
+own. Both need the certificate credential.
+
 ## Permissions
 
 What each group of rpcs needs, as proven against a real tenant on 2026-11-22.
@@ -236,9 +253,10 @@ All are application permissions with admin consent.
 |---|---|---|
 | Everything scoped to a site: `GetSite`, drives, items, downloads, lists, list items, columns, item / list / list-item `ListPermissions`, the delta rpcs, `Sync`, and every write rpc | Graph `Sites.Selected` plus a grant on the site | site grant `manage` |
 | `ListSites`, `ListAllSites`, `DeltaSites` | Graph `Sites.Read.All` (tenant-wide) | refused with `Sites.Selected` alone |
-| `ListUsers`, `ListGroups`, `DeltaGroups`, `ListGroupTransitiveMembers`, `ListUserTransitiveMemberOf` | Graph `User.Read.All` and `GroupMember.Read.All` | those two |
+| `ListUsers`, `ListGroups`, `DeltaUsers`, `DeltaGroups`, `ListGroupTransitiveMembers`, `ListUserTransitiveMemberOf`, `WatchChanges` with `directory` | Graph `User.Read.All` and `GroupMember.Read.All` | those two |
 | `ListSiteGroups`, `GetSiteRoleInheritance` | SharePoint `Sites.Selected` plus a grant on the site, certificate credential | site grant `manage` |
 | `ListSiteGroupMembers`, `ListSiteRoleAssignments` | SharePoint `Sites.Selected` plus site grant `fullcontrol`, certificate credential (refused with `manage`) | site grant `fullcontrol`; also SharePoint `Sites.FullControl.All` |
+| `ListSiteChanges`, `WatchChanges` with `site_changes` | SharePoint `Sites.Selected` plus a grant on the site, certificate credential | site grant `fullcontrol` (not tried with `manage`) |
 | `ListPermissions` on a site | Graph `Sites.FullControl.All` | that |
 | `MicrosoftAdminService` | Graph `Sites.FullControl.All` | that (grant created, changed and revoked) |
 

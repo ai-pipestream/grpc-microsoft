@@ -1,0 +1,22 @@
+{
+  "request" : {
+    "method" : "GET",
+    "url" : "https://redacted.example/url/3/_api/web/lists(guid'00000000-0000-4000-8000-000000000022')?$select=CurrentChangeToken",
+    "authorized" : true,
+    "headers" : { }
+  },
+  "response" : {
+    "status" : 200,
+    "headers" : {
+      "etag" : "\"21\"",
+      "content-type" : "application/json;odata=nometadata;streaming=true;charset=utf-8"
+    },
+    "body" : {
+      "json" : {
+        "CurrentChangeToken" : {
+          "StringValue" : "1;3;00000000-0000-4000-8000-000000000022;639311403438270000;1675688694"
+        }
+      }
+    }
+  }
+}

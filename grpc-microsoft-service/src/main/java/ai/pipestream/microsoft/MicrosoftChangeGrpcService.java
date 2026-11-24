@@ -6,6 +6,9 @@ import ai.pipestream.microsoft.v1.CreateSubscriptionRequest;
 import ai.pipestream.microsoft.v1.CreateSubscriptionResponse;
 import ai.pipestream.microsoft.v1.DeleteSubscriptionRequest;
 import ai.pipestream.microsoft.v1.DeleteSubscriptionResponse;
+import ai.pipestream.microsoft.v1.DirectoryKind;
+import ai.pipestream.microsoft.v1.DirectorySnapshot;
+import ai.pipestream.microsoft.v1.DirectoryWatch;
 import ai.pipestream.microsoft.v1.GetSubscriptionRequest;
 import ai.pipestream.microsoft.v1.GetSubscriptionResponse;
 import ai.pipestream.microsoft.v1.ListSubscriptionRenewalsRequest;
@@ -19,6 +22,11 @@ import ai.pipestream.microsoft.v1.PassTrigger;
 import ai.pipestream.microsoft.v1.ReauthorizeSubscriptionRequest;
 import ai.pipestream.microsoft.v1.ReauthorizeSubscriptionResponse;
 import ai.pipestream.microsoft.v1.Subscription;
+import ai.pipestream.microsoft.v1.ListSiteChangesRequest;
+import ai.pipestream.microsoft.v1.SiteChangeScope;
+import ai.pipestream.microsoft.v1.SiteChangeSnapshot;
+import ai.pipestream.microsoft.v1.SiteChangeWatch;
+import ai.pipestream.microsoft.v1.SyncCursor;
 import ai.pipestream.microsoft.v1.SyncRequest;
 import ai.pipestream.microsoft.v1.SyncResponse;
 import ai.pipestream.microsoft.v1.UpdateSubscriptionRequest;
@@ -42,6 +50,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.concurrent.TimeUnit;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -175,6 +184,11 @@ public final class MicrosoftChangeGrpcService
                     .asRuntimeException());
             return;
         }
+        if (request.getSiteChanges().getScope() == SiteChangeScope.SITE_CHANGE_SCOPE_LIST) {
+            observer.onError(Status.INVALID_ARGUMENT
+                    .withDescription("site_changes cannot read the log of a list").asRuntimeException());
+            return;
+        }
         Context context = Context.current();
         AtomicLong sequence = new AtomicLong();
         AtomicReference<String> cursor = new AtomicReference<>(request.getResumeCursor().isBlank()
@@ -184,8 +198,8 @@ public final class MicrosoftChangeGrpcService
             int notifications = 0;
             for (long pass = 1; !context.isCancelled(); pass++) {
                 Instant started = clock.instant();
-                long changes = passWithRetries(request.getSync(), cursor, trigger, sequence,
-                        observer, context);
+                long changes = passWithRetries(request, cursor,
+                        trigger, sequence, observer, context);
                 if (changes < 0) {
                     break;
                 }
@@ -249,12 +263,12 @@ public final class MicrosoftChangeGrpcService
      * {@code UNAVAILABLE} or {@code RESOURCE_EXHAUSTED}; answers its change count,
      * or -1 when the client left while waiting.
      */
-    private long passWithRetries(SyncRequest scope, AtomicReference<String> cursor,
-            PassTrigger trigger, AtomicLong sequence, StreamObserver<WatchChangesResponse> observer,
-            Context context) throws Throwable {
+    private long passWithRetries(WatchChangesRequest request,
+            AtomicReference<String> cursor, PassTrigger trigger, AtomicLong sequence,
+            StreamObserver<WatchChangesResponse> observer, Context context) throws Throwable {
         for (int failures = 1; ; failures++) {
             try {
-                return runPass(scope, cursor, trigger, sequence, observer);
+                return runPass(request, cursor, trigger, sequence, observer);
             } catch (Throwable t) {
                 StatusRuntimeException error = GraphErrors.toException(t);
                 if (context.isCancelled() || !retryable(error.getStatus().getCode())) {
@@ -309,9 +323,16 @@ public final class MicrosoftChangeGrpcService
         return false;
     }
 
-    /** Runs one Sync pass, forwarding its events; answers how many changes it emitted. */
-    private long runPass(SyncRequest scope, AtomicReference<String> cursor, PassTrigger trigger,
-            AtomicLong sequence, StreamObserver<WatchChangesResponse> observer) throws Throwable {
+    /**
+     * Runs one Sync pass and then reads the watched directory, forwarding their
+     * events; answers how many changes it emitted.
+     */
+    private long runPass(WatchChangesRequest request,
+            AtomicReference<String> cursor, PassTrigger trigger, AtomicLong sequence,
+            StreamObserver<WatchChangesResponse> observer) throws Throwable {
+        SyncRequest scope = request.getSync();
+        DirectoryWatch directory = request.getDirectory();
+        SiteChangeWatch sites = request.getSiteChanges();
         AtomicLong changes = new AtomicLong();
         AtomicReference<Throwable> failure = new AtomicReference<>();
         AtomicReference<String> next = new AtomicReference<>();
@@ -354,10 +375,94 @@ public final class MicrosoftChangeGrpcService
         if (failure.get() != null) {
             throw failure.get();
         }
-        if (next.get() != null) {
-            cursor.set(next.get());
+        String ended = next.get() == null ? resume : next.get();
+        if (directory.getUsers() || directory.getGroups() || sites.getSiteIdsCount() > 0) {
+            MicrosoftSessions.Session session = microsoft.sessions().resolve(scope.getConnectionId());
+            String graphBaseUrl = session.graph().baseUrl();
+            SyncCursor before = SyncCursors.decode(resume, graphBaseUrl);
+            // Sync's cursor holds nothing of the directory or the site logs.
+            SyncCursor.Builder after = SyncCursors.decode(ended, graphBaseUrl).toBuilder()
+                    .setUsersDeltaLink(before.getUsersDeltaLink())
+                    .setGroupsDeltaLink(before.getGroupsDeltaLink())
+                    .putAllSiteChangeTokens(before.getSiteChangeTokensMap());
+            Emitter emit = message -> {
+                synchronized (observer) {
+                    observer.onNext(message.setResumeCursor(resume)
+                            .setSequence(sequence.incrementAndGet()).build());
+                }
+            };
+            readDirectory(session, directory, before, after, changes, emit);
+            readSiteChanges(session, sites, before, after, changes, emit);
+            ended = SyncCursors.encode(after.build());
         }
+        cursor.set(ended);
         return changes.get();
+    }
+
+    /** Reads the watched parts of the directory and puts their new delta links in {@code after}. */
+    private void readDirectory(MicrosoftSessions.Session session, DirectoryWatch directory,
+            SyncCursor before, SyncCursor.Builder after, AtomicLong changes, Emitter emit)
+            throws Exception {
+        if (directory.getUsers()) {
+            AtomicLong read = new AtomicLong();
+            AtomicBoolean everything = new AtomicBoolean(before.getUsersDeltaLink().isEmpty());
+            GraphPager.DeltaOutcome outcome = microsoft.usersDelta(session,
+                    before.getUsersDeltaLink(), resync -> everything.set(true), change -> {
+                        read.incrementAndGet();
+                        emit.send(WatchChangesResponse.newBuilder().setUserChange(change));
+                    });
+            after.setUsersDeltaLink(outcome.deltaLink());
+            emit.send(snapshot(DirectoryKind.DIRECTORY_KIND_USERS, everything.get(), read.get()));
+            changes.addAndGet(read.get());
+        }
+        if (directory.getGroups()) {
+            AtomicLong read = new AtomicLong();
+            AtomicBoolean everything = new AtomicBoolean(before.getGroupsDeltaLink().isEmpty());
+            GraphPager.DeltaOutcome outcome = microsoft.groupsDelta(session,
+                    before.getGroupsDeltaLink(), directory.getGroupMembers(),
+                    resync -> everything.set(true), change -> {
+                        read.incrementAndGet();
+                        emit.send(WatchChangesResponse.newBuilder().setGroupChange(change));
+                    });
+            after.setGroupsDeltaLink(outcome.deltaLink());
+            emit.send(snapshot(DirectoryKind.DIRECTORY_KIND_GROUPS, everything.get(), read.get()));
+            changes.addAndGet(read.get());
+        }
+    }
+
+    /** Reads the change log of every watched site and puts its new token in {@code after}. */
+    private void readSiteChanges(MicrosoftSessions.Session session, SiteChangeWatch sites,
+            SyncCursor before, SyncCursor.Builder after, AtomicLong changes, Emitter emit)
+            throws Exception {
+        for (String siteId : sites.getSiteIdsList()) {
+            String token = before.getSiteChangeTokensOrDefault(siteId, "");
+            AtomicLong read = new AtomicLong();
+            String end = microsoft.siteChanges(session, ListSiteChangesRequest.newBuilder()
+                    .setSiteId(siteId).setScope(sites.getScope())
+                    .setChangeToken(token.isEmpty() ? SiteChanges.LATEST : token)
+                    .addAllObjects(sites.getObjectsList()).addAllTypes(sites.getTypesList()).build(),
+                    change -> {
+                        read.incrementAndGet();
+                        emit.send(WatchChangesResponse.newBuilder().setSiteChange(change));
+                    });
+            after.putSiteChangeTokens(siteId, end);
+            emit.send(WatchChangesResponse.newBuilder().setSiteChangeSnapshot(
+                    SiteChangeSnapshot.newBuilder().setSiteId(siteId).setChangeCount(read.get())
+                            .setSource(token.isEmpty() ? ChangeSource.CHANGE_SOURCE_CRAWL
+                                    : ChangeSource.CHANGE_SOURCE_DELTA)));
+            changes.addAndGet(read.get());
+        }
+    }
+
+    private interface Emitter {
+        void send(WatchChangesResponse.Builder message);
+    }
+
+    private static WatchChangesResponse.Builder snapshot(DirectoryKind kind, boolean everything,
+            long count) {
+        return WatchChangesResponse.newBuilder().setDirectorySnapshot(DirectorySnapshot.newBuilder()
+                .setKind(kind).setChangeCount(count).setSource(everything
+                        ? ChangeSource.CHANGE_SOURCE_CRAWL : ChangeSource.CHANGE_SOURCE_DELTA));
     }
 
     private static MicrosoftChange stamp(MicrosoftChange change, PassTrigger trigger) {

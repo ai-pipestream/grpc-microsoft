@@ -128,7 +128,7 @@ class MicrosoftLiveChangeIT {
         Instant startedAt = Instant.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS);
         ChangeScenarios.Backend backend = new ChangeScenarios.Backend(driveId, suffix, startedAt,
                 publicUrl + NotificationReceiver.NOTIFICATIONS_PATH,
-                publicUrl + NotificationReceiver.LIFECYCLE_PATH);
+                publicUrl + NotificationReceiver.LIFECYCLE_PATH, config.siteId());
 
         Map<String, byte[]> blobs = new ConcurrentHashMap<>();
         RecordingScrubber scrubber = new RecordingScrubber(graphBaseUrl);
@@ -200,7 +200,8 @@ class MicrosoftLiveChangeIT {
                     .put("driveId", scrubber.text(driveId))
                     .put("startedAt", startedAt.toString())
                     .put("notificationUrl", scrubber.text(backend.notificationUrl()))
-                    .put("lifecycleUrl", scrubber.text(backend.lifecycleUrl()));
+                    .put("lifecycleUrl", scrubber.text(backend.lifecycleUrl()))
+                    .put("siteId", scrubber.text(backend.siteId()));
             NotificationBus.Listener listener = scenarios.listen();
             try {
                 for (ChangeScenarios.Scenario scenario : scenarios.all()) {

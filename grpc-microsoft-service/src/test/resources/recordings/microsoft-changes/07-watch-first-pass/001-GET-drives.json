@@ -16,7 +16,7 @@
         "createdDateTime" : "2026-10-10T02:58:54Z",
         "description" : "",
         "id" : "b!drive-0001",
-        "lastModifiedDateTime" : "2026-11-24T16:58:59Z",
+        "lastModifiedDateTime" : "2026-11-24T17:40:01Z",
         "name" : "Documents",
         "webUrl" : "https://redacted.example/url/5",
         "driveType" : "documentLibrary",
@@ -28,23 +28,23 @@
         "owner" : {
           "user" : {
             "email" : "email-1@example.invalid",
-            "id" : "00000000-0000-4000-8000-000000000005",
+            "id" : "00000000-0000-4000-8000-000000000007",
             "displayName" : "Identity 2"
           }
         },
         "quota" : {
-          "deleted" : 10406164,
-          "remaining" : 27487767580047,
+          "deleted" : 10475085,
+          "remaining" : 27487767510500,
           "state" : "normal",
           "total" : 27487790694400,
-          "used" : 12708189
+          "used" : 12708815
         },
         "sharePointIds" : {
-          "listId" : "00000000-0000-4000-8000-000000000006",
-          "siteId" : "00000000-0000-4000-8000-000000000007",
+          "listId" : "00000000-0000-4000-8000-000000000008",
+          "siteId" : "00000000-0000-4000-8000-000000000001",
           "siteUrl" : "https://redacted.example/url/6",
-          "tenantId" : "00000000-0000-4000-8000-000000000008",
-          "webId" : "00000000-0000-4000-8000-000000000009"
+          "tenantId" : "00000000-0000-4000-8000-000000000009",
+          "webId" : "00000000-0000-4000-8000-000000000002"
         }
       }
     }

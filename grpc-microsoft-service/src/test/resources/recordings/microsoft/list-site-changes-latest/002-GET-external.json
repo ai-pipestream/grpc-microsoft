@@ -1,0 +1,21 @@
+{
+  "request" : {
+    "method" : "GET",
+    "url" : "https://redacted.example/url/3/_api/web?$select=CurrentChangeToken",
+    "authorized" : true,
+    "headers" : { }
+  },
+  "response" : {
+    "status" : 200,
+    "headers" : {
+      "content-type" : "application/json;odata=nometadata;streaming=true;charset=utf-8"
+    },
+    "body" : {
+      "json" : {
+        "CurrentChangeToken" : {
+          "StringValue" : "1;2;00000000-0000-4000-8000-000000000002;639311403435370000;1675688692"
+        }
+      }
+    }
+  }
+}

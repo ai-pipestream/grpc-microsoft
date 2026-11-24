@@ -1,0 +1,38 @@
+{
+  "request" : {
+    "method" : "POST",
+    "url" : "https://graph.microsoft.com/v1.0/drives/b!drive-0001/items/item-0003/createLink",
+    "authorized" : true,
+    "headers" : {
+      "content-type" : "application/json"
+    },
+    "body" : {
+      "json" : {
+        "type" : "view",
+        "scope" : "organization"
+      }
+    }
+  },
+  "response" : {
+    "status" : 201,
+    "headers" : {
+      "location" : "https://redacted.example/url/17",
+      "content-type" : "application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8"
+    },
+    "body" : {
+      "json" : {
+        "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#microsoft.graph.permission",
+        "id" : "permission-0002",
+        "roles" : [ "read" ],
+        "shareId" : "u!aHR0cHM6Ly9waXBlc3RyZWFtYWkuc2hhcmVwb2ludC5jb20vOnQ6L3MvV2VsY29tZVRvUGlwZXN0cmVhbS9JUUJKVkJmR0c1ejFSWjVsQUtieXU4WUpBWG9WMVVESG9ia3FiZi10MWtDZVpsUQ",
+        "hasPassword" : false,
+        "link" : {
+          "scope" : "organization",
+          "type" : "view",
+          "webUrl" : "https://redacted.example/url/18",
+          "preventsDownload" : false
+        }
+      }
+    }
+  }
+}

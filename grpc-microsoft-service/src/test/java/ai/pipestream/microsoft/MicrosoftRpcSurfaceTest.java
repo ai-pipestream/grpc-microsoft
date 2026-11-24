@@ -13,6 +13,8 @@ import ai.pipestream.microsoft.v1.DeltaPreferences;
 import ai.pipestream.microsoft.v1.DeltaResyncReason;
 import ai.pipestream.microsoft.v1.DeltaGroupsRequest;
 import ai.pipestream.microsoft.v1.DeltaGroupsResponse;
+import ai.pipestream.microsoft.v1.DeltaUsersRequest;
+import ai.pipestream.microsoft.v1.DeltaUsersResponse;
 import ai.pipestream.microsoft.v1.DeltaSitesRequest;
 import ai.pipestream.microsoft.v1.DeltaSitesResponse;
 import ai.pipestream.microsoft.v1.DownloadContentRequest;
@@ -421,6 +423,41 @@ class MicrosoftRpcSurfaceTest {
         int before = fake.requests().size();
         assertThat(code(() -> drain(appStub.deltaGroups(DeltaGroupsRequest.newBuilder()
                 .setDeltaLink(fake.baseUrl() + "/sites/delta?token=x").build()))))
+                .isEqualTo(Status.Code.INVALID_ARGUMENT);
+        assertThat(fake.requests()).hasSize(before);
+    }
+
+    @Test
+    void deltaUsersReportsUsersRemovalsAndTheLink() {
+        String d1 = fake.baseUrl() + "/users/delta?$deltatoken=abc";
+        fake.stub("/users/delta", MicrosoftFixtures.deltaJson(d1, """
+                {"id":"u1","displayName":"Ada","userPrincipalName":"ada@contoso.example",
+                 "accountEnabled":true}""", """
+                {"id":"u2","@removed":{"reason":"changed"}}"""));
+        List<DeltaUsersResponse> full = drain(appStub.deltaUsers(DeltaUsersRequest.getDefaultInstance()));
+        assertThat(fake.requestsTo("/users/delta").get(0).query())
+                .isEqualTo("$select=" + GraphPaths.USER_SELECT);
+        assertThat(full).hasSize(3);
+        assertThat(full.get(0).getChange().getUser().getUserPrincipalName())
+                .isEqualTo("ada@contoso.example");
+        assertThat(full.get(0).getChange().getRemoved()).isFalse();
+        assertThat(full.get(1).getChange().getUser().getId()).isEqualTo("u2");
+        assertThat(full.get(1).getChange().getRemoved()).isTrue();
+        assertThat(full.get(2).getDeltaLink()).isEqualTo(d1);
+
+        fake.stub("/users/delta?$deltatoken=abc", MicrosoftFixtures.deltaJson(d1));
+        List<DeltaUsersResponse> resumed = drain(appStub.deltaUsers(DeltaUsersRequest.newBuilder()
+                .setDeltaLink(d1).build()));
+        assertThat(resumed).hasSize(1);
+        assertThat(resumed.get(0).getDeltaLink()).isEqualTo(d1);
+
+        fake.stub("/users/delta?$deltatoken=latest", MicrosoftFixtures.deltaJson(d1));
+        assertThat(drain(appStub.deltaUsers(DeltaUsersRequest.newBuilder().setDeltaLink("latest")
+                .build()))).hasSize(1);
+
+        int before = fake.requests().size();
+        assertThat(code(() -> drain(appStub.deltaUsers(DeltaUsersRequest.newBuilder()
+                .setDeltaLink(fake.baseUrl() + "/groups/delta?token=x").build()))))
                 .isEqualTo(Status.Code.INVALID_ARGUMENT);
         assertThat(fake.requests()).hasSize(before);
     }

@@ -32,6 +32,9 @@ final class SharePointRest {
     }
 
     private static final Map<String, String> ACCEPT = Map.of("accept", "application/json;odata=nometadata");
+    /** Asks for answers that name the type of each object ({@code odata.type}). */
+    private static final Map<String, String> ACCEPT_TYPED =
+            Map.of("accept", "application/json;odata=minimalmetadata");
 
     private final Tokens tokens;
     private final Map<String, Supplier<String>> cached = new ConcurrentHashMap<>();
@@ -54,9 +57,16 @@ final class SharePointRest {
     /** One site's REST API. */
     final class Web {
         private final GraphClient client;
+        private final String host;
 
-        private Web(GraphClient client) {
+        private Web(GraphClient client, String host) {
             this.client = client;
+            this.host = host;
+        }
+
+        /** Host name of the site. */
+        String host() {
+            return host;
         }
 
         /** GET one object. */
@@ -67,6 +77,11 @@ final class SharePointRest {
         /** POST JSON and return the answer's body. */
         JsonNode post(String path, JsonNode body) throws IOException, InterruptedException {
             return client.execute(new GraphClient.Call("POST", path, ACCEPT, body)).body();
+        }
+
+        /** POST JSON and return the answer's body, each object with its {@code odata.type}. */
+        JsonNode postTyped(String path, JsonNode body) throws IOException, InterruptedException {
+            return client.execute(new GraphClient.Call("POST", path, ACCEPT_TYPED, body)).body();
         }
 
         /** GET a collection, following {@code odata.nextLink}. */
@@ -116,7 +131,8 @@ final class SharePointRest {
         String resource = uri.getScheme() + "://" + uri.getAuthority();
         Supplier<String> bearer = cached.computeIfAbsent(session.connectionId() + "\n" + resource,
                 key -> tokens.forResource(session, resource));
-        return new Web(session.graph().sibling(GraphLinks.stripTrailingSlashes(webUrl) + "/_api", bearer));
+        return new Web(session.graph().sibling(GraphLinks.stripTrailingSlashes(webUrl) + "/_api", bearer),
+                uri.getHost());
     }
 
     /** The site id a securable belongs to. */
@@ -165,6 +181,16 @@ final class SharePointRest {
      */
     static String item(String listId, String itemId) {
         return list(listId) + "/items(" + itemId(itemId) + ")";
+    }
+
+    /**
+     * The REST path of a list.
+     *
+     * @param listId the list's GUID
+     * @return the path, relative to {@code {web}/_api}
+     */
+    static String listPath(String listId) {
+        return list(listId);
     }
 
     private static String list(String listId) {

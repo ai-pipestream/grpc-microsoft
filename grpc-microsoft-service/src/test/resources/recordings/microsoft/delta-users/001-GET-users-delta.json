@@ -1,0 +1,33 @@
+{
+  "request" : {
+    "method" : "GET",
+    "url" : "https://graph.microsoft.com/v1.0/users/delta?$select=id,displayName,userPrincipalName,mail,givenName,surname,jobTitle,department,officeLocation,userType,accountEnabled,preferredLanguage,proxyAddresses,otherMails",
+    "authorized" : true,
+    "headers" : { }
+  },
+  "response" : {
+    "status" : 200,
+    "headers" : {
+      "content-type" : "application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8"
+    },
+    "body" : {
+      "json" : {
+        "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#users(id,displayName,userPrincipalName,mail,givenName,surname,jobTitle,department,officeLocation,userType,accountEnabled,preferredLanguage,proxyAddresses,otherMails)",
+        "@odata.nextLink" : "https://graph.microsoft.com/v1.0/users/delta?$skiptoken=cursor-0066",
+        "value" : [ {
+          "displayName" : "Directory value 1",
+          "userPrincipalName" : "email-1@example.invalid",
+          "mail" : "email-1@example.invalid",
+          "givenName" : "Directory value 2",
+          "surname" : "Directory value 3",
+          "userType" : "Member",
+          "accountEnabled" : true,
+          "preferredLanguage" : "en",
+          "proxyAddresses" : [ "smtp:email-2@example.invalid", "SMTP:email-1@example.invalid" ],
+          "otherMails" : [ "join-proof@example.invalid", "email-3@example.invalid" ],
+          "id" : "00000000-0000-4000-8000-000000000016"
+        } ]
+      }
+    }
+  }
+}
