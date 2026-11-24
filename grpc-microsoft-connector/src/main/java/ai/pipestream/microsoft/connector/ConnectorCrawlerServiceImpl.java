@@ -15,6 +15,7 @@ import microsoft.graph.connectors.contracts.grpc.GetIncrementalCrawlStreamReques
 import microsoft.graph.connectors.contracts.grpc.IncrementalCrawlItem;
 import microsoft.graph.connectors.contracts.grpc.IncrementalCrawlStreamBit;
 import microsoft.graph.connectors.contracts.grpc.OperationResult;
+import microsoft.graph.connectors.contracts.grpc.OperationStatus;
 
 import java.util.Iterator;
 import java.util.Optional;
@@ -37,6 +38,12 @@ import java.util.Optional;
  *
  * <p>A Sync stream that ends without its terminal resume cursor was cut
  * short, so the crawl ends with an error status and no new checkpoint.
+ *
+ * <p>When the connection asks for content, an item whose file content is
+ * not on it (not text, too large, not inlined, not decodable) is still
+ * emitted with its properties, and its bit reports
+ * {@link OperationResult#PartialSuccess} with the reason. The last bit of
+ * the crawl counts those items.
  */
 public final class ConnectorCrawlerServiceImpl
         extends ConnectorCrawlerServiceGrpc.ConnectorCrawlerServiceImplBase {
@@ -72,18 +79,24 @@ public final class ConnectorCrawlerServiceImpl
             String stored = request.getCrawlProgressMarker().getCustomMarkerData();
             Iterator<SyncResponse> sync = stub.sync(syncRequest(config, ""));
             int emitted = 0;
+            int withoutContent = 0;
             String next = "";
             while (sync.hasNext()) {
                 SyncResponse event = sync.next();
                 if (event.getEventCase() == SyncResponse.EventCase.CHANGE) {
-                    Optional<CrawlItem> item = CrawlItemMapper.toCrawlItem(event.getChange());
+                    Optional<CrawlItemMapper.Mapped<CrawlItem>> item = CrawlItemMapper.toCrawlItem(
+                            event.getChange(), config.includeContent());
                     if (item.isEmpty()) {
                         continue;
                     }
                     emitted++;
+                    if (item.get().omittedContent().isPresent()) {
+                        withoutContent++;
+                    }
                     observer.onNext(CrawlStreamBit.newBuilder()
-                            .setStatus(OperationStatuses.success())
-                            .setCrawlItem(item.get())
+                            .setStatus(itemStatus(item.get().item().getItemId(),
+                                    item.get().omittedContent()))
+                            .setCrawlItem(item.get().item())
                             .setCrawlProgressMarker(checkpoint(emitted, stored))
                             .build());
                 } else if (event.getEventCase() == SyncResponse.EventCase.RESUME_CURSOR) {
@@ -94,7 +107,7 @@ public final class ConnectorCrawlerServiceImpl
                 throw new IllegalStateException(NO_RESUME_CURSOR);
             }
             observer.onNext(CrawlStreamBit.newBuilder()
-                    .setStatus(OperationStatuses.success("emitted " + emitted))
+                    .setStatus(OperationStatuses.success(summary(emitted, withoutContent)))
                     .setCrawlProgressMarker(checkpoint(emitted, next))
                     .build());
             observer.onCompleted();
@@ -130,20 +143,26 @@ public final class ConnectorCrawlerServiceImpl
             String stored = request.getCrawlProgressMarker().getCustomMarkerData();
             Iterator<SyncResponse> sync = stub.sync(syncRequest(config, stored));
             int emitted = 0;
+            int withoutContent = 0;
             String next = "";
             while (sync.hasNext()) {
                 SyncResponse event = sync.next();
                 if (event.getEventCase() == SyncResponse.EventCase.CHANGE) {
                     MicrosoftChange change = event.getChange();
-                    Optional<IncrementalCrawlItem> item =
-                            CrawlItemMapper.toIncrementalCrawlItem(change);
+                    Optional<CrawlItemMapper.Mapped<IncrementalCrawlItem>> item =
+                            CrawlItemMapper.toIncrementalCrawlItem(change,
+                                    config.includeContent());
                     if (item.isEmpty()) {
                         continue;
                     }
                     emitted++;
+                    if (item.get().omittedContent().isPresent()) {
+                        withoutContent++;
+                    }
                     observer.onNext(IncrementalCrawlStreamBit.newBuilder()
-                            .setStatus(OperationStatuses.success())
-                            .setCrawlItem(item.get())
+                            .setStatus(itemStatus(item.get().item().getItemId(),
+                                    item.get().omittedContent()))
+                            .setCrawlItem(item.get().item())
                             .setCrawlProgressMarker(checkpoint(emitted, stored))
                             .build());
                 } else if (event.getEventCase() == SyncResponse.EventCase.RESUME_CURSOR) {
@@ -154,7 +173,7 @@ public final class ConnectorCrawlerServiceImpl
                 throw new IllegalStateException(NO_RESUME_CURSOR);
             }
             observer.onNext(IncrementalCrawlStreamBit.newBuilder()
-                    .setStatus(OperationStatuses.success("emitted " + emitted))
+                    .setStatus(OperationStatuses.success(summary(emitted, withoutContent)))
                     .setCrawlProgressMarker(checkpoint(emitted, next))
                     .build());
             observer.onCompleted();
@@ -171,14 +190,33 @@ public final class ConnectorCrawlerServiceImpl
         }
     }
 
-    /** One pass over the configured scope; an empty cursor asks for a full enumeration. */
+    /**
+     * One pass over the configured scope; an empty cursor asks for a full
+     * enumeration. Content is inlined only up to what an item can carry: a
+     * larger file could not be sent on, and one Sync response over the
+     * channel's message limit would fail the whole crawl.
+     */
     private static SyncRequest syncRequest(ConnectorCustomConfig config, String sinceCursor) {
         return SyncRequest.newBuilder()
                 .addAllDriveIds(config.driveIds())
                 .setFolderPath(config.folderPath())
                 .setIncludeContent(config.includeContent())
+                .setMaxInlineBytes(config.includeContent() ? CrawlItemMapper.CONTENT_CAP_BYTES : 0)
                 .setSinceCursor(sinceCursor)
                 .build();
+    }
+
+    /** Success, or {@code PartialSuccess} naming the item and why its content is not on it. */
+    private static OperationStatus itemStatus(String itemId, Optional<OmittedContent> omitted) {
+        return omitted
+                .map(o -> OperationStatuses.of(OperationResult.PartialSuccess,
+                        "content of " + itemId + " not sent (" + o.reason() + "): " + o.detail()))
+                .orElseGet(OperationStatuses::success);
+    }
+
+    private static String summary(int emitted, int withoutContent) {
+        return withoutContent == 0 ? "emitted " + emitted
+                : "emitted " + emitted + ", content not sent for " + withoutContent;
     }
 
     /** A checkpoint whose marker is a Sync resume cursor, or empty for none. */

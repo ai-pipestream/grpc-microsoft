@@ -13,6 +13,9 @@ import microsoft.graph.connectors.contracts.grpc.CrawlItem;
 import microsoft.graph.connectors.contracts.grpc.IncrementalCrawlItem;
 import org.junit.jupiter.api.Test;
 
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 class CrawlItemMapperTest {
@@ -31,8 +34,10 @@ class CrawlItemMapperTest {
                         .setUser(Identity.newBuilder().setId("u1").setDisplayName("Ada")))
                 .build();
 
-        CrawlItem crawl = CrawlItemMapper.toCrawlItem(item);
+        CrawlItemMapper.Mapped<CrawlItem> mapped = CrawlItemMapper.toCrawlItem(item, true);
+        CrawlItem crawl = mapped.item();
 
+        assertThat(mapped.omittedContent()).isEmpty();
         assertThat(crawl.getItemType()).isEqualTo(CrawlItem.ItemType.ContentItem);
         assertThat(crawl.getItemId()).isEqualTo("drive-1/file-1");
         assertThat(crawl.getContentItem().getPropertyValues().getValuesMap()
@@ -57,11 +62,12 @@ class CrawlItemMapperTest {
                         .setIngestedAt(Timestamp.newBuilder().setSeconds(1)))
                 .build();
 
-        IncrementalCrawlItem item = CrawlItemMapper.toIncrementalCrawlItem(change).orElseThrow();
+        IncrementalCrawlItem item =
+                CrawlItemMapper.toIncrementalCrawlItem(change, true).orElseThrow().item();
 
         assertThat(item.getItemType()).isEqualTo(IncrementalCrawlItem.ItemType.DeletedItem);
         assertThat(item.getItemId()).isEqualTo("gone");
-        assertThat(CrawlItemMapper.toCrawlItem(change)).isEmpty();
+        assertThat(CrawlItemMapper.toCrawlItem(change, true)).isEmpty();
     }
 
     @Test
@@ -75,6 +81,99 @@ class CrawlItemMapperTest {
                         .setDrive(ai.pipestream.microsoft.v1.Drive.newBuilder().setId("drive-1")))
                 .build();
 
-        assertThat(CrawlItemMapper.toCrawlItem(change)).isEmpty();
+        assertThat(CrawlItemMapper.toCrawlItem(change, true)).isEmpty();
+    }
+
+    @Test
+    void textAtTheLimitIsSentAndOneByteMoreIsLeftOut() {
+        byte[] atLimit = new byte[CrawlItemMapper.CONTENT_CAP_BYTES];
+        java.util.Arrays.fill(atLimit, (byte) 'a');
+        byte[] over = new byte[CrawlItemMapper.CONTENT_CAP_BYTES + 1];
+        java.util.Arrays.fill(over, (byte) 'a');
+
+        assertThat(map("text/plain", atLimit).item().getContentItem().getContent()
+                .getContentValue()).hasSize(CrawlItemMapper.CONTENT_CAP_BYTES);
+        CrawlItemMapper.Mapped<CrawlItem> mapped = map("text/plain", over);
+        assertThat(mapped.item().getContentItem().hasContent()).isFalse();
+        assertThat(mapped.omittedContent().orElseThrow().reason())
+                .isEqualTo(OmittedContent.Reason.TOO_LARGE);
+    }
+
+    @Test
+    void theLimitIsOnTheTextAsItIsSentNotOnTheFileBytes() {
+        // Each of these characters is two bytes as UTF-16 and three as UTF-8:
+        // the file is under the limit, the text GCA would receive is over it.
+        String text = "\u4e2d".repeat(CrawlItemMapper.CONTENT_CAP_BYTES / 2 - 4);
+        byte[] utf16 = ("\ufeff" + text).getBytes(StandardCharsets.UTF_16LE);
+        assertThat(utf16.length).isLessThan(CrawlItemMapper.CONTENT_CAP_BYTES);
+
+        CrawlItemMapper.Mapped<CrawlItem> mapped = map("text/plain", utf16);
+
+        assertThat(mapped.item().getContentItem().hasContent()).isFalse();
+        OmittedContent omitted = mapped.omittedContent().orElseThrow();
+        assertThat(omitted.reason()).isEqualTo(OmittedContent.Reason.TOO_LARGE);
+        assertThat(omitted.detail()).contains("UTF-8");
+    }
+
+    @Test
+    void aUtf32ByteOrderMarkIsNotTakenForUtf16() {
+        byte[] utf32 = ("\ufeff" + "héllo").getBytes(Charset.forName("UTF-32LE"));
+
+        assertThat(map("text/plain", utf32).item().getContentItem().getContent()
+                .getContentValue()).isEqualTo("héllo");
+    }
+
+    @Test
+    void aByteOrderMarkWinsOverTheDeclaredCharset() {
+        byte[] utf8 = ("\ufeff" + "héllo").getBytes(StandardCharsets.UTF_8);
+
+        assertThat(map("text/plain; charset=iso-8859-1", utf8).item().getContentItem()
+                .getContent().getContentValue()).isEqualTo("héllo");
+    }
+
+    @Test
+    void aQuotedCharsetParameterIsRead() {
+        assertThat(map("text/plain; format=flowed; charset=\"ISO-8859-1\"",
+                "héllo".getBytes(StandardCharsets.ISO_8859_1)).item().getContentItem()
+                .getContent().getContentValue()).isEqualTo("héllo");
+    }
+
+    @Test
+    void anAsciiReadableDeclarationOfUtf16IsNotBelieved() {
+        byte[] html = "<meta charset=\"utf-16\"><p>héllo</p>".getBytes(StandardCharsets.UTF_8);
+
+        assertThat(map("text/html", html).item().getContentItem().getContent()
+                .getContentValue()).isEqualTo("<meta charset=\"utf-16\"><p>héllo</p>");
+    }
+
+    @Test
+    void richTextMarkupAndFilesWithoutAMediaTypeAreNotText() {
+        byte[] rtf = "{\\rtf1\\ansi hello}".getBytes(StandardCharsets.US_ASCII);
+
+        for (String mime : new String[] {"text/rtf", "application/rtf", "",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                "application/vnd.ms-excel", "image/png", "application/zip"}) {
+            CrawlItemMapper.Mapped<CrawlItem> mapped = map(mime, rtf);
+            assertThat(mapped.item().getContentItem().hasContent()).as(mime).isFalse();
+            assertThat(mapped.omittedContent().orElseThrow().reason()).as(mime)
+                    .isEqualTo(OmittedContent.Reason.NOT_TEXT);
+        }
+    }
+
+    @Test
+    void mediaTypesAreMatchedWithoutRegardToCase() {
+        assertThat(map("Text/Plain; Charset=UTF-8", "hello".getBytes(StandardCharsets.UTF_8))
+                .item().getContentItem().getContent().getContentValue()).isEqualTo("hello");
+    }
+
+    private static CrawlItemMapper.Mapped<CrawlItem> map(String mimeType, byte[] content) {
+        return CrawlItemMapper.toCrawlItem(DriveItem.newBuilder()
+                .setId("file-1")
+                .setName("file")
+                .setDriveId("drive-1")
+                .setMimeType(mimeType)
+                .setSize(content.length)
+                .setContent(ByteString.copyFrom(content))
+                .build(), true);
     }
 }

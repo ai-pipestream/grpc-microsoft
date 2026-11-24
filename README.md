@@ -224,6 +224,20 @@ is a full enumeration, which reports no deletes. A full crawl never sends a
 cursor. A `Sync` stream that ends without its terminal resume cursor was
 cut short: the crawl ends with `DatasourceError` and no new checkpoint.
 
+Content: with `includeContent` on, a file's bytes become the item's content
+only when they are text. That is `text/*` (not RTF), JSON, XML, YAML,
+JavaScript and the `+json` / `+xml` types, with HTML and XHTML sent as
+HTML. Office documents, PDFs and images are not text: their items carry
+properties only until a parser service turns them into text. The bytes are
+decoded strictly, by the byte order mark, then the media type's `charset`,
+then the charset an HTML or XML document declares, then UTF-8. The crawl
+asks `Sync` to inline at most 3 MiB per file, and sends at most 3 MiB of
+UTF-8 text per item. An item whose content is not sent is still emitted,
+and its crawl bit reports `PartialSuccess` with a message that names the
+item, the reason (`NOT_TEXT`, `TOO_LARGE`, `NOT_INLINED`, `NOT_DECODABLE`)
+and what was found. The last bit of the crawl counts those items. With
+`includeContent` off, nothing is reported: no content was asked for.
+
 ```
 MICROSOFT_GRPC_TARGET=localhost:9096
 CONNECTOR_GRPC_PORT=30303
