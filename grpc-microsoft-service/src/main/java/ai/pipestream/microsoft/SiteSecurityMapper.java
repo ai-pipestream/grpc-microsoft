@@ -12,7 +12,7 @@ import java.util.UUID;
 final class SiteSecurityMapper {
 
     /** Start of the login name of an Entra user. */
-    private static final String MEMBERSHIP_LOGIN = "i:0#.f|membership|";
+    static final String MEMBERSHIP_LOGIN = "i:0#.f|membership|";
 
     private SiteSecurityMapper() {
     }

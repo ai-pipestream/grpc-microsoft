@@ -155,6 +155,12 @@ class RecordingScrubberTest {
         assertThat(group.path("LoginName").asText()).isEqualTo("Principal 1");
         assertThat(group.path("OwnerTitle").asText()).isEqualTo("Principal 1");
         assertThat(group.path("Description").asText()).isEqualTo("Principal 2");
+        JsonNode own = scrubber.json(Recordings.JSON.readTree("""
+                {"Id":31,"LoginName":"pipestream-live-write-1-group","Title":"pipestream-live-write-1-group",
+                 "OwnerTitle":"Team Owners","PrincipalType":8}"""));
+        assertThat(own.path("Title").asText()).isEqualTo("pipestream-live-write-1-group");
+        assertThat(own.path("LoginName").asText()).isEqualTo("pipestream-live-write-1-group");
+        assertThat(own.path("OwnerTitle").asText()).isEqualTo("Principal 1");
         JsonNode member = scrubber.json(Recordings.JSON.readTree("""
                 {"Id":9,"LoginName":"i:0#.f|membership|ada@contoso.com","Title":"Ada Lovelace",
                  "UserId":{"NameId":"100320012345abcd","NameIdIssuer":"urn:federation:microsoftonline"}}"""));

@@ -1125,6 +1125,87 @@ public final class MicrosoftGrpcService
         });
     }
 
+    @Override
+    public void createSiteGroup(ai.pipestream.microsoft.v1.CreateSiteGroupRequest request,
+            StreamObserver<ai.pipestream.microsoft.v1.CreateSiteGroupResponse> observer) {
+        unary(observer, () -> {
+            MicrosoftSessions.Session session = sessions.resolve(request.getConnectionId());
+            return ai.pipestream.microsoft.v1.CreateSiteGroupResponse.newBuilder()
+                    .setGroup(SiteSecurityWriter.createGroup(sharePoint.web(session, request.getSiteId()),
+                            request.getTitle(), request.getDescription()))
+                    .build();
+        });
+    }
+
+    @Override
+    public void deleteSiteGroup(ai.pipestream.microsoft.v1.DeleteSiteGroupRequest request,
+            StreamObserver<ai.pipestream.microsoft.v1.DeleteSiteGroupResponse> observer) {
+        unary(observer, () -> {
+            MicrosoftSessions.Session session = sessions.resolve(request.getConnectionId());
+            SiteSecurityWriter.deleteGroup(sharePoint.web(session, request.getSiteId()), request.getGroupId());
+            return ai.pipestream.microsoft.v1.DeleteSiteGroupResponse.getDefaultInstance();
+        });
+    }
+
+    @Override
+    public void addSiteGroupMember(ai.pipestream.microsoft.v1.AddSiteGroupMemberRequest request,
+            StreamObserver<ai.pipestream.microsoft.v1.AddSiteGroupMemberResponse> observer) {
+        unary(observer, () -> {
+            MicrosoftSessions.Session session = sessions.resolve(request.getConnectionId());
+            return ai.pipestream.microsoft.v1.AddSiteGroupMemberResponse.newBuilder()
+                    .setMember(SiteSecurityWriter.addMember(sharePoint.web(session, request.getSiteId()), request))
+                    .build();
+        });
+    }
+
+    @Override
+    public void removeSiteGroupMember(ai.pipestream.microsoft.v1.RemoveSiteGroupMemberRequest request,
+            StreamObserver<ai.pipestream.microsoft.v1.RemoveSiteGroupMemberResponse> observer) {
+        unary(observer, () -> {
+            MicrosoftSessions.Session session = sessions.resolve(request.getConnectionId());
+            SiteSecurityWriter.removeMember(sharePoint.web(session, request.getSiteId()),
+                    request.getGroupId(), request.getMemberId());
+            return ai.pipestream.microsoft.v1.RemoveSiteGroupMemberResponse.getDefaultInstance();
+        });
+    }
+
+    @Override
+    public void listSiteRoleDefinitions(ai.pipestream.microsoft.v1.ListSiteRoleDefinitionsRequest request,
+            StreamObserver<ai.pipestream.microsoft.v1.ListSiteRoleDefinitionsResponse> observer) {
+        stream(observer, () -> {
+            MicrosoftSessions.Session session = sessions.resolve(request.getConnectionId());
+            sharePoint.web(session, request.getSiteId()).forEach("/web/roledefinitions", node -> {
+                observer.onNext(ai.pipestream.microsoft.v1.ListSiteRoleDefinitionsResponse.newBuilder()
+                        .setRole(SiteSecurityMapper.toRoleDefinition(node)).build());
+                return true;
+            });
+        });
+    }
+
+    @Override
+    public void addSiteRoleAssignment(ai.pipestream.microsoft.v1.AddSiteRoleAssignmentRequest request,
+            StreamObserver<ai.pipestream.microsoft.v1.AddSiteRoleAssignmentResponse> observer) {
+        unary(observer, () -> {
+            MicrosoftSessions.Session session = sessions.resolve(request.getConnectionId());
+            SiteSecurable securable = request.getSecurable();
+            SiteSecurityWriter.roleAssignment(sharePoint.web(session, SharePointRest.siteId(securable)),
+                    securable, request.getPrincipalId(), request.getRoleDefinitionId(), true);
+            return ai.pipestream.microsoft.v1.AddSiteRoleAssignmentResponse.getDefaultInstance();
+        });
+    }
+
+    @Override
+    public void removeSiteRoleAssignment(ai.pipestream.microsoft.v1.RemoveSiteRoleAssignmentRequest request,
+            StreamObserver<ai.pipestream.microsoft.v1.RemoveSiteRoleAssignmentResponse> observer) {
+        unary(observer, () -> {
+            MicrosoftSessions.Session session = sessions.resolve(request.getConnectionId());
+            SiteSecurable securable = request.getSecurable();
+            SiteSecurityWriter.roleAssignment(sharePoint.web(session, SharePointRest.siteId(securable)),
+                    securable, request.getPrincipalId(), request.getRoleDefinitionId(), false);
+            return ai.pipestream.microsoft.v1.RemoveSiteRoleAssignmentResponse.getDefaultInstance();
+        });
+    }
+
     // ------------------------------------------------------------ sync
 
     @Override

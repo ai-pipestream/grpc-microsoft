@@ -144,6 +144,15 @@ class MicrosoftLiveCoverageIT {
             Map.entry("GetSiteRoleInheritance", "GET {web}/_api/{securable}?$select=HasUniqueRoleAssignments"),
             Map.entry("ListSiteChanges", "POST {web}/_api/{scope}/getchanges"),
             Map.entry("SetSiteRoleInheritance", "POST {web}/_api/{securable}/breakroleinheritance"),
+            Map.entry("CreateSiteGroup", "POST {web}/_api/web/sitegroups"),
+            Map.entry("DeleteSiteGroup", "POST {web}/_api/web/sitegroups/removebyid({id})"),
+            Map.entry("AddSiteGroupMember", "POST {web}/_api/web/sitegroups/getbyid({id})/users"),
+            Map.entry("RemoveSiteGroupMember",
+                    "POST {web}/_api/web/sitegroups/getbyid({id})/users/removebyid({id})"),
+            Map.entry("ListSiteRoleDefinitions", "GET {web}/_api/web/roledefinitions"),
+            Map.entry("AddSiteRoleAssignment", "POST {web}/_api/{securable}/roleassignments/addroleassignment"),
+            Map.entry("RemoveSiteRoleAssignment",
+                    "POST {web}/_api/{securable}/roleassignments/removeroleassignment"),
             Map.entry("ListUsers", "GET /users"),
             Map.entry("ListGroups", "GET /groups"),
             Map.entry("DeltaGroups", "GET /groups/delta"),
@@ -575,6 +584,10 @@ class MicrosoftLiveCoverageIT {
                     l -> l.size() + " member(s), kinds " + l.stream()
                             .map(r -> r.getMember().getPrincipalType().name()).distinct().sorted().toList());
         }
+        stream("ListSiteRoleDefinitions", "ListSiteRoleDefinitions", LIST_CAP,
+                s -> s.listSiteRoleDefinitions(ai.pipestream.microsoft.v1.ListSiteRoleDefinitionsRequest
+                        .newBuilder().setSiteId(chosenSite).build()),
+                l -> l.size() + " permission level(s)");
         SiteSecurable siteSecurable = SiteSecurable.newBuilder().setSiteId(chosenSite).build();
         stream("ListSiteRoleAssignments", "ListSiteRoleAssignments [site]", LIST_CAP,
                 s -> s.listSiteRoleAssignments(ListSiteRoleAssignmentsRequest.newBuilder()
@@ -1371,7 +1384,8 @@ class MicrosoftLiveCoverageIT {
             "UploadItem", "CreateFolder", "UpdateDriveItem", "DeleteDriveItem",
             "RestoreDriveItemVersion", "CopyDriveItem", "CreateListItem",
             "UpdateListItemFields", "DeleteListItem", "EnsureColumns", "EnsureList", "Mutate",
-            "SetSiteRoleInheritance");
+            "SetSiteRoleInheritance", "CreateSiteGroup", "DeleteSiteGroup", "AddSiteGroupMember",
+            "RemoveSiteGroupMember", "AddSiteRoleAssignment", "RemoveSiteRoleAssignment");
 
     private void skip(String rpc, String reason) {
         skip(rpc, rpc, reason);
