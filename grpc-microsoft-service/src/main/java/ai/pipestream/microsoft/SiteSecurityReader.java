@@ -11,9 +11,12 @@ import ai.pipestream.sync.v1.AclCompleteness;
 import com.fasterxml.jackson.databind.JsonNode;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Reads the SharePoint security of one site for a sync pass: its groups with
@@ -33,12 +36,22 @@ final class SiteSecurityReader {
      * @param itemOwners list item id to the entity id of the role assignments
      *        that apply to it, for the items where that is not {@code listOwner}
      * @param acls the role assignments of the list and its items that have their own
+     * @param moved ids of the list items whose role assignments may apply
+     *        differently than before: the items asked about that still exist,
+     *        and everything below them
      */
-    record ListSecurity(String listOwner, Map<String, String> itemOwners, List<SiteAcl> acls) {
+    record ListSecurity(String listOwner, Map<String, String> itemOwners, List<SiteAcl> acls,
+            Set<String> moved) {
 
         /** Entity id of the role assignments that apply to a list item. */
         String owner(String listItemId) {
             return itemOwners.getOrDefault(listItemId, listOwner);
+        }
+
+        /** Whether the list's security could be read. */
+        boolean available() {
+            return acls.stream().noneMatch(acl -> acl.getSecurable().hasList()
+                    && acl.getCompleteness() == AclCompleteness.ACL_COMPLETENESS_UNAVAILABLE);
         }
     }
 
@@ -93,12 +106,25 @@ final class SiteSecurityReader {
 
     /** The security of one list and its items. */
     ListSecurity list(String listId) throws IOException, InterruptedException {
+        return list(listId, Set.of());
+    }
+
+    /**
+     * The security of one list and its items.
+     *
+     * @param listId the list
+     * @param rescoped ids of the list items that started or stopped having
+     *        their own role assignments since the last pass
+     * @return the list's security, with the items the change reaches
+     */
+    ListSecurity list(String listId, Set<String> rescoped) throws IOException, InterruptedException {
         SiteSecurable list = SiteSecurable.newBuilder()
                 .setList(ListRef.newBuilder().setSiteId(siteId).setListId(listId)).build();
         String listPath = SharePointRest.path(list);
         List<SiteAcl> acls = new ArrayList<>();
         String listOwner;
         Map<String, String> itemOwners = new HashMap<>();
+        Set<String> moved = new LinkedHashSet<>();
         try {
             boolean unique = web.get(listPath + "?$select=HasUniqueRoleAssignments")
                     .path("HasUniqueRoleAssignments").asBoolean(false);
@@ -110,9 +136,14 @@ final class SiteSecurityReader {
             }
             Map<String, String> folderOf = new HashMap<>();
             Map<String, String> ownerByPath = new HashMap<>();
+            List<String> rescopedPaths = new ArrayList<>();
             web.forEach(listPath + ITEMS, node -> {
                 String id = node.path("Id").asText("");
                 folderOf.put(id, node.path("FileDirRef").asText(""));
+                if (rescoped.contains(id)) {
+                    moved.add(id);
+                    rescopedPaths.add(node.path("FileRef").asText(""));
+                }
                 if (node.path("HasUniqueRoleAssignments").asBoolean(false)) {
                     SiteSecurable item = SiteSecurable.newBuilder().setListItem(ListItemRef.newBuilder()
                             .setSiteId(siteId).setListId(listId).setItemId(id)).build();
@@ -133,15 +164,30 @@ final class SiteSecurityReader {
                     }
                 });
             }
+            if (!rescopedPaths.isEmpty()) {
+                folderOf.forEach((id, folder) -> {
+                    if (rescopedPaths.stream().anyMatch(path -> below(folder, path))) {
+                        moved.add(id);
+                    }
+                });
+            }
         } catch (GraphClient.GraphApiException e) {
             // Nothing of the list can be trusted: everything in it points at one unavailable record.
             acls.clear();
             itemOwners.clear();
+            moved.clear();
             acls.add(SiteAcl.newBuilder().setSecurable(list)
                     .setCompleteness(AclCompleteness.ACL_COMPLETENESS_UNAVAILABLE).build());
             listOwner = MicrosoftEntityIds.siteAcl(list);
         }
-        return new ListSecurity(listOwner, Map.copyOf(itemOwners), List.copyOf(acls));
+        return new ListSecurity(listOwner, Map.copyOf(itemOwners), List.copyOf(acls),
+                Collections.unmodifiableSet(moved));
+    }
+
+    /** Whether {@code folder} is {@code path} or a folder below it. */
+    private static boolean below(String folder, String path) {
+        return !path.isEmpty() && folder.startsWith(path)
+                && (folder.length() == path.length() || folder.charAt(path.length()) == '/');
     }
 
     /** The owner of the nearest folder at or above {@code folder} that has one. */

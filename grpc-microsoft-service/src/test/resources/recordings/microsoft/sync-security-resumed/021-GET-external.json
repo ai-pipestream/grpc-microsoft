@@ -1,0 +1,131 @@
+{
+  "request" : {
+    "method" : "GET",
+    "url" : "https://redacted.example/url/3/_api/web/roleassignments?$expand=Member,RoleDefinitionBindings",
+    "authorized" : true,
+    "headers" : { }
+  },
+  "response" : {
+    "status" : 200,
+    "headers" : {
+      "content-type" : "application/json;odata=nometadata;streaming=true;charset=utf-8"
+    },
+    "body" : {
+      "json" : {
+        "value" : [ {
+          "Member" : {
+            "Id" : 3,
+            "IsHiddenInUI" : false,
+            "LoginName" : "Principal 17",
+            "Title" : "Principal 17",
+            "PrincipalType" : 8,
+            "AllowMembersEditMembership" : false,
+            "AllowRequestToJoinLeave" : false,
+            "AutoAcceptRequestToJoinLeave" : false,
+            "Description" : null,
+            "OnlyAllowMembersViewMembership" : false,
+            "OwnerTitle" : "Principal 17",
+            "RequestToJoinLeaveEmailSetting" : ""
+          },
+          "RoleDefinitionBindings" : [ {
+            "BasePermissions" : {
+              "High" : "2147483647",
+              "Low" : "4294967295"
+            },
+            "Description" : "Has full control.",
+            "Hidden" : false,
+            "Id" : 1073741829,
+            "Name" : "Full Control",
+            "Order" : 1,
+            "RoleTypeKind" : 5
+          } ],
+          "PrincipalId" : 3
+        }, {
+          "Member" : {
+            "Id" : 4,
+            "IsHiddenInUI" : false,
+            "LoginName" : "Principal 18",
+            "Title" : "Principal 18",
+            "PrincipalType" : 8,
+            "AllowMembersEditMembership" : false,
+            "AllowRequestToJoinLeave" : false,
+            "AutoAcceptRequestToJoinLeave" : false,
+            "Description" : null,
+            "OnlyAllowMembersViewMembership" : false,
+            "OwnerTitle" : "Principal 17",
+            "RequestToJoinLeaveEmailSetting" : ""
+          },
+          "RoleDefinitionBindings" : [ {
+            "BasePermissions" : {
+              "High" : "176",
+              "Low" : "138612833"
+            },
+            "Description" : "Can view pages and list items and download documents.",
+            "Hidden" : false,
+            "Id" : 1073741826,
+            "Name" : "Read",
+            "Order" : 128,
+            "RoleTypeKind" : 2
+          } ],
+          "PrincipalId" : 4
+        }, {
+          "Member" : {
+            "Id" : 5,
+            "IsHiddenInUI" : false,
+            "LoginName" : "Principal 16",
+            "Title" : "Principal 16",
+            "PrincipalType" : 8,
+            "AllowMembersEditMembership" : true,
+            "AllowRequestToJoinLeave" : false,
+            "AutoAcceptRequestToJoinLeave" : false,
+            "Description" : null,
+            "OnlyAllowMembersViewMembership" : false,
+            "OwnerTitle" : "Principal 17",
+            "RequestToJoinLeaveEmailSetting" : ""
+          },
+          "RoleDefinitionBindings" : [ {
+            "BasePermissions" : {
+              "High" : "432",
+              "Low" : "1011030767"
+            },
+            "Description" : "Can add, edit and delete lists; can view, add, update and delete list items and documents.",
+            "Hidden" : false,
+            "Id" : 1073741830,
+            "Name" : "Edit",
+            "Order" : 48,
+            "RoleTypeKind" : 6
+          } ],
+          "PrincipalId" : 5
+        }, {
+          "Member" : {
+            "Id" : 12,
+            "IsHiddenInUI" : false,
+            "LoginName" : "Principal 3",
+            "Title" : "Principal 3",
+            "PrincipalType" : 8,
+            "AllowMembersEditMembership" : false,
+            "AllowRequestToJoinLeave" : false,
+            "AutoAcceptRequestToJoinLeave" : false,
+            "Description" : "Principal 3",
+            "OnlyAllowMembersViewMembership" : true,
+            "OwnerTitle" : "Principal 2",
+            "RequestToJoinLeaveEmailSetting" : null
+          },
+          "RoleDefinitionBindings" : [ {
+            "BasePermissions" : {
+              "High" : "560",
+              "Low" : "134221824"
+            },
+            "Description" : "Can only view the web when given permissions.",
+            "Hidden" : true,
+            "Id" : 1073741833,
+            "Name" : "Web-Only Limited Access",
+            "Order" : 176,
+            "RoleTypeKind" : 9
+          } ],
+          "PrincipalId" : 12
+        } ]
+      }
+    }
+  }
+}

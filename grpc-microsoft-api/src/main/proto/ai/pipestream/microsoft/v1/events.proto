@@ -166,4 +166,8 @@ message SyncCursor {
   // Site id to the change token its SharePoint change log was last read to,
   // when a WatchChanges stream reads it. Sync does not read or write it.
   map<string, string> site_change_tokens = 6;
+  // Site id to the change token the site's SharePoint change log was read
+  // to by the last Sync pass that read security. The next pass reads the
+  // log from it to find the items whose role assignments moved.
+  map<string, string> security_change_tokens = 7;
 }

@@ -264,7 +264,8 @@ service MicrosoftService {
   // What changed in a site, its site collection or one of its lists since a
   // change token, as a stream that ends with the token to resume from. Names
   // changes to role assignments, role inheritance, groups and group members.
-  // Needs a certificate credential. SharePoint REST: POST {scope}/getchanges.
+  // A token SharePoint cannot parse is INVALID_ARGUMENT. Needs a certificate
+  // credential. SharePoint REST: POST {scope}/getchanges.
   rpc ListSiteChanges(ListSiteChangesRequest) returns (stream ListSiteChangesResponse);
 
   // --- Sync ----------------------------------------------------------------
@@ -1189,7 +1190,10 @@ message SyncRequest {
   // credential. A pass without it does not read security, so what an
   // earlier pass recorded for site groups, site admins and ACLs stays as it
   // is. ACLs are found gone only by a pass that also sets include_lists,
-  // because the lists of a site hold ACLs too.
+  // because the lists of a site hold ACLs too. A pass resumed from
+  // since_cursor also emits the items whose `acl_owner_id` moved since the
+  // last pass, and deletes the `site_acl` of a list or item that inherits
+  // again, as the site's change log reports them.
   bool include_security = 13;
   // Extensible key-value metadata (extension-metadata map - see convention).
   map<string, string> metadata = 99;

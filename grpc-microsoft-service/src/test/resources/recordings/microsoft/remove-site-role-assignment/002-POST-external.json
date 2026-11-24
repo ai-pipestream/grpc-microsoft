@@ -1,7 +1,7 @@
 {
   "request" : {
     "method" : "POST",
-    "url" : "https://redacted.example/url/3/_api/web/lists(guid'00000000-0000-4000-8000-000000000022')/items(1)/roleassignments/removeroleassignment(principalid=21,roledefid=1073741826)",
+    "url" : "https://redacted.example/url/3/_api/web/lists(guid'00000000-0000-4000-8000-000000000022')/items(1)/roleassignments/removeroleassignment(principalid=26,roledefid=1073741826)",
     "authorized" : true,
     "headers" : {
       "content-type" : "application/json"

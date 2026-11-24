@@ -6,13 +6,20 @@ import ai.pipestream.microsoft.v1.DeltaPreferences;
 import ai.pipestream.microsoft.v1.Drive;
 import ai.pipestream.microsoft.v1.DriveItem;
 import ai.pipestream.microsoft.v1.ListItem;
+import ai.pipestream.microsoft.v1.ListItemRef;
+import ai.pipestream.microsoft.v1.ListRef;
+import ai.pipestream.microsoft.v1.ListSiteChangesRequest;
 import ai.pipestream.microsoft.v1.MicrosoftChange;
 import ai.pipestream.microsoft.v1.MicrosoftEntity;
 import ai.pipestream.microsoft.v1.MicrosoftSnapshot;
 import ai.pipestream.microsoft.v1.SharePointList;
 import ai.pipestream.microsoft.v1.Site;
 import ai.pipestream.microsoft.v1.SiteAcl;
+import ai.pipestream.microsoft.v1.SiteChangeObject;
+import ai.pipestream.microsoft.v1.SiteChangeScope;
+import ai.pipestream.microsoft.v1.SiteChangeType;
 import ai.pipestream.microsoft.v1.SiteGroupMembers;
+import ai.pipestream.microsoft.v1.SiteSecurable;
 import ai.pipestream.microsoft.v1.SyncCursor;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.protobuf.Timestamp;
@@ -24,7 +31,9 @@ import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -167,6 +176,55 @@ public final class MicrosoftCrawler {
         }
     }
 
+    /**
+     * More moved items than this in one list are read again with a full
+     * sweep of the list instead of one by one.
+     */
+    static final int MOVED_READ_LIMIT = 200;
+
+    /**
+     * What a site's change log says happened to role assignments since the
+     * last pass.
+     *
+     * @param items list id to the ids of its items that got or lost their own
+     *        role assignments
+     * @param dropped list id to the ids of its items that lost their own
+     * @param lists ids of the lists that got or lost their own
+     * @param droppedLists ids of the lists that lost their own
+     * @param everything whether the log could not be read from the last
+     *        pass's token, so any item may have moved
+     */
+    record Rescoped(Map<String, Set<String>> items, Map<String, Set<String>> dropped,
+            Set<String> lists, Set<String> droppedLists, boolean everything) {
+
+        /** Nothing moved. */
+        static final Rescoped NONE = new Rescoped(Map.of(), Map.of(), Set.of(), Set.of(), false);
+
+        /** Ids of the list's items that got or lost their own role assignments. */
+        Set<String> items(String listId) {
+            return items.getOrDefault(key(listId), Set.of());
+        }
+
+        /** Ids of the list's items that lost their own role assignments. */
+        Set<String> dropped(String listId) {
+            return dropped.getOrDefault(key(listId), Set.of());
+        }
+
+        /** Whether every item of the list may point at other role assignments. */
+        boolean wholeList(String listId) {
+            return everything || lists.contains(key(listId));
+        }
+
+        /** Whether the list lost its own role assignments. */
+        boolean droppedList(String listId) {
+            return droppedLists.contains(key(listId));
+        }
+
+        static String key(String listId) {
+            return listId.toLowerCase(Locale.ROOT);
+        }
+    }
+
     /** Gives the crawler the SharePoint REST API of a site. */
     @FunctionalInterface
     interface SiteWebs {
@@ -191,6 +249,9 @@ public final class MicrosoftCrawler {
     private final MicrosoftValidator validator = MicrosoftValidator.create();
     private final SiteWebs webs;
     private final Map<String, SiteSecurityReader> security = new HashMap<>();
+    private final Map<String, SharePointRest.Web> sites = new HashMap<>();
+    /** Site id to what its change log says of this pass. */
+    private final Map<String, Rescoped> rescoped = new HashMap<>();
     /** Drive and list sweeps of the current pass; the pass runs them one after another. */
     private int sweeps;
     /** Drives and lists the current pass enumerated in full, in sweep order. */
@@ -275,6 +336,7 @@ public final class MicrosoftCrawler {
         boolean fullSweep = true;
         sweeps = 0;
         crawled.clear();
+        rescoped.clear();
 
         List<Site> sites = new ArrayList<>();
         for (String siteId : scopeSites()) {
@@ -418,20 +480,25 @@ public final class MicrosoftCrawler {
         sweeps++;
         Instant started = Instant.now();
         Map<String, Long> counts = new TreeMap<>();
-        SiteSecurityReader.ListSecurity acls = options.security() && !found.getSiteId().isEmpty()
-                && !found.getListId().isEmpty()
-                        ? securityOf(found.getSiteId()).list(found.getListId()) : null;
+        boolean secured = options.security() && !found.getSiteId().isEmpty()
+                && !found.getListId().isEmpty();
+        Rescoped moves = secured ? rescopedOf(found.getSiteId(), cursor) : Rescoped.NONE;
+        SiteSecurityReader.ListSecurity acls = secured ? securityOf(found.getSiteId())
+                .list(found.getListId(), moves.items(found.getListId())) : null;
         if (acls != null) {
             for (SiteAcl acl : acls.acls()) {
                 emitAcl(acl, passSource, runId);
             }
             counts.merge("site_acl", (long) acls.acls().size(), Long::sum);
+            dropAcls(found.getSiteId(), found.getListId(), acls, moves, passSource, runId);
         }
         Drive drive = acls == null ? found : found.toBuilder().setAclOwnerId(acls.listOwner()).build();
         emit(entity(drive.getId()).setDrive(drive).build(), ChangeOperation.CHANGE_OPERATION_UPSERT,
                 passSource, runId);
         counts.merge("drive", 1L, Long::sum);
-        String link = cursor.getDriveDeltaLinksOrDefault(drive.getId(), "");
+        String link = acls != null && sweepAgain(acls, moves, found.getListId()) ? ""
+                : cursor.getDriveDeltaLinksOrDefault(drive.getId(), "");
+        Set<String> moved = new LinkedHashSet<>(acls == null ? Set.of() : acls.moved());
         ChangeSource[] source = {link.isEmpty() ? ChangeSource.CHANGE_SOURCE_CRAWL
                 : ChangeSource.CHANGE_SOURCE_DELTA};
         String changeCursor = link.isEmpty() ? runId : link;
@@ -453,6 +520,7 @@ public final class MicrosoftCrawler {
                         if (item.getId().isEmpty()) {
                             return;
                         }
+                        moved.remove(item.getSharepointIds().getListItemId());
                         if (item.hasDeleted()) {
                             if (scope.containsDeleted(item)) {
                                 emit(entity(item.getId()).setDriveItem(item).build(),
@@ -461,20 +529,25 @@ public final class MicrosoftCrawler {
                             }
                             return;
                         }
-                        if (!scope.contains(item)) {
-                            return;
+                        if (scope.contains(item)) {
+                            upsert(item, acls, source[0], readUnder[0], counts);
                         }
-                        item = enrich(item);
-                        if (acls != null) {
-                            item = item.toBuilder().setAclOwnerId(item.getIsRoot() ? acls.listOwner()
-                                    : acls.owner(item.getSharepointIds().getListItemId())).build();
-                        }
-                        emit(entity(item.getId()).setDriveItem(item).build(),
-                                ChangeOperation.CHANGE_OPERATION_UPSERT, source[0], readUnder[0]);
-                        counts.merge(item.getIsRoot() ? COUNT_ROOT : item.getFolder() ? "folder" : "file",
-                                1L, Long::sum);
                     }
                 });
+        if (source[0] == ChangeSource.CHANGE_SOURCE_DELTA) {
+            String select = GraphPaths.driveItemSelect(options.publication());
+            for (String listItemId : moved) {
+                String path = GraphPaths.listItem(drive.getSiteId(), drive.getListId(), listItemId)
+                        + "/driveItem";
+                JsonNode node = existing(List.of(path + "?$select=" + select, path));
+                if (node != null) {
+                    DriveItem item = mapper.toDriveItem(node, drive.getId());
+                    if (!item.getId().isEmpty() && !item.hasDeleted() && scope.contains(item)) {
+                        upsert(item, acls, source[0], readUnder[0], counts);
+                    }
+                }
+            }
+        }
         cursor.putDriveDeltaLinks(drive.getId(), outcome.deltaLink());
         snapshot(MicrosoftSnapshot.newBuilder()
                 .setSnapshotId(runId + "-" + drive.getId())
@@ -491,6 +564,32 @@ public final class MicrosoftCrawler {
             crawled.add(SweepScope.drive(drive.getId()));
         }
         return full;
+    }
+
+    /** Emits a drive item with everything the pass adds to it. */
+    private void upsert(DriveItem found, SiteSecurityReader.ListSecurity acls, ChangeSource source,
+            String readUnder, Map<String, Long> counts) throws IOException, InterruptedException {
+        DriveItem item = enrich(found);
+        if (acls != null) {
+            item = item.toBuilder().setAclOwnerId(item.getIsRoot() ? acls.listOwner()
+                    : acls.owner(item.getSharepointIds().getListItemId())).build();
+        }
+        emit(entity(item.getId()).setDriveItem(item).build(),
+                ChangeOperation.CHANGE_OPERATION_UPSERT, source, readUnder);
+        counts.merge(item.getIsRoot() ? COUNT_ROOT : item.getFolder() ? "folder" : "file",
+                1L, Long::sum);
+    }
+
+    /** GET one object; null when it is gone. */
+    private JsonNode existing(List<String> candidates) throws IOException, InterruptedException {
+        try {
+            return pager.get(candidates, Map.of());
+        } catch (GraphClient.GraphApiException e) {
+            if (e.status() == 404) {
+                return null;
+            }
+            throw e;
+        }
     }
 
     private DriveItem enrich(DriveItem item) throws IOException, InterruptedException {
@@ -526,13 +625,15 @@ public final class MicrosoftCrawler {
         sweeps++;
         Instant started = Instant.now();
         Map<String, Long> counts = new TreeMap<>();
+        Rescoped moves = options.security() ? rescopedOf(siteId, cursor) : Rescoped.NONE;
         SiteSecurityReader.ListSecurity acls = options.security()
-                ? securityOf(siteId).list(found.getId()) : null;
+                ? securityOf(siteId).list(found.getId(), moves.items(found.getId())) : null;
         if (acls != null) {
             for (SiteAcl acl : acls.acls()) {
                 emitAcl(acl, passSource, runId);
             }
             counts.merge("site_acl", (long) acls.acls().size(), Long::sum);
+            dropAcls(siteId, found.getId(), acls, moves, passSource, runId);
         }
         SharePointList list = acls == null ? found
                 : found.toBuilder().setAclOwnerId(acls.listOwner()).build();
@@ -540,7 +641,9 @@ public final class MicrosoftCrawler {
                 passSource, runId);
         counts.merge("list", 1L, Long::sum);
         String key = SyncCursors.listKey(siteId, list.getId());
-        String link = cursor.getListDeltaLinksOrDefault(key, "");
+        String link = acls != null && sweepAgain(acls, moves, list.getId()) ? ""
+                : cursor.getListDeltaLinksOrDefault(key, "");
+        Set<String> moved = new LinkedHashSet<>(acls == null ? Set.of() : acls.moved());
         ChangeSource[] source = {link.isEmpty() ? ChangeSource.CHANGE_SOURCE_CRAWL
                 : ChangeSource.CHANGE_SOURCE_DELTA};
         String[] readUnder = {link.isEmpty() ? runId : link};
@@ -560,17 +663,21 @@ public final class MicrosoftCrawler {
                         if (item.getId().isEmpty()) {
                             return;
                         }
-                        boolean deleted = item.hasDeleted();
-                        if (acls != null && !deleted) {
-                            item = item.toBuilder().setAclOwnerId(acls.owner(item.getId())).build();
-                        }
-                        emit(entity(MicrosoftEntityIds.listItem(item)).setListItem(item).build(),
-                                deleted ? ChangeOperation.CHANGE_OPERATION_DELETE
-                                        : ChangeOperation.CHANGE_OPERATION_UPSERT,
-                                source[0], readUnder[0]);
-                        counts.merge(deleted ? "deleted" : "list_item", 1L, Long::sum);
+                        moved.remove(item.getId());
+                        upsert(item, acls, source[0], readUnder[0], counts);
                     }
                 });
+        if (source[0] == ChangeSource.CHANGE_SOURCE_DELTA) {
+            for (String itemId : moved) {
+                JsonNode node = existing(reader.itemCandidates(itemId));
+                if (node != null) {
+                    ListItem item = reader.read(node);
+                    if (!item.getId().isEmpty()) {
+                        upsert(item, acls, source[0], readUnder[0], counts);
+                    }
+                }
+            }
+        }
         cursor.putListDeltaLinks(key, outcome.deltaLink());
         snapshot(MicrosoftSnapshot.newBuilder()
                 .setSnapshotId(runId + "-" + list.getId())
@@ -587,6 +694,144 @@ public final class MicrosoftCrawler {
             crawled.add(SweepScope.list(siteId, list.getId()));
         }
         return full;
+    }
+
+    /** Emits a list item, or its deletion, with the role assignments that apply to it. */
+    private void upsert(ListItem found, SiteSecurityReader.ListSecurity acls, ChangeSource source,
+            String readUnder, Map<String, Long> counts) {
+        boolean deleted = found.hasDeleted();
+        ListItem item = acls != null && !deleted
+                ? found.toBuilder().setAclOwnerId(acls.owner(found.getId())).build() : found;
+        emit(entity(MicrosoftEntityIds.listItem(item)).setListItem(item).build(),
+                deleted ? ChangeOperation.CHANGE_OPERATION_DELETE : ChangeOperation.CHANGE_OPERATION_UPSERT,
+                source, readUnder);
+        counts.merge(deleted ? "deleted" : "list_item", 1L, Long::sum);
+    }
+
+    /**
+     * What the site's change log says happened to role assignments since the
+     * last pass. Read once per pass, before the security of the site's lists,
+     * and leaves the token for the next pass in {@code cursor}.
+     */
+    private Rescoped rescopedOf(String siteId, SyncCursor.Builder cursor)
+            throws IOException, InterruptedException {
+        Rescoped known = rescoped.get(siteId);
+        if (known != null) {
+            return known;
+        }
+        SharePointRest.Web web = webOf(siteId);
+        ListSiteChangesRequest end = ListSiteChangesRequest.newBuilder().setSiteId(siteId)
+                .setScope(SiteChangeScope.SITE_CHANGE_SCOPE_WEB).setChangeToken(SiteChanges.LATEST).build();
+        String since = options.since().getSecurityChangeTokensOrDefault(siteId, "");
+        Map<String, Set<String>> items = new HashMap<>();
+        Map<String, Set<String>> dropped = new HashMap<>();
+        Set<String> lists = new LinkedHashSet<>();
+        Set<String> droppedLists = new LinkedHashSet<>();
+        boolean everything = false;
+        String token;
+        try {
+            if (since.isEmpty()) {
+                token = SiteChanges.read(web, end, change -> { });
+            } else {
+                String read = null;
+                try {
+                    read = SiteChanges.read(web, end.toBuilder().setChangeToken(since)
+                            .addObjects(SiteChangeObject.SITE_CHANGE_OBJECT_ITEM)
+                            .addObjects(SiteChangeObject.SITE_CHANGE_OBJECT_LIST)
+                            .addTypes(SiteChangeType.SITE_CHANGE_TYPE_SCOPE_ADD)
+                            .addTypes(SiteChangeType.SITE_CHANGE_TYPE_SCOPE_DELETE).build(), change -> {
+                                boolean gone = change.getType() == SiteChangeType.SITE_CHANGE_TYPE_SCOPE_DELETE;
+                                String list = Rescoped.key(change.getListId());
+                                if (change.getObject() == SiteChangeObject.SITE_CHANGE_OBJECT_LIST) {
+                                    lists.add(list);
+                                    if (gone) {
+                                        droppedLists.add(list);
+                                    }
+                                } else if (!change.getItemId().isEmpty()) {
+                                    items.computeIfAbsent(list, k -> new LinkedHashSet<>())
+                                            .add(change.getItemId());
+                                    if (gone) {
+                                        dropped.computeIfAbsent(list, k -> new LinkedHashSet<>())
+                                                .add(change.getItemId());
+                                    }
+                                }
+                            });
+                } catch (IllegalArgumentException e) {
+                    // The token is not one SharePoint can read.
+                } catch (GraphClient.GraphApiException e) {
+                    if (!refusesToken(e)) {
+                        throw e;
+                    }
+                }
+                if (read == null) {
+                    items.clear();
+                    dropped.clear();
+                    lists.clear();
+                    droppedLists.clear();
+                    everything = true;
+                    read = SiteChanges.read(web, end, change -> { });
+                }
+                token = read;
+            }
+        } catch (GraphClient.GraphApiException e) {
+            if (e.status() != 401 && e.status() != 403) {
+                throw e;
+            }
+            // The log is not readable with this grant: the pass goes on without it.
+            items.clear();
+            dropped.clear();
+            lists.clear();
+            droppedLists.clear();
+            everything = false;
+            token = "";
+        }
+        if (token.isEmpty()) {
+            cursor.removeSecurityChangeTokens(siteId);
+        } else {
+            cursor.putSecurityChangeTokens(siteId, token);
+        }
+        Rescoped read = new Rescoped(items, dropped, lists, droppedLists, everything);
+        rescoped.put(siteId, read);
+        return read;
+    }
+
+    /**
+     * Whether a failed read of the change log is put down to the token: any
+     * HTTP answer that is not about the caller or the load. The end of the
+     * log is read next, and that fails too when the site itself is down.
+     */
+    private static boolean refusesToken(GraphClient.GraphApiException e) {
+        return e.status() >= 400 && e.status() != 401 && e.status() != 403 && e.status() != 429
+                && e.status() != 503;
+    }
+
+    /** Whether a list's delta link is set aside so every item is read again. */
+    private static boolean sweepAgain(SiteSecurityReader.ListSecurity acls, Rescoped moves, String listId) {
+        return moves.wholeList(listId) || acls.moved().size() > MOVED_READ_LIMIT;
+    }
+
+    /** Emits the deletion of role assignments the change log says are gone. */
+    private void dropAcls(String siteId, String listId, SiteSecurityReader.ListSecurity acls,
+            Rescoped moves, ChangeSource source, String cursor) {
+        if (!acls.available()) {
+            return;
+        }
+        List<SiteSecurable> gone = new ArrayList<>();
+        for (String itemId : moves.dropped(listId)) {
+            gone.add(SiteSecurable.newBuilder().setListItem(ListItemRef.newBuilder()
+                    .setSiteId(siteId).setListId(listId).setItemId(itemId)).build());
+        }
+        if (moves.droppedList(listId)) {
+            gone.add(SiteSecurable.newBuilder().setList(ListRef.newBuilder()
+                    .setSiteId(siteId).setListId(listId)).build());
+        }
+        for (SiteSecurable securable : gone) {
+            String id = MicrosoftEntityIds.siteAcl(securable);
+            if (acls.acls().stream().noneMatch(acl -> acl.getSecurable().equals(securable))) {
+                emit(entity(id).setSiteAcl(SiteAcl.newBuilder().setSecurable(securable)).build(),
+                        ChangeOperation.CHANGE_OPERATION_DELETE, source, cursor);
+            }
+        }
     }
 
     private void emit(MicrosoftEntity entity, ChangeOperation operation, ChangeSource source,
@@ -606,10 +851,19 @@ public final class MicrosoftCrawler {
     private SiteSecurityReader securityOf(String siteId) throws IOException, InterruptedException {
         SiteSecurityReader reader = security.get(siteId);
         if (reader == null) {
-            reader = new SiteSecurityReader(webs.web(siteId), siteId);
+            reader = new SiteSecurityReader(webOf(siteId), siteId);
             security.put(siteId, reader);
         }
         return reader;
+    }
+
+    private SharePointRest.Web webOf(String siteId) throws IOException, InterruptedException {
+        SharePointRest.Web web = sites.get(siteId);
+        if (web == null) {
+            web = webs.web(siteId);
+            sites.put(siteId, web);
+        }
+        return web;
     }
 
     private void emitAcl(SiteAcl acl, ChangeSource source, String cursor) {
