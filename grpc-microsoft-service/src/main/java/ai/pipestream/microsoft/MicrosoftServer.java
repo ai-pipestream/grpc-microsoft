@@ -120,6 +120,23 @@ public final class MicrosoftServer {
         }
         MicrosoftChangeGrpcService changes = new MicrosoftChangeGrpcService(service, bus,
                 receiverOn, clientState, java.time.Clock.systemUTC());
+        if (!clientState.isBlank()
+                && SubscriptionRenewer.enabled(System.getenv(SubscriptionRenewer.ENV_RENEWAL))) {
+            SubscriptionRenewer renewer = new SubscriptionRenewer(changes::subscriptions, bus,
+                    clientState, java.time.Clock.systemUTC(), SubscriptionRenewer.renewBefore(
+                            System.getenv(SubscriptionRenewer.ENV_RENEW_BEFORE_MINUTES)));
+            try {
+                LOG.log(System.Logger.Level.INFO, "microsoft-proxy keeps {0} subscription(s) alive",
+                        renewer.adopt(""));
+            } catch (Exception e) {
+                LOG.log(System.Logger.Level.WARNING,
+                        "the subscriptions of the default connection were not read: {0}", e.toString());
+            }
+            changes.renewer(renewer);
+            renewer.answerLifecycles();
+            renewer.checkEvery(SubscriptionRenewer.CHECK_INTERVAL);
+            closables.add(renewer);
+        }
         Server server = startNetty(parseInt(System.getenv(ENV_GRPC_PORT), DEFAULT_GRPC_PORT),
                 service, changes);
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {

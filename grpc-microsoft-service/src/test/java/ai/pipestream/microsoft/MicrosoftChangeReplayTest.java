@@ -44,11 +44,15 @@ class MicrosoftChangeReplayTest {
     private ManagedChannel channel;
     private NotificationReceiver receiver;
     private ChangeScenarios scenarios;
+    private SubscriptionRenewer renewer;
 
     @AfterEach
     void stop() {
         if (scenarios != null) {
             scenarios.close();
+        }
+        if (renewer != null) {
+            renewer.close();
         }
         if (receiver != null) {
             receiver.close();
@@ -104,8 +108,12 @@ class MicrosoftChangeReplayTest {
                 .start();
         channel = InProcessChannelBuilder.forName(name).build();
         HttpClient http = HttpClient.newHttpClient();
-        URI post = URI.create("http://127.0.0.1:" + receiver.port()
-                + NotificationReceiver.NOTIFICATIONS_PATH);
+        String local = "http://127.0.0.1:" + receiver.port();
+        SubscriptionRenewer renewer = ChangeScenarios.renewer(service::subscriptions, serviceBus,
+                backend);
+        service.renewer(renewer);
+        renewer.answerLifecycles();
+        this.renewer = renewer;
         ChangeScenarios.Notifications replay = new ChangeScenarios.Notifications() {
             @Override
             public void arrive(String stepId) throws Exception {
@@ -113,6 +121,9 @@ class MicrosoftChangeReplayTest {
                 if (!Files.isRegularFile(file)) {
                     return;
                 }
+                URI post = URI.create(local + (stepId.equals(ChangeScenarios.LIFECYCLE_STEP)
+                        ? NotificationReceiver.LIFECYCLE_PATH
+                        : NotificationReceiver.NOTIFICATIONS_PATH));
                 for (JsonNode body : Recordings.JSON.readTree(file.toFile())) {
                     HttpResponse<String> answer = http.send(HttpRequest.newBuilder(post)
                             .header("Content-Type", "application/json")
@@ -129,7 +140,8 @@ class MicrosoftChangeReplayTest {
         };
         scenarios = new ChangeScenarios(MicrosoftChangeServiceGrpc.newBlockingStub(channel),
                 MicrosoftChangeServiceGrpc.newStub(channel), client, backend, receiverBus,
-                serviceBus, replay);
+                serviceBus, replay, renewer, () -> ChangeScenarios.renewer(service::subscriptions,
+                        new NotificationBus(), backend));
         NotificationBus.Listener listener = scenarios.listen();
         for (ChangeScenarios.Scenario scenario : scenarios.all()) {
             tests.add(DynamicTest.dynamicTest(scenario.id(), () -> {

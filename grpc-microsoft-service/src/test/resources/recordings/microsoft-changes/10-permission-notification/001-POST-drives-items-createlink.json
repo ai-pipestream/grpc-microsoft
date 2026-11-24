@@ -16,7 +16,7 @@
   "response" : {
     "status" : 201,
     "headers" : {
-      "location" : "https://redacted.example/url/8",
+      "location" : "https://redacted.example/url/9",
       "content-type" : "application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8"
     },
     "body" : {
@@ -24,12 +24,12 @@
         "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#microsoft.graph.permission",
         "id" : "permission-0001",
         "roles" : [ "read" ],
-        "shareId" : "u!aHR0cHM6Ly9waXBlc3RyZWFtYWkuc2hhcmVwb2ludC5jb20vOnQ6L3MvV2VsY29tZVRvUGlwZXN0cmVhbS9JUUFVMU9rOXpWU0JTWVpSR3ppdEFsc3pBZFJ6ZVBSdEdxelBXejRMaEpvMEV5RQ",
+        "shareId" : "u!aHR0cHM6Ly9waXBlc3RyZWFtYWkuc2hhcmVwb2ludC5jb20vOnQ6L3MvV2VsY29tZVRvUGlwZXN0cmVhbS9JUUFHT09vWGo5bGdTSlNsSVRjS2NoQ2JBYXJEeE5NR2IzNXNTMnRLMnRZdDZvcw",
         "hasPassword" : false,
         "link" : {
           "scope" : "organization",
           "type" : "view",
-          "webUrl" : "https://redacted.example/url/9",
+          "webUrl" : "https://redacted.example/url/10",
           "preventsDownload" : false
         }
       }

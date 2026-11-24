@@ -1,0 +1,34 @@
+{
+  "request" : {
+    "method" : "PATCH",
+    "url" : "https://graph.microsoft.com/v1.0/subscriptions/00000000-0000-4000-8000-000000000001",
+    "authorized" : true,
+    "headers" : {
+      "content-type" : "application/json"
+    },
+    "body" : {
+      "json" : {
+        "expirationDateTime" : "2026-12-24T02:14:08Z"
+      }
+    }
+  },
+  "response" : {
+    "status" : 404,
+    "headers" : {
+      "content-type" : "application/json"
+    },
+    "body" : {
+      "json" : {
+        "error" : {
+          "code" : "ResourceNotFound",
+          "message" : "The object was not found.",
+          "innerError" : {
+            "date" : "2026-11-24T17:21:59",
+            "request-id" : "00000000-0000-4000-8000-000000000013",
+            "client-request-id" : "00000000-0000-4000-8000-000000000013"
+          }
+        }
+      }
+    }
+  }
+}

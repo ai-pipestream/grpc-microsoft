@@ -8,6 +8,8 @@ import ai.pipestream.microsoft.v1.DeleteSubscriptionRequest;
 import ai.pipestream.microsoft.v1.DeleteSubscriptionResponse;
 import ai.pipestream.microsoft.v1.GetSubscriptionRequest;
 import ai.pipestream.microsoft.v1.GetSubscriptionResponse;
+import ai.pipestream.microsoft.v1.ListSubscriptionRenewalsRequest;
+import ai.pipestream.microsoft.v1.ListSubscriptionRenewalsResponse;
 import ai.pipestream.microsoft.v1.ListSubscriptionsRequest;
 import ai.pipestream.microsoft.v1.ListSubscriptionsResponse;
 import ai.pipestream.microsoft.v1.MicrosoftChange;
@@ -16,6 +18,7 @@ import ai.pipestream.microsoft.v1.PassCompleted;
 import ai.pipestream.microsoft.v1.PassTrigger;
 import ai.pipestream.microsoft.v1.ReauthorizeSubscriptionRequest;
 import ai.pipestream.microsoft.v1.ReauthorizeSubscriptionResponse;
+import ai.pipestream.microsoft.v1.Subscription;
 import ai.pipestream.microsoft.v1.SyncRequest;
 import ai.pipestream.microsoft.v1.SyncResponse;
 import ai.pipestream.microsoft.v1.UpdateSubscriptionRequest;
@@ -38,6 +41,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.concurrent.TimeUnit;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -91,6 +95,7 @@ public final class MicrosoftChangeGrpcService
     private final boolean receiverOn;
     private final String clientState;
     private final Clock clock;
+    private volatile SubscriptionRenewer renewer;
 
     /**
      * Creates the service.
@@ -127,6 +132,20 @@ public final class MicrosoftChangeGrpcService
         this.receiverOn = receiverOn;
         this.clientState = clientState == null ? "" : clientState;
         this.clock = clock;
+    }
+
+    /**
+     * Sets the renewer that keeps this server's subscriptions alive.
+     *
+     * @param renewer the renewer; {@code null} = renewal is off
+     */
+    void renewer(SubscriptionRenewer renewer) {
+        this.renewer = renewer;
+    }
+
+    /** The Graph subscription calls of a catalog connection. */
+    GraphSubscriptions subscriptions(String connectionId) {
+        return new GraphSubscriptions(microsoft.sessions().resolve(connectionId).graph());
     }
 
     /**
@@ -213,10 +232,14 @@ public final class MicrosoftChangeGrpcService
         }
     }
 
-    /** Whether a notification starts a pass: a change, or Graph saying it dropped some. */
+    /**
+     * Whether a notification starts a pass: a change, or Graph saying it dropped
+     * some or removed the subscription.
+     */
     static boolean startsPass(ChangeNotification notification) {
         return switch (notification.getLifecycleEvent()) {
-            case LIFECYCLE_EVENT_UNSPECIFIED, LIFECYCLE_EVENT_MISSED -> true;
+            case LIFECYCLE_EVENT_UNSPECIFIED, LIFECYCLE_EVENT_MISSED,
+                    LIFECYCLE_EVENT_SUBSCRIPTION_REMOVED -> true;
             default -> false;
         };
     }
@@ -382,31 +405,59 @@ public final class MicrosoftChangeGrpcService
                 throw Status.FAILED_PRECONDITION.withDescription("no clientState is configured; set "
                         + NotificationReceiver.ENV_CLIENT_STATE).asRuntimeException();
             }
-            return CreateSubscriptionResponse.newBuilder().setSubscription(
-                    subscriptions(request.getConnectionId()).create(request, clientState,
-                            clock.instant())).build();
+            Subscription created = subscriptions(request.getConnectionId()).create(request,
+                    clientState, clock.instant());
+            SubscriptionRenewer keeper = renewer;
+            if (keeper != null) {
+                keeper.created(request.getConnectionId(), request.getIncludeSecurityWebhooks(),
+                        created);
+            }
+            return CreateSubscriptionResponse.newBuilder().setSubscription(created).build();
         });
     }
 
     @Override
     public void getSubscription(GetSubscriptionRequest request,
             StreamObserver<GetSubscriptionResponse> observer) {
-        unary(observer, () -> GetSubscriptionResponse.newBuilder().setSubscription(
-                subscriptions(request.getConnectionId()).get(request.getSubscriptionId())).build());
+        unary(observer, () -> GetSubscriptionResponse.newBuilder().setSubscription(seen(
+                request.getConnectionId(), subscriptions(request.getConnectionId())
+                        .get(request.getSubscriptionId()))).build());
     }
 
     @Override
     public void listSubscriptions(ListSubscriptionsRequest request,
             StreamObserver<ListSubscriptionsResponse> observer) {
-        unary(observer, () -> ListSubscriptionsResponse.newBuilder().addAllSubscriptions(
-                subscriptions(request.getConnectionId()).list()).build());
+        unary(observer, () -> {
+            ListSubscriptionsResponse.Builder out = ListSubscriptionsResponse.newBuilder();
+            List<GraphSubscriptions.Entry> listed = subscriptions(request.getConnectionId()).list();
+            SubscriptionRenewer keeper = renewer;
+            if (keeper != null) {
+                try {
+                    keeper.adopt(request.getConnectionId(), listed);
+                } catch (InterruptedException e) {
+                    throw e;
+                } catch (Exception e) {
+                    LOG.log(System.Logger.Level.WARNING,
+                            "a listed subscription could not be read: {0}", e.toString());
+                }
+            }
+            listed.forEach(entry -> out.addSubscriptions(entry.subscription()));
+            return out.build();
+        });
     }
 
     @Override
     public void updateSubscription(UpdateSubscriptionRequest request,
             StreamObserver<UpdateSubscriptionResponse> observer) {
-        unary(observer, () -> UpdateSubscriptionResponse.newBuilder().setSubscription(
-                subscriptions(request.getConnectionId()).update(request, clock.instant())).build());
+        unary(observer, () -> {
+            Subscription updated = subscriptions(request.getConnectionId()).update(request,
+                    clock.instant());
+            SubscriptionRenewer keeper = renewer;
+            if (keeper != null) {
+                keeper.updated(updated);
+            }
+            return UpdateSubscriptionResponse.newBuilder().setSubscription(updated).build();
+        });
     }
 
     @Override
@@ -423,12 +474,36 @@ public final class MicrosoftChangeGrpcService
             StreamObserver<DeleteSubscriptionResponse> observer) {
         unary(observer, () -> {
             subscriptions(request.getConnectionId()).delete(request.getSubscriptionId());
+            SubscriptionRenewer keeper = renewer;
+            if (keeper != null) {
+                keeper.deleted(request.getSubscriptionId());
+            }
             return DeleteSubscriptionResponse.getDefaultInstance();
         });
     }
 
-    private GraphSubscriptions subscriptions(String connectionId) {
-        return new GraphSubscriptions(microsoft.sessions().resolve(connectionId).graph());
+    @Override
+    public void listSubscriptionRenewals(ListSubscriptionRenewalsRequest request,
+            StreamObserver<ListSubscriptionRenewalsResponse> observer) {
+        unary(observer, () -> {
+            SubscriptionRenewer keeper = renewer;
+            if (keeper == null) {
+                throw Status.FAILED_PRECONDITION.withDescription("subscription renewal is off; it "
+                        + "needs " + NotificationReceiver.ENV_CLIENT_STATE + " and "
+                        + SubscriptionRenewer.ENV_RENEWAL + " not set to off").asRuntimeException();
+            }
+            return ListSubscriptionRenewalsResponse.newBuilder().addAllRenewals(keeper.renewals())
+                    .build();
+        });
+    }
+
+    /** Tells the renewer about a subscription Graph reported, and answers it. */
+    private Subscription seen(String connectionId, GraphSubscriptions.Entry entry) {
+        SubscriptionRenewer keeper = renewer;
+        if (keeper != null) {
+            keeper.seen(connectionId, entry);
+        }
+        return entry.subscription();
     }
 
     // ------------------------------------------------------------ helpers

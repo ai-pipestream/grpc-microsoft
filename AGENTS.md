@@ -8,11 +8,9 @@ specific to the Microsoft (SharePoint Online, OneDrive, Entra) connector.
 
 ## Which branch this describes
 
-`main` has the reads, the write rpcs, the Entra and SharePoint security
-reads, term columns and the admin service. The change stream
-(`MicrosoftChangeService`) is still on open PR #4, branch
-`claude/project-thread-sbyfoc`; the parts below marked "change branch"
-describe that branch.
+`main`: the reads, the write rpcs, the Entra and SharePoint security reads,
+term columns, the admin service and the change stream
+(`MicrosoftChangeService`).
 
 ## Build
 
@@ -31,8 +29,8 @@ build. Do not change how tests are run.
 
 | Module | What |
 |---|---|
-| `grpc-microsoft-api` | `ai.pipestream.microsoft.v1`. `microsoft_service.proto` is the service; `drive.proto`, `list.proto`, `site.proto`, `permission.proto`, `write.proto`, `directory.proto` (Entra), `site_security.proto` (SharePoint groups, role assignments, `SiteAcl`, `SiteAdmins`), `term_store.proto` and `microsoft_admin_service.proto`; on the change branch `change_feed.proto`. |
-| `grpc-microsoft-service` | The process (port 9096). `MicrosoftGrpcService` (rpc handlers), `GraphClient`, `GraphAuth` and `ClientCertificate` (secret or certificate sign-in), `MicrosoftSessions` (catalog connections), `MicrosoftMapper`, `MicrosoftCrawler` (`Sync`, delta), `WritePlans`, `UploadHandler`, `MutateHandler` (`$batch`), `ListFieldWriter` and `ColumnSpecs` (typed column values), `SharePointRest`, `SiteSecurityReader` and `SiteSecurityMapper`. On the change branch: `MicrosoftChangeGrpcService`, `GraphSubscriptions`, `NotificationReceiver`, `NotificationBus`. |
+| `grpc-microsoft-api` | `ai.pipestream.microsoft.v1`. `microsoft_service.proto` is the service; `drive.proto`, `list.proto`, `site.proto`, `permission.proto`, `write.proto`, `directory.proto` (Entra), `site_security.proto` (SharePoint groups, role assignments, `SiteAcl`, `SiteAdmins`), `term_store.proto`, `microsoft_admin_service.proto` and `change_feed.proto` (`MicrosoftChangeService`). |
+| `grpc-microsoft-service` | The process (port 9096). `MicrosoftGrpcService` (rpc handlers), `GraphClient`, `GraphAuth` and `ClientCertificate` (secret or certificate sign-in), `MicrosoftSessions` (catalog connections), `MicrosoftMapper`, `MicrosoftCrawler` (`Sync`, delta), `WritePlans`, `UploadHandler`, `MutateHandler` (`$batch`), `ListFieldWriter` and `ColumnSpecs` (typed column values), `SharePointRest`, `SiteSecurityReader` and `SiteSecurityMapper`. Change stream: `MicrosoftChangeGrpcService`, `GraphSubscriptions`, `SubscriptionRenewer`, `NotificationReceiver`, `NotificationBus`. |
 | `grpc-microsoft-admin` | `MicrosoftAdminService`: list, ensure (with `dry_run`) and revoke per-site application grants. The only process that signs in with `Sites.FullControl.All`; deployed on its own. Default port 9097, the same as the sync ledger's default. |
 | `grpc-microsoft-connector` | Microsoft Copilot / Graph Connector Agent adapter (port 30303). Its `Contracts/` protos are a frozen MIT copy of Microsoft's wire and are outside the Buf workspace. |
 | `grpc-microsoft-output` | Store keys, OKF catalog mapping, the `microsoft-connector` output format. |
@@ -56,7 +54,7 @@ build. Do not change how tests are run.
 | Suite | Live task (opt-in) | Replay in `test` | Recordings |
 |---|---|---|---|
 | `WriteScenarios` (writes and security reads) | `liveWriteTest` (`MICROSOFT_LIVE_WRITE=1`, `MICROSOFT_SITE_ID`) | `MicrosoftWriteReplayTest` | `grpc-microsoft-service/.../recordings/microsoft/` |
-| `ChangeScenarios` (change branch) | `liveChangesTest` | `MicrosoftChangeReplayTest` | `.../recordings/microsoft-changes/` |
+| `ChangeScenarios` (change stream and subscription renewal) | `liveChangesTest` | `MicrosoftChangeReplayTest` | `.../recordings/microsoft-changes/` |
 | `AdminGrantScenarios` | `:grpc-microsoft-admin:liveAdminTest` (grant changes only with `MICROSOFT_ADMIN_LIVE_CHANGE=1`) | `MicrosoftAdminReplayTest` | `grpc-microsoft-admin/.../recordings/admin/` |
 | read coverage | `liveCoverageTest` | none | report only |
 | smoke | `liveSmokeTest` | none | none |
@@ -70,8 +68,8 @@ email addresses.
 
 Live runs go through `.github/workflows/ci.yml` `workflow_dispatch` inputs
 (`run_live_write`, `run_live_coverage`, `run_live_admin`,
-`import_recordings_run_id`, `import_admin_recordings_run_id`, and on the
-change branch `run_live_changes`). Some inputs change tenant grants.
+`import_recordings_run_id`, `import_admin_recordings_run_id`,
+`run_live_changes`). Some inputs change tenant grants.
 Reviewers do not dispatch them.
 
 ## Microsoft specifics to keep in mind

@@ -17,12 +17,21 @@ option java_package = "ai.pipestream.microsoft.v1";
 //
 // WatchChanges runs Sync passes back to back: one at start, then one each
 // poll interval, and one early whenever a Graph change notification for a
-// watched drive or list arrives, or a "missed" lifecycle notification.
-// Polling is the baseline; notifications only shorten the wait. A pass that
-// fails with UNAVAILABLE or RESOURCE_EXHAUSTED runs again from the same
-// cursor after Graph's Retry-After or a backoff of at most 5 minutes. The subscription rpcs map 1:1 to Graph
-// /subscriptions. The notification receiver is off unless the server is
-// started with a notification port.
+// watched drive or list arrives, or a "missed" or "subscriptionRemoved"
+// lifecycle notification. Polling is the baseline; notifications only
+// shorten the wait. A pass that fails with UNAVAILABLE or RESOURCE_EXHAUSTED
+// runs again from the same cursor after Graph's Retry-After or a backoff of
+// at most 5 minutes. The subscription rpcs map 1:1 to Graph /subscriptions.
+// The notification receiver is off unless the server is started with a
+// notification port.
+//
+// The server keeps the subscriptions it owns alive: the ones created
+// through CreateSubscription and, after a restart, the ones Graph lists
+// with the server's clientState. It renews each before it expires, renews
+// on a "reauthorizationRequired" lifecycle notification, and creates a
+// subscription again when Graph removed it. A subscription that expires
+// while the server is down is gone; polling still covers its changes.
+// ListSubscriptionRenewals reports what the server keeps.
 // ============================================================================
 
 // Streams Microsoft Graph changes continuously and manages Graph change
@@ -55,8 +64,12 @@ service MicrosoftChangeService {
   // reauthorizationRequired lifecycle notification.
   rpc ReauthorizeSubscription(ReauthorizeSubscriptionRequest) returns (ReauthorizeSubscriptionResponse);
 
-  // DELETE /subscriptions/{id}.
+  // DELETE /subscriptions/{id}. The server stops renewing it.
   rpc DeleteSubscription(DeleteSubscriptionRequest) returns (DeleteSubscriptionResponse);
+
+  // The subscriptions the server keeps alive and what it last did for each.
+  // Answers FAILED_PRECONDITION when renewal is off.
+  rpc ListSubscriptionRenewals(ListSubscriptionRenewalsRequest) returns (ListSubscriptionRenewalsResponse);
 }
 
 // ============================================================================
@@ -324,3 +337,49 @@ message DeleteSubscriptionRequest {
 
 // Response to DeleteSubscription.
 message DeleteSubscriptionResponse {}
+
+// ============================================================================
+// RENEWAL
+// ============================================================================
+
+// What the server did to keep a subscription alive.
+enum RenewalAction {
+  // Zero value; nothing was needed yet.
+  RENEWAL_ACTION_UNSPECIFIED = 0;
+  // Renewed because its expiration was near.
+  RENEWAL_ACTION_RENEWED = 1;
+  // Renewed in answer to a reauthorizationRequired lifecycle notification.
+  // Renewing a subscription reauthorizes it too.
+  RENEWAL_ACTION_REAUTHORIZED = 2;
+  // Created again because Graph no longer had it.
+  RENEWAL_ACTION_RECREATED = 3;
+}
+
+// A subscription the server keeps alive.
+message SubscriptionRenewal {
+  // The subscription as Graph last reported it.
+  Subscription subscription = 1;
+  // Catalog connection it belongs to; empty = the process default.
+  string connection_id = 2;
+  // When the server renews it next.
+  google.protobuf.Timestamp renew_at = 3;
+  // The last thing the server did for it.
+  RenewalAction last_action = 4;
+  // When it did that; unset when last_action is UNSPECIFIED.
+  google.protobuf.Timestamp last_action_time = 5;
+  // Id of the subscription this one replaced; set when last_action is
+  // RECREATED.
+  string replaced_subscription_id = 6;
+  // Why the last attempt failed; empty when it succeeded. The server tries
+  // again on its next check.
+  string last_error = 7;
+}
+
+// Request for ListSubscriptionRenewals.
+message ListSubscriptionRenewalsRequest {}
+
+// Response to ListSubscriptionRenewals.
+message ListSubscriptionRenewalsResponse {
+  // Every subscription the server keeps alive, of every connection.
+  repeated SubscriptionRenewal renewals = 1;
+}

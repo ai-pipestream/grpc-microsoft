@@ -5,13 +5,17 @@ import ai.pipestream.microsoft.v1.ChangeSource;
 import ai.pipestream.microsoft.v1.CreateSubscriptionRequest;
 import ai.pipestream.microsoft.v1.DeleteSubscriptionRequest;
 import ai.pipestream.microsoft.v1.GetSubscriptionRequest;
+import ai.pipestream.microsoft.v1.LifecycleEvent;
+import ai.pipestream.microsoft.v1.ListSubscriptionRenewalsRequest;
 import ai.pipestream.microsoft.v1.ListSubscriptionsRequest;
 import ai.pipestream.microsoft.v1.MicrosoftChange;
 import ai.pipestream.microsoft.v1.MicrosoftChangeServiceGrpc;
 import ai.pipestream.microsoft.v1.PassTrigger;
 import ai.pipestream.microsoft.v1.ReauthorizeSubscriptionRequest;
+import ai.pipestream.microsoft.v1.RenewalAction;
 import ai.pipestream.microsoft.v1.Subscription;
 import ai.pipestream.microsoft.v1.SubscriptionChangeType;
+import ai.pipestream.microsoft.v1.SubscriptionRenewal;
 import ai.pipestream.microsoft.v1.SubscriptionResource;
 import ai.pipestream.microsoft.v1.SyncRequest;
 import ai.pipestream.microsoft.v1.UpdateSubscriptionRequest;
@@ -33,6 +37,7 @@ import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
 /**
  * Every {@code MicrosoftChangeService} rpc in one ordered run, shared by the
@@ -45,6 +50,16 @@ final class ChangeScenarios {
     static final Duration NOTIFICATION_WAIT = Duration.ofMinutes(6);
     /** How long a step waits for a WatchChanges pass. */
     static final Duration PASS_WAIT = Duration.ofMinutes(10);
+    /** Lifetime of the subscription that should make Graph ask for a reauthorization. */
+    static final Duration SHORT_LIFETIME = Duration.ofMinutes(50);
+    /** How long after that subscription was created a live run waits for Graph to ask. */
+    static final Duration LIFECYCLE_WAIT = Duration.ofMinutes(2);
+    /** The longest such wait: the subscription must still exist when the wait ends. */
+    static final Duration LONGEST_LIFECYCLE_WAIT = SHORT_LIFETIME.minusMinutes(4);
+    /** Renewal margin of the run's renewer: longer than any lifetime, so every check renews. */
+    static final Duration RENEW_BEFORE = Duration.ofDays(60);
+    /** Step that waits for a lifecycle notification. */
+    static final String LIFECYCLE_STEP = "12-lifecycle-renewal";
 
     /** Where the notifications of a step come from. */
     interface Notifications {
@@ -92,9 +107,15 @@ final class ChangeScenarios {
     private final NotificationBus receiverBus;
     private final NotificationBus serviceBus;
     private final Notifications notifications;
+    private final SubscriptionRenewer renewer;
+    private final Supplier<SubscriptionRenewer> restarted;
     private final BlockingQueue<ChangeNotification> received = new LinkedBlockingQueue<>();
+    private final BlockingQueue<ChangeNotification> lifecycles = new LinkedBlockingQueue<>();
 
     private String subscriptionId;
+    private String shortLivedId;
+    private long shortLivedCreated;
+    private Duration lifecycleWait = LIFECYCLE_WAIT;
     private String fileId;
     private Context.CancellableContext watch;
     private final BlockingQueue<WatchChangesResponse> watched = new LinkedBlockingQueue<>();
@@ -102,7 +123,8 @@ final class ChangeScenarios {
     ChangeScenarios(MicrosoftChangeServiceGrpc.MicrosoftChangeServiceBlockingStub blocking,
             MicrosoftChangeServiceGrpc.MicrosoftChangeServiceStub async, GraphClient graph,
             Backend backend, NotificationBus receiverBus, NotificationBus serviceBus,
-            Notifications notifications) {
+            Notifications notifications, SubscriptionRenewer renewer,
+            Supplier<SubscriptionRenewer> restarted) {
         this.blocking = blocking;
         this.async = async;
         this.graph = graph;
@@ -110,6 +132,27 @@ final class ChangeScenarios {
         this.receiverBus = receiverBus;
         this.serviceBus = serviceBus;
         this.notifications = notifications;
+        this.renewer = renewer;
+        this.restarted = restarted;
+    }
+
+    /**
+     * The renewer of a run: its clock stands at the run's start, so the
+     * expirations it asks for are the same when the run is replayed.
+     */
+    static SubscriptionRenewer renewer(SubscriptionRenewer.Graphs graphs, NotificationBus bus,
+            Backend backend) {
+        return new SubscriptionRenewer(graphs, bus, backend.clientState(),
+                java.time.Clock.fixed(backend.startedAt(), java.time.ZoneOffset.UTC), RENEW_BEFORE);
+    }
+
+    /**
+     * Sets how long the run waits for Graph to ask for a reauthorization.
+     *
+     * @param wait the wait, cut to {@link #LONGEST_LIFECYCLE_WAIT}
+     */
+    void lifecycleWait(Duration wait) {
+        lifecycleWait = wait.compareTo(LONGEST_LIFECYCLE_WAIT) > 0 ? LONGEST_LIFECYCLE_WAIT : wait;
     }
 
     /** Every step, in run order. */
@@ -117,25 +160,41 @@ final class ChangeScenarios {
         return List.of(
                 new Scenario("01-create-subscription", "CreateSubscription",
                         "CreateSubscription (drive root, security webhooks)", this::create),
-                new Scenario("02-get-subscription", "GetSubscription", "GetSubscription", this::get),
-                new Scenario("03-list-subscriptions", "ListSubscriptions", "ListSubscriptions",
+                new Scenario("02-create-short-lived", "CreateSubscription",
+                        "CreateSubscription (expires within the hour)", this::createShortLived),
+                new Scenario("03-get-subscription", "GetSubscription", "GetSubscription", this::get),
+                new Scenario("04-list-subscriptions", "ListSubscriptions", "ListSubscriptions",
                         this::list),
-                new Scenario("04-update-subscription", "UpdateSubscription",
+                new Scenario("05-update-subscription", "UpdateSubscription",
                         "UpdateSubscription (renew)", this::update),
-                new Scenario("05-reauthorize-subscription", "ReauthorizeSubscription",
+                new Scenario("06-reauthorize-subscription", "ReauthorizeSubscription",
                         "ReauthorizeSubscription", this::reauthorize),
-                new Scenario("06-watch-first-pass", "WatchChanges", "WatchChanges (first pass)",
+                new Scenario("07-watch-first-pass", "WatchChanges", "WatchChanges (first pass)",
                         this::watchStart),
-                new Scenario("07-write-file", "", "write a file (Graph helper)", this::writeFile),
-                new Scenario("08-notified-pass", "WatchNotifications",
+                new Scenario("08-write-file", "", "write a file (Graph helper)", this::writeFile),
+                new Scenario("09-notified-pass", "WatchNotifications",
                         "WatchNotifications + WatchChanges pass started by a notification",
                         this::notifiedPass),
-                new Scenario("09-permission-notification", "",
+                new Scenario("10-permission-notification", "",
                         "notification after a sharing link is added (security webhooks)",
                         this::permissionNotification),
-                new Scenario("10-delete-file", "", "delete the file (Graph helper)",
+                new Scenario("11-delete-file", "", "delete the file (Graph helper)",
                         this::deleteFile),
-                new Scenario("11-delete-subscription", "DeleteSubscription", "DeleteSubscription",
+                new Scenario(LIFECYCLE_STEP, "",
+                        "renewal after Graph asks for a reauthorization (lifecycle notification)",
+                        this::lifecycleRenewal),
+                new Scenario("13-delete-short-lived", "DeleteSubscription",
+                        "DeleteSubscription (the short-lived one)", this::deleteShortLived),
+                new Scenario("14-renew-before-expiry", "ListSubscriptionRenewals",
+                        "ListSubscriptionRenewals after the server renewed a subscription near its "
+                                + "expiration", this::renewBeforeExpiry),
+                new Scenario("15-find-after-restart", "",
+                        "a restarted server finds its subscription by clientState",
+                        this::findAfterRestart),
+                new Scenario("16-create-again", "",
+                        "the server creates a subscription again that Graph no longer has",
+                        this::createAgain),
+                new Scenario("17-delete-subscription", "DeleteSubscription", "DeleteSubscription",
                         this::delete));
     }
 
@@ -182,6 +241,21 @@ final class ChangeScenarios {
                 + created.getChangeTypesList());
         subscriptionId = created.getId();
         return "subscription created, expires " + created.getExpirationDateTime().getSeconds();
+    }
+
+    private String createShortLived() {
+        Subscription created = blocking.createSubscription(CreateSubscriptionRequest.newBuilder()
+                .setResource(SubscriptionResource.newBuilder().setDriveRoot(backend.driveId()))
+                .addChangeTypes(SubscriptionChangeType.SUBSCRIPTION_CHANGE_TYPE_UPDATED)
+                .setNotificationUrl(backend.notificationUrl())
+                .setLifecycleNotificationUrl(backend.lifecycleUrl())
+                .setExpirationDateTime(timestamp(backend.startedAt().plus(SHORT_LIFETIME)))
+                .build()).getSubscription();
+        check(!created.getId().isBlank(), "Graph answered no subscription id");
+        shortLivedId = created.getId();
+        shortLivedCreated = System.nanoTime();
+        return "subscription created, expires " + SHORT_LIFETIME.toMinutes()
+                + " min after the run started";
     }
 
     private String get() {
@@ -270,7 +344,7 @@ final class ChangeScenarios {
         try {
             stream.run(() -> async.watchNotifications(WatchNotificationsRequest.newBuilder()
                     .setSubscriptionId(subscriptionId).build(), collector(seen)));
-            notifications.arrive("08-notified-pass");
+            notifications.arrive("09-notified-pass");
             ChangeNotification first = awaitNotification(NOTIFICATION_WAIT);
             Thread.sleep(200);
             serviceBus.publish(first);
@@ -301,7 +375,7 @@ final class ChangeScenarios {
         ObjectNode body = Recordings.JSON.createObjectNode().put("type", "view")
                 .put("scope", "organization");
         graph.post("/drives/" + backend.driveId() + "/items/" + id + "/createLink", body);
-        notifications.arrive("09-permission-notification");
+        notifications.arrive("10-permission-notification");
         ChangeNotification next = awaitNotification(NOTIFICATION_WAIT);
         return "notification " + next.getChangeType() + " after the sharing link was added";
     }
@@ -312,11 +386,133 @@ final class ChangeScenarios {
         return "deleted";
     }
 
+    private String lifecycleRenewal() throws Exception {
+        String id = need(shortLivedId, "the short-lived subscription");
+        notifications.arrive(LIFECYCLE_STEP);
+        long deadline = shortLivedCreated + lifecycleWait.toNanos();
+        ChangeNotification asked = null;
+        while (asked == null) {
+            ChangeNotification next = lifecycles.poll(500, TimeUnit.MILLISECONDS);
+            if (next != null && next.getSubscriptionId().equals(id)) {
+                asked = next;
+            } else if (System.nanoTime() > deadline) {
+                throw new Skip("Graph sent no lifecycle notification within "
+                        + lifecycleWait.toMinutes() + " min for a subscription that expires in "
+                        + SHORT_LIFETIME.toMinutes() + " min");
+            }
+        }
+        check(asked.getLifecycleEvent() == LifecycleEvent.LIFECYCLE_EVENT_REAUTHORIZATION_REQUIRED,
+                "the lifecycle notification is " + asked.getLifecycleEvent());
+        long waited = TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - shortLivedCreated);
+        serviceBus.publish(asked);
+        SubscriptionRenewal renewal = null;
+        long until = System.nanoTime() + TimeUnit.SECONDS.toNanos(60);
+        while (System.nanoTime() < until) {
+            renewal = renewal(id);
+            if (renewal != null
+                    && renewal.getLastAction() != RenewalAction.RENEWAL_ACTION_UNSPECIFIED) {
+                break;
+            }
+            Thread.sleep(100);
+        }
+        check(renewal != null, "the server no longer keeps the short-lived subscription");
+        check(renewal.getLastAction() == RenewalAction.RENEWAL_ACTION_REAUTHORIZED,
+                "the server answered with " + renewal.getLastAction() + " " + renewal.getLastError());
+        check(renewal.getSubscription().getExpirationDateTime().getSeconds() == longest(renewal),
+                "the renewed expiration is " + renewal.getSubscription().getExpirationDateTime()
+                        .getSeconds() + ", wanted " + longest(renewal));
+        return "Graph asked for a reauthorization (waited " + (waited < 60 ? "under a minute"
+                : waited / 60 + " min") + "); the server renewed the subscription";
+    }
+
+    private String deleteShortLived() {
+        blocking.deleteSubscription(DeleteSubscriptionRequest.newBuilder()
+                .setSubscriptionId(need(shortLivedId, "the short-lived subscription")).build());
+        check(renewal(shortLivedId) == null, "the server still keeps the deleted subscription");
+        shortLivedId = null;
+        return "deleted";
+    }
+
+    private String renewBeforeExpiry() {
+        String id = need(subscriptionId, "a subscription");
+        SubscriptionRenewal before = renewal(id);
+        check(before != null, "the server does not keep the subscription it created");
+        check(before.getLastAction() == RenewalAction.RENEWAL_ACTION_UNSPECIFIED,
+                "the server already acted on it: " + before.getLastAction());
+        renewer.runOnce();
+        SubscriptionRenewal after = renewal(id);
+        check(after != null && after.getLastAction() == RenewalAction.RENEWAL_ACTION_RENEWED,
+                "the server did not renew it: " + (after == null ? "not kept"
+                        : after.getLastAction() + " " + after.getLastError()));
+        long wanted = longest(after);
+        check(after.getSubscription().getExpirationDateTime().getSeconds() == wanted,
+                "the renewed expiration is " + after.getSubscription().getExpirationDateTime()
+                        .getSeconds() + ", wanted " + wanted);
+        Subscription got = blocking.getSubscription(GetSubscriptionRequest.newBuilder()
+                .setSubscriptionId(id).build()).getSubscription();
+        check(got.getExpirationDateTime().getSeconds() == wanted,
+                "Graph reports the expiration " + got.getExpirationDateTime().getSeconds()
+                        + ", wanted " + wanted);
+        return "renewed to the longest expiration, "
+                + GraphSubscriptions.maxLifetime(got.getResource()).toDays() + " days";
+    }
+
+    private String findAfterRestart() throws Exception {
+        String id = need(subscriptionId, "a subscription");
+        SubscriptionRenewer fresh = restarted.get();
+        int found = fresh.adopt("");
+        check(fresh.renewals().stream().anyMatch(one -> one.getSubscription().getId().equals(id)),
+                "a new renewer did not find the subscription");
+        return found + " subscription(s) with this run's clientState found";
+    }
+
+    private String createAgain() throws Exception {
+        String old = need(subscriptionId, "a subscription");
+        graph.delete("/subscriptions/" + old);
+        try (NotificationBus.Listener bus = serviceBus.listen()) {
+            renewer.runOnce();
+            SubscriptionRenewal renewal = renewals().stream()
+                    .filter(one -> one.getReplacedSubscriptionId().equals(old)).findFirst()
+                    .orElse(null);
+            SubscriptionRenewal stale = renewal(old);
+            check(renewal != null, "the server did not create it again"
+                    + (stale == null ? "" : ": " + stale.getLastError()));
+            subscriptionId = renewal.getSubscription().getId();
+            check(renewal.getLastAction() == RenewalAction.RENEWAL_ACTION_RECREATED,
+                    "the last action is " + renewal.getLastAction());
+            check(!subscriptionId.equals(old), "the new subscription has the old id");
+            check(stale == null, "the server still keeps the removed subscription");
+            ChangeNotification missed = bus.queue().poll(5, TimeUnit.SECONDS);
+            check(missed != null && missed.getSubscriptionId().equals(subscriptionId)
+                            && missed.getLifecycleEvent() == LifecycleEvent.LIFECYCLE_EVENT_MISSED,
+                    "watchers were not told to run a pass");
+        }
+        return "Graph answered NOT_FOUND to the renewal; the server created the subscription again";
+    }
+
     private String delete() {
         blocking.deleteSubscription(DeleteSubscriptionRequest.newBuilder()
                 .setSubscriptionId(need(subscriptionId, "a subscription")).build());
         subscriptionId = null;
+        check(renewals().isEmpty(), "the server still keeps " + renewals().size()
+                + " subscription(s)");
         return "deleted";
+    }
+
+    private List<SubscriptionRenewal> renewals() {
+        return blocking.listSubscriptionRenewals(ListSubscriptionRenewalsRequest.getDefaultInstance())
+                .getRenewalsList();
+    }
+
+    private SubscriptionRenewal renewal(String id) {
+        return renewals().stream().filter(one -> one.getSubscription().getId().equals(id))
+                .findFirst().orElse(null);
+    }
+
+    /** The expiration the run's renewer asks for, in epoch seconds. */
+    private long longest(SubscriptionRenewal renewal) {
+        return backend.startedAt().plus(GraphSubscriptions.maxLifetime(
+                renewal.getSubscription().getResource())).getEpochSecond();
     }
 
     /** Removes what a failed run left behind. */
@@ -329,13 +525,16 @@ final class ChangeScenarios {
         } catch (Exception e) {
             System.out.println("[ChangeScenarios] file clean-up failed: " + e.getMessage());
         }
-        try {
-            if (subscriptionId != null) {
-                blocking.deleteSubscription(DeleteSubscriptionRequest.newBuilder()
-                        .setSubscriptionId(subscriptionId).build());
+        for (String id : java.util.Arrays.asList(subscriptionId, shortLivedId)) {
+            try {
+                if (id != null) {
+                    blocking.deleteSubscription(DeleteSubscriptionRequest.newBuilder()
+                            .setSubscriptionId(id).build());
+                }
+            } catch (RuntimeException e) {
+                System.out.println("[ChangeScenarios] subscription clean-up failed: "
+                        + e.getMessage());
             }
-        } catch (RuntimeException e) {
-            System.out.println("[ChangeScenarios] subscription clean-up failed: " + e.getMessage());
         }
     }
 
@@ -348,7 +547,8 @@ final class ChangeScenarios {
             try {
                 while (true) {
                     ChangeNotification next = listener.queue().take();
-                    received.add(next);
+                    (next.getLifecycleEvent() == LifecycleEvent.LIFECYCLE_EVENT_UNSPECIFIED
+                            ? received : lifecycles).add(next);
                 }
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
@@ -361,9 +561,7 @@ final class ChangeScenarios {
         long deadline = System.nanoTime() + wait.toNanos();
         while (System.nanoTime() < deadline) {
             ChangeNotification next = received.poll(500, TimeUnit.MILLISECONDS);
-            if (next != null && next.getSubscriptionId().equals(subscriptionId)
-                    && next.getLifecycleEvent()
-                    == ai.pipestream.microsoft.v1.LifecycleEvent.LIFECYCLE_EVENT_UNSPECIFIED) {
+            if (next != null && next.getSubscriptionId().equals(subscriptionId)) {
                 return next;
             }
         }

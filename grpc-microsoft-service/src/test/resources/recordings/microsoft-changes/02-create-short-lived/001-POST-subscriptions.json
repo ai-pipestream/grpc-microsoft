@@ -1,34 +1,40 @@
 {
   "request" : {
-    "method" : "PATCH",
-    "url" : "https://graph.microsoft.com/v1.0/subscriptions/00000000-0000-4000-8000-000000000001",
+    "method" : "POST",
+    "url" : "https://graph.microsoft.com/v1.0/subscriptions",
     "authorized" : true,
     "headers" : {
       "content-type" : "application/json"
     },
     "body" : {
       "json" : {
-        "expirationDateTime" : "2026-11-24T14:29:41Z"
+        "changeType" : "updated",
+        "notificationUrl" : "https://redacted.example/url/1",
+        "resource" : "/drives/b%21drive-0001/root",
+        "expirationDateTime" : "2026-11-24T18:09:08Z",
+        "clientState" : "pipestream-live-change-20261124-171908-e6200964",
+        "lifecycleNotificationUrl" : "https://redacted.example/url/2"
       }
     }
   },
   "response" : {
-    "status" : 200,
+    "status" : 201,
     "headers" : {
+      "location" : "https://redacted.example/url/4",
       "content-type" : "application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8"
     },
     "body" : {
       "json" : {
         "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#subscriptions/$entity",
-        "id" : "00000000-0000-4000-8000-000000000001",
+        "id" : "00000000-0000-4000-8000-000000000004",
         "resource" : "/drives/b%21drive-0001/root",
         "applicationId" : "00000000-0000-4000-8000-000000000002",
         "changeType" : "updated",
-        "clientState" : "pipestream-live-change-20261122-142941-64e2bba4",
+        "clientState" : "pipestream-live-change-20261124-171908-e6200964",
         "notificationUrl" : "https://redacted.example/url/1",
         "notificationQueryOptions" : null,
         "lifecycleNotificationUrl" : "https://redacted.example/url/2",
-        "expirationDateTime" : "2026-11-24T14:29:41Z",
+        "expirationDateTime" : "2026-11-24T18:09:08Z",
         "creatorId" : "00000000-0000-4000-8000-000000000003",
         "includeResourceData" : null,
         "latestSupportedTlsVersion" : null,
