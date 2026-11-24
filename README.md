@@ -227,6 +227,14 @@ for a reauthorization, and creates a subscription again when Graph no longer
 has it. `ListSubscriptionRenewals` shows what it keeps and the last error. A
 subscription that expires while the server is down is not created again.
 
+`WatchChangesRequest.directory` adds Entra users and groups to every pass:
+`user_change` and `group_change` messages (a group change carries its member
+changes when `group_members` is set), then one `directory_snapshot` per
+kind. The first pass lists every user and group; later passes read
+`/users/delta` and `/groups/delta` from the links the resume cursor carries.
+Subscriptions on `/users`, `/groups` and `/groups/{id}/members` shorten the
+wait the same way as the ones on drives and lists.
+
 ## Permissions
 
 What each group of rpcs needs, as proven against a real tenant on 2026-11-22.
@@ -236,7 +244,7 @@ All are application permissions with admin consent.
 |---|---|---|
 | Everything scoped to a site: `GetSite`, drives, items, downloads, lists, list items, columns, item / list / list-item `ListPermissions`, the delta rpcs, `Sync`, and every write rpc | Graph `Sites.Selected` plus a grant on the site | site grant `manage` |
 | `ListSites`, `ListAllSites`, `DeltaSites` | Graph `Sites.Read.All` (tenant-wide) | refused with `Sites.Selected` alone |
-| `ListUsers`, `ListGroups`, `DeltaGroups`, `ListGroupTransitiveMembers`, `ListUserTransitiveMemberOf` | Graph `User.Read.All` and `GroupMember.Read.All` | those two |
+| `ListUsers`, `ListGroups`, `DeltaUsers`, `DeltaGroups`, `ListGroupTransitiveMembers`, `ListUserTransitiveMemberOf`, `WatchChanges` with `directory` | Graph `User.Read.All` and `GroupMember.Read.All` | those two |
 | `ListSiteGroups`, `GetSiteRoleInheritance` | SharePoint `Sites.Selected` plus a grant on the site, certificate credential | site grant `manage` |
 | `ListSiteGroupMembers`, `ListSiteRoleAssignments` | SharePoint `Sites.Selected` plus site grant `fullcontrol`, certificate credential (refused with `manage`) | site grant `fullcontrol`; also SharePoint `Sites.FullControl.All` |
 | `ListPermissions` on a site | Graph `Sites.FullControl.All` | that |

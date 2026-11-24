@@ -4,6 +4,9 @@ import ai.pipestream.microsoft.v1.ChangeNotification;
 import ai.pipestream.microsoft.v1.ChangeSource;
 import ai.pipestream.microsoft.v1.CreateSubscriptionRequest;
 import ai.pipestream.microsoft.v1.DeleteSubscriptionRequest;
+import ai.pipestream.microsoft.v1.DirectoryKind;
+import ai.pipestream.microsoft.v1.DirectorySnapshot;
+import ai.pipestream.microsoft.v1.DirectoryWatch;
 import ai.pipestream.microsoft.v1.GetSubscriptionRequest;
 import ai.pipestream.microsoft.v1.LifecycleEvent;
 import ai.pipestream.microsoft.v1.ListSubscriptionRenewalsRequest;
@@ -17,6 +20,7 @@ import ai.pipestream.microsoft.v1.Subscription;
 import ai.pipestream.microsoft.v1.SubscriptionChangeType;
 import ai.pipestream.microsoft.v1.SubscriptionRenewal;
 import ai.pipestream.microsoft.v1.SubscriptionResource;
+import ai.pipestream.microsoft.v1.SyncCursor;
 import ai.pipestream.microsoft.v1.SyncRequest;
 import ai.pipestream.microsoft.v1.UpdateSubscriptionRequest;
 import ai.pipestream.microsoft.v1.WatchChangesRequest;
@@ -27,16 +31,19 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.protobuf.Timestamp;
 import io.grpc.Context;
+import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
 
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
 /**
@@ -116,6 +123,7 @@ final class ChangeScenarios {
     private String shortLivedId;
     private long shortLivedCreated;
     private Duration lifecycleWait = LIFECYCLE_WAIT;
+    private String directoryCursor;
     private String fileId;
     private Context.CancellableContext watch;
     private final BlockingQueue<WatchChangesResponse> watched = new LinkedBlockingQueue<>();
@@ -195,7 +203,19 @@ final class ChangeScenarios {
                         "the server creates a subscription again that Graph no longer has",
                         this::createAgain),
                 new Scenario("17-delete-subscription", "DeleteSubscription", "DeleteSubscription",
-                        this::delete));
+                        this::delete),
+                new Scenario("18-watch-directory", "WatchChanges",
+                        "WatchChanges (every Entra user and group, with members)",
+                        this::watchDirectory),
+                new Scenario("19-watch-directory-resumed", "WatchChanges",
+                        "WatchChanges (Entra changes since the cursor)", this::watchDirectoryResumed),
+                new Scenario("20-subscribe-user", "CreateSubscription",
+                        "CreateSubscription (one Entra user)", this::subscribeToAUser),
+                new Scenario("21-subscribe-group", "CreateSubscription",
+                        "CreateSubscription (one Entra group)", this::subscribeToAGroup),
+                new Scenario("22-subscribe-group-members", "CreateSubscription",
+                        "CreateSubscription (the members of one Entra group)",
+                        this::subscribeToGroupMembers));
     }
 
     /** Runs one step. */
@@ -497,6 +517,154 @@ final class ChangeScenarios {
         check(renewals().isEmpty(), "the server still keeps " + renewals().size()
                 + " subscription(s)");
         return "deleted";
+    }
+
+    private String watchDirectory() throws Exception {
+        List<WatchChangesResponse> pass = directoryPass("");
+        long users = pass.stream().filter(WatchChangesResponse::hasUserChange).count();
+        long groups = pass.stream().filter(WatchChangesResponse::hasGroupChange).count();
+        long members = pass.stream().filter(WatchChangesResponse::hasGroupChange)
+                .mapToLong(message -> message.getGroupChange().getMemberChangesCount()).sum();
+        check(users > 0, "the pass listed no user");
+        check(pass.stream().filter(WatchChangesResponse::hasUserChange)
+                        .noneMatch(message -> message.getUserChange().getUser().getId().isBlank()),
+                "a user change has no id");
+        check(pass.stream().filter(WatchChangesResponse::hasGroupChange)
+                        .noneMatch(message -> message.getGroupChange().getGroup().getId().isBlank()),
+                "a group change has no id");
+        checkSnapshot(pass, DirectoryKind.DIRECTORY_KIND_USERS, ChangeSource.CHANGE_SOURCE_CRAWL, users);
+        checkSnapshot(pass, DirectoryKind.DIRECTORY_KIND_GROUPS, ChangeSource.CHANGE_SOURCE_CRAWL,
+                groups);
+        WatchChangesResponse last = pass.get(pass.size() - 1);
+        SyncCursor cursor = SyncCursor.parseFrom(Base64.getUrlDecoder().decode(last.getResumeCursor()));
+        check(!cursor.getUsersDeltaLink().isBlank() && !cursor.getGroupsDeltaLink().isBlank(),
+                "the resume cursor holds no users or groups delta link");
+        check(last.getPassCompleted().getChangeCount() >= users + groups,
+                "the pass counted " + last.getPassCompleted().getChangeCount() + " change(s)");
+        directoryCursor = last.getResumeCursor();
+        return users + " user(s), " + groups + " group(s) with " + members + " member change(s)";
+    }
+
+    private String watchDirectoryResumed() throws Exception {
+        List<WatchChangesResponse> pass = directoryPass(need(directoryCursor,
+                "the cursor of the directory pass"));
+        long users = pass.stream().filter(WatchChangesResponse::hasUserChange).count();
+        long groups = pass.stream().filter(WatchChangesResponse::hasGroupChange).count();
+        checkSnapshot(pass, DirectoryKind.DIRECTORY_KIND_USERS, ChangeSource.CHANGE_SOURCE_DELTA, users);
+        checkSnapshot(pass, DirectoryKind.DIRECTORY_KIND_GROUPS, ChangeSource.CHANGE_SOURCE_DELTA,
+                groups);
+        return "since the cursor: " + users + " user change(s), " + groups + " group change(s)";
+    }
+
+    /** Opens a watch with the directory on, collects its first pass and closes it. */
+    private List<WatchChangesResponse> directoryPass(String resumeCursor) throws Exception {
+        Context.CancellableContext stream = Context.current().withCancellation();
+        BlockingQueue<WatchChangesResponse> seen = new LinkedBlockingQueue<>();
+        AtomicReference<Throwable> failure = new AtomicReference<>();
+        WatchChangesRequest request = WatchChangesRequest.newBuilder()
+                .setSync(SyncRequest.newBuilder().addDriveIds(backend.driveId()))
+                .setResumeCursor(resumeCursor)
+                .setDirectory(DirectoryWatch.newBuilder().setUsers(true).setGroups(true)
+                        .setGroupMembers(true))
+                .setPollInterval(com.google.protobuf.Duration.newBuilder().setSeconds(3600))
+                .build();
+        try {
+            stream.run(() -> async.watchChanges(request, new StreamObserver<>() {
+                @Override
+                public void onNext(WatchChangesResponse value) {
+                    seen.add(value);
+                }
+
+                @Override
+                public void onError(Throwable t) {
+                    failure.set(t);
+                }
+
+                @Override
+                public void onCompleted() {
+                    // Not expected while the watch is open.
+                }
+            }));
+            List<WatchChangesResponse> pass = new ArrayList<>();
+            long deadline = System.nanoTime() + PASS_WAIT.toNanos();
+            while (System.nanoTime() < deadline) {
+                WatchChangesResponse next = seen.poll(200, TimeUnit.MILLISECONDS);
+                if (next == null) {
+                    if (failure.get() != null) {
+                        throw Status.fromThrowable(failure.get()).asRuntimeException();
+                    }
+                    continue;
+                }
+                pass.add(next);
+                if (next.hasPassCompleted()) {
+                    return pass;
+                }
+            }
+            throw new AssertionError("no pass within " + PASS_WAIT.toMinutes() + " min");
+        } finally {
+            stream.cancel(null);
+        }
+    }
+
+    private static void checkSnapshot(List<WatchChangesResponse> pass, DirectoryKind kind,
+            ChangeSource source, long changes) {
+        DirectorySnapshot snapshot = pass.stream()
+                .filter(WatchChangesResponse::hasDirectorySnapshot)
+                .map(WatchChangesResponse::getDirectorySnapshot)
+                .filter(one -> one.getKind() == kind).findFirst().orElse(null);
+        check(snapshot != null, "the pass sent no snapshot of " + kind);
+        check(snapshot.getSource() == source, "the snapshot of " + kind + " is " + snapshot.getSource());
+        check(snapshot.getChangeCount() == changes, "the snapshot of " + kind + " counts "
+                + snapshot.getChangeCount() + ", the pass held " + changes);
+    }
+
+    private String subscribeToAUser() throws Exception {
+        String id = graph.get("/users?$top=1&$select=id").path("value").path(0).path("id").asText("");
+        check(!id.isBlank(), "the tenant lists no user");
+        return subscribeTo(SubscriptionResource.newBuilder().setUser(id).build(), true);
+    }
+
+    private String subscribeToAGroup() throws Exception {
+        return subscribeTo(SubscriptionResource.newBuilder().setGroup(firstGroup()).build(), true);
+    }
+
+    private String subscribeToGroupMembers() throws Exception {
+        return subscribeTo(SubscriptionResource.newBuilder().setGroupMembers(firstGroup()).build(),
+                false);
+    }
+
+    private String firstGroup() throws Exception {
+        String id = graph.get("/groups?$top=1&$select=id").path("value").path(0).path("id").asText("");
+        if (id.isBlank()) {
+            throw new Skip("the tenant lists no group");
+        }
+        return id;
+    }
+
+    /** Creates and deletes a subscription, or reports that Graph refuses it to this app. */
+    private String subscribeTo(SubscriptionResource resource, boolean deletes) {
+        CreateSubscriptionRequest.Builder request = CreateSubscriptionRequest.newBuilder()
+                .setResource(resource)
+                .addChangeTypes(SubscriptionChangeType.SUBSCRIPTION_CHANGE_TYPE_UPDATED)
+                .setNotificationUrl(backend.notificationUrl())
+                .setLifecycleNotificationUrl(backend.lifecycleUrl())
+                .setExpirationDateTime(timestamp(backend.startedAt().plus(Duration.ofDays(1))));
+        if (deletes) {
+            request.addChangeTypes(SubscriptionChangeType.SUBSCRIPTION_CHANGE_TYPE_DELETED);
+        }
+        Subscription created;
+        try {
+            created = blocking.createSubscription(request.build()).getSubscription();
+        } catch (StatusRuntimeException e) {
+            if (e.getStatus().getCode() == Status.Code.PERMISSION_DENIED) {
+                return "REFUSED: Graph answered PERMISSION_DENIED to this app";
+            }
+            throw e;
+        }
+        check(!created.getId().isBlank(), "Graph answered no subscription id");
+        blocking.deleteSubscription(DeleteSubscriptionRequest.newBuilder()
+                .setSubscriptionId(created.getId()).build());
+        return "created (" + created.getChangeTypesCount() + " change type(s)) and deleted";
     }
 
     private List<SubscriptionRenewal> renewals() {

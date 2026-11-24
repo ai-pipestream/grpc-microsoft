@@ -54,7 +54,7 @@ build. Do not change how tests are run.
 | Suite | Live task (opt-in) | Replay in `test` | Recordings |
 |---|---|---|---|
 | `WriteScenarios` (writes and security reads) | `liveWriteTest` (`MICROSOFT_LIVE_WRITE=1`, `MICROSOFT_SITE_ID`) | `MicrosoftWriteReplayTest` | `grpc-microsoft-service/.../recordings/microsoft/` |
-| `ChangeScenarios` (change stream and subscription renewal) | `liveChangesTest` | `MicrosoftChangeReplayTest` | `.../recordings/microsoft-changes/` |
+| `ChangeScenarios` (change stream, subscription renewal, Entra users and groups) | `liveChangesTest` | `MicrosoftChangeReplayTest` | `.../recordings/microsoft-changes/` |
 | `AdminGrantScenarios` | `:grpc-microsoft-admin:liveAdminTest` (grant changes only with `MICROSOFT_ADMIN_LIVE_CHANGE=1`) | `MicrosoftAdminReplayTest` | `grpc-microsoft-admin/.../recordings/admin/` |
 | read coverage | `liveCoverageTest` | none | report only |
 | smoke | `liveSmokeTest` | none | none |

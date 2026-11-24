@@ -19,6 +19,8 @@ import ai.pipestream.microsoft.v1.DateTimeColumnFormat;
 import ai.pipestream.microsoft.v1.DeleteDriveItemRequest;
 import ai.pipestream.microsoft.v1.DeltaGroupsRequest;
 import ai.pipestream.microsoft.v1.DeltaGroupsResponse;
+import ai.pipestream.microsoft.v1.DeltaUsersRequest;
+import ai.pipestream.microsoft.v1.DeltaUsersResponse;
 import ai.pipestream.microsoft.v1.DeleteListItemRequest;
 import ai.pipestream.microsoft.v1.DownloadContentRequest;
 import ai.pipestream.microsoft.v1.DriveItem;
@@ -347,6 +349,8 @@ final class WriteScenarios {
                 new Scenario("list-groups", "ListGroups", "ListGroups", this::groups),
                 new Scenario("delta-groups", "DeltaGroups", "DeltaGroups [full, then from its link]",
                         this::groupChanges),
+                new Scenario("delta-users", "DeltaUsers", "DeltaUsers [full, then from its link]",
+                        this::userChanges),
                 new Scenario("list-group-transitive-members", "ListGroupTransitiveMembers",
                         "ListGroupTransitiveMembers", this::membersOfAGroup),
                 new Scenario("list-group-owners", "ListGroupOwners", "ListGroupOwners",
@@ -1336,6 +1340,32 @@ final class WriteScenarios {
         check(next.stream().noneMatch(DeltaGroupsResponse::hasResync), "the fresh link was refused");
         return ids.size() + " group(s) with " + members + " member change(s); from the link, "
                 + (next.size() - 1) + " change(s)";
+    }
+
+    private String userChanges() {
+        List<DeltaUsersResponse> full = new ArrayList<>();
+        stub().deltaUsers(DeltaUsersRequest.getDefaultInstance()).forEachRemaining(full::add);
+        check(!full.isEmpty() && full.get(full.size() - 1).getEventCase()
+                == DeltaUsersResponse.EventCase.DELTA_LINK, "the stream did not end with a delta link");
+        String link = full.get(full.size() - 1).getDeltaLink();
+        check(!link.isEmpty(), "the delta link is empty");
+        Set<String> ids = new TreeSet<>();
+        for (DeltaUsersResponse response : full.subList(0, full.size() - 1)) {
+            check(response.hasChange(), "a full enumeration held something other than a change");
+            check(!response.getChange().getUser().getId().isEmpty(), "a user change has no user id");
+            if (!response.getChange().getRemoved()) {
+                ids.add(response.getChange().getUser().getId());
+            }
+        }
+        check(userId == null || ids.contains(userId), "a listed user is missing from the delta");
+
+        List<DeltaUsersResponse> next = new ArrayList<>();
+        stub().deltaUsers(DeltaUsersRequest.newBuilder().setDeltaLink(link).build())
+                .forEachRemaining(next::add);
+        check(!next.isEmpty() && !next.get(next.size() - 1).getDeltaLink().isEmpty(),
+                "the second stream did not end with a delta link");
+        check(next.stream().noneMatch(DeltaUsersResponse::hasResync), "the fresh link was refused");
+        return ids.size() + " user(s); from the link, " + (next.size() - 1) + " change(s)";
     }
 
     private String membersOfAGroup() {

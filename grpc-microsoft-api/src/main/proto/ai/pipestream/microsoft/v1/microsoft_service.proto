@@ -178,6 +178,10 @@ service MicrosoftService {
   // link. Application permission GroupMember.Read.All.
   rpc DeltaGroups(DeltaGroupsRequest) returns (stream DeltaGroupsResponse);
 
+  // GET /users/delta. Users that were created, changed or deleted since a
+  // delta link. Application permission User.Read.All.
+  rpc DeltaUsers(DeltaUsersRequest) returns (stream DeltaUsersResponse);
+
   // --- Term store ---
   //
   // Graph serves the term store to delegated tokens. An application token is
@@ -1061,6 +1065,32 @@ message DeltaGroupsResponse {
     // A created, changed or deleted group. Graph can report one group in
     // several changes when it has many members.
     GroupChange change = 2;
+    // Terminal message: the delta link to persist for the next call.
+    string delta_link = 3;
+  }
+}
+
+// Request for DeltaUsers.
+message DeltaUsersRequest {
+  // The `@odata.deltaLink` a previous DeltaUsers stream ended with. Empty =
+  // every user; `latest` = emit no users, only the current delta link. The
+  // server validates the link as for DeltaDriveItems.
+  string delta_link = 1;
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 2;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// One streamed user delta event.
+message DeltaUsersResponse {
+  // Exactly one of a resync notice, a user change, or the terminal delta
+  // link.
+  oneof event {
+    // Emitted first when the supplied delta link was rejected (410 Gone).
+    DeltaResync resync = 1;
+    // A created, changed or deleted user.
+    UserChange change = 2;
     // Terminal message: the delta link to persist for the next call.
     string delta_link = 3;
   }

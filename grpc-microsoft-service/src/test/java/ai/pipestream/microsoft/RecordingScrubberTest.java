@@ -159,6 +159,27 @@ class RecordingScrubberTest {
     }
 
     @Test
+    void aChangedUserOrGroupOfADeltaLosesItsNameWithoutItsOtherProperties() throws Exception {
+        JsonNode users = scrubber.json(Recordings.JSON.readTree("""
+                {"@odata.context":"https://graph.microsoft.com/v1.0/$metadata#users(id,displayName)",
+                 "value":[{"id":"u1","displayName":"Ada Lovelace"},
+                          {"id":"u2","@removed":{"reason":"changed"}}]}"""));
+        assertThat(users.path("value").path(0).path("displayName").asText())
+                .isEqualTo("Directory value 1");
+        assertThat(users.path("value").path(1).path("@removed").path("reason").asText())
+                .isEqualTo("changed");
+        JsonNode groups = scrubber.json(Recordings.JSON.readTree("""
+                {"@odata.context":"https://graph.microsoft.com/v1.0/$metadata#groups",
+                 "value":[{"id":"g1","description":"Payroll team"}]}"""));
+        assertThat(groups.path("value").path(0).path("description").asText())
+                .isEqualTo("Directory value 2");
+        JsonNode drives = scrubber.json(Recordings.JSON.readTree("""
+                {"@odata.context":"https://graph.microsoft.com/v1.0/$metadata#drives",
+                 "value":[{"id":"d1","name":"Documents"}]}"""));
+        assertThat(drives.path("value").path(0).path("name").asText()).isEqualTo("Documents");
+    }
+
+    @Test
     void pagingAndDeltaTokensOfGraphLinksAreReplaced() {
         RecordingScrubber scrubber = new RecordingScrubber("https://graph.microsoft.com/v1.0");
         String link = scrubber.text("https://graph.microsoft.com/v1.0/groups/delta?$deltatoken=AbC-dEf_123.xyz");

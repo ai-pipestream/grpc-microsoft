@@ -59,6 +59,8 @@ final class RecordingScrubber {
     private final Map<String, Integer> counters = new HashMap<>();
     /** Real permission ids long enough to be an encoded grantee, to their placeholders. */
     private final Map<String, String> permissionIds = new HashMap<>();
+    /** Whether the body being scrubbed is a Graph listing of users, groups or directory objects. */
+    private boolean directoryListing;
 
     /**
      * Creates a scrubber.
@@ -81,13 +83,22 @@ final class RecordingScrubber {
 
     /** Scrubs every string value of a JSON tree; keys stay. */
     synchronized JsonNode json(JsonNode node) {
-        return json(node, "");
+        String context = node.path("@odata.context").asText("");
+        directoryListing = context.contains("$metadata#users") || context.contains("$metadata#groups")
+                || context.contains("$metadata#directoryObjects");
+        try {
+            return json(node, "");
+        } finally {
+            directoryListing = false;
+        }
     }
 
     private JsonNode json(JsonNode node, String parentKey) {
         if (node.isObject()) {
             ObjectNode out = JsonNodeFactory.instance.objectNode();
-            boolean directory = directoryObject(node);
+            // A delta of users or groups can hold only an id and the changed properties.
+            boolean directory = directoryObject(node)
+                    || (directoryListing && parentKey.equals("value") && node.has("id"));
             boolean principal = node.has("LoginName");
             for (Map.Entry<String, JsonNode> entry : node.properties()) {
                 JsonNode value = entry.getValue();

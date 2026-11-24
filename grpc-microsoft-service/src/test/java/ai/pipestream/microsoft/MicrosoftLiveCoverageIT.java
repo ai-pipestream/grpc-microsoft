@@ -146,6 +146,7 @@ class MicrosoftLiveCoverageIT {
             Map.entry("ListUsers", "GET /users"),
             Map.entry("ListGroups", "GET /groups"),
             Map.entry("DeltaGroups", "GET /groups/delta"),
+            Map.entry("DeltaUsers", "GET /users/delta"),
             Map.entry("ListGroupTransitiveMembers", "GET /groups/{group-id}/transitiveMembers"),
             Map.entry("ListGroupOwners", "GET /groups/{group-id}/owners"),
             Map.entry("ListUserTransitiveMemberOf", "GET /users/{user-id}/transitiveMemberOf"),
@@ -529,6 +530,12 @@ class MicrosoftLiveCoverageIT {
                         .setIncludeMembers(true).build()),
                 r -> r.getEventCase() == DeltaGroupsResponse.EventCase.DELTA_LINK ? r.getDeltaLink() : null,
                 r -> r.getEventCase() == DeltaGroupsResponse.EventCase.RESYNC);
+        delta("DeltaUsers", "tenant", LIST_CAP,
+                link -> s -> s.deltaUsers(ai.pipestream.microsoft.v1.DeltaUsersRequest.newBuilder()
+                        .setDeltaLink(link).build()),
+                r -> r.getEventCase() == ai.pipestream.microsoft.v1.DeltaUsersResponse.EventCase.DELTA_LINK
+                        ? r.getDeltaLink() : null,
+                r -> r.getEventCase() == ai.pipestream.microsoft.v1.DeltaUsersResponse.EventCase.RESYNC);
         if (groups == null || groups.isEmpty()) {
             skip("ListGroupTransitiveMembers", "no group was listed");
             skip("ListGroupOwners", "no group was listed");

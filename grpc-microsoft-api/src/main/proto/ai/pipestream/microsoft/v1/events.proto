@@ -157,4 +157,10 @@ message SyncCursor {
   // `@odata.deltaLink` of the site catalog (`/sites/delta`), when the pass
   // enumerated sites.
   string sites_delta_link = 3;
+  // `@odata.deltaLink` of the Entra users (`/users/delta`), when a
+  // WatchChanges stream watches them. Sync does not read or write it.
+  string users_delta_link = 4;
+  // `@odata.deltaLink` of the Entra groups (`/groups/delta`), when a
+  // WatchChanges stream watches them. Sync does not read or write it.
+  string groups_delta_link = 5;
 }

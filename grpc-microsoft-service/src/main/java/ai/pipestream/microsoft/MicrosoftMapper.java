@@ -63,6 +63,7 @@ import ai.pipestream.microsoft.v1.SpecialFolder;
 import ai.pipestream.microsoft.v1.TermColumn;
 import ai.pipestream.microsoft.v1.TextColumn;
 import ai.pipestream.microsoft.v1.ThumbnailColumn;
+import ai.pipestream.microsoft.v1.UserChange;
 import ai.pipestream.microsoft.v1.Video;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.protobuf.Timestamp;
@@ -170,6 +171,16 @@ public final class MicrosoftMapper {
                     .setRemoved(member.has("@removed")));
         }
         return change.build();
+    }
+
+    /**
+     * Maps one element of a user delta response.
+     *
+     * @param node the API object
+     * @return the proto
+     */
+    public UserChange toUserChange(JsonNode node) {
+        return UserChange.newBuilder().setUser(toUser(node)).setRemoved(node.has("@removed")).build();
     }
 
     /**
