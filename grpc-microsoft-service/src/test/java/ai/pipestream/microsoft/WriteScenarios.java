@@ -1725,8 +1725,10 @@ final class WriteScenarios {
                     onTheItem.add(change.getType());
                 }
             }
-            check(!onTheItem.isEmpty(), "nothing about the list item in the "
-                    + name(scope) + " log: " + kinds);
+            check(onTheItem.contains(SiteChangeType.SITE_CHANGE_TYPE_SCOPE_ADD)
+                    && onTheItem.contains(SiteChangeType.SITE_CHANGE_TYPE_SCOPE_DELETE),
+                    "the " + name(scope) + " log does not show the list item stop inheriting "
+                    + "and inherit again: " + onTheItem + " of " + kinds);
             // Read again from the end: nothing new, same token.
             List<ListSiteChangesResponse> again = changes(changesOf(scope).setChangeToken(end)
                     .addObjects(SiteChangeObject.SITE_CHANGE_OBJECT_ITEM).build());
@@ -1747,16 +1749,10 @@ final class WriteScenarios {
         check(parts.length == 5, "a change token of " + parts.length + " parts");
         long ticks = Long.parseLong(parts[3]) - Duration.ofDays(365).toSeconds() * 10_000_000L;
         String old = String.join(";", parts[0], parts[1], parts[2], Long.toString(ticks), "1");
-        try {
-            List<ListSiteChangesResponse> stream = new ArrayList<>();
-            stub().listSiteChanges(changesOf(SiteChangeScope.SITE_CHANGE_SCOPE_LIST)
-                    .setChangeToken(old).build()).forEachRemaining(stream::add);
-            return "SharePoint accepted the token: " + (stream.size() - 1) + " change(s)";
-        } catch (StatusRuntimeException e) {
-            return "refused with " + e.getStatus().getCode() + ": "
-                    + new RecordingScrubber("https://graph.microsoft.com/v1.0")
-                            .text(String.valueOf(e.getStatus().getDescription()));
-        }
+        List<ListSiteChangesResponse> stream = changes(changesOf(SiteChangeScope.SITE_CHANGE_SCOPE_LIST)
+                .setChangeToken(old).build());
+        check(stream.size() > 1, "a token older than the list answered no change");
+        return "SharePoint accepted the token: " + (stream.size() - 1) + " change(s)";
     }
 
     private static String name(com.google.protobuf.ProtocolMessageEnum value) {
