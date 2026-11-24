@@ -134,25 +134,36 @@ public final class MicrosoftCrawler {
      *        site groups and admins only when it read the security of a
      *        site; ACLs only when it read security and left out no list that
      *        could hold one
+     * @param scopes when the pass was not complete, the drives and lists it
+     *        nevertheless enumerated in full on their own: a drive or list
+     *        with no delta link yet, or one whose link Graph rejected with
+     *        {@code 410 Gone} and that was read again from scratch. Inside
+     *        each a sink may treat what the pass did not emit as gone. A
+     *        drive swept under a folder other than the connection's own is
+     *        not among them. Empty when the pass was complete, because
+     *        {@code enumerated} then covers every one of them
      * @param cursor every delta link for the next pass (links of drives and lists
      *        outside this pass's scope are carried over unchanged)
      */
     public record Result(String runId, boolean fullSweep, boolean complete,
-            Set<MicrosoftEntity.EntityCase> enumerated, SyncCursor cursor) {
+            Set<MicrosoftEntity.EntityCase> enumerated, Set<SweepScope> scopes,
+            SyncCursor cursor) {
 
         /**
-         * Copies the set of kinds.
+         * Copies the sets.
          *
          * @param runId the pass's run id
          * @param fullSweep whether every sweep was a full enumeration
          * @param complete whether the pass covered the whole connection in full
          * @param enumerated the kinds enumerated in full
+         * @param scopes the drives and lists enumerated in full on their own
          * @param cursor the delta links for the next pass
          */
         public Result {
             enumerated = Collections.unmodifiableSet(enumerated.isEmpty()
                     ? EnumSet.noneOf(MicrosoftEntity.EntityCase.class)
                     : EnumSet.copyOf(enumerated));
+            scopes = Collections.unmodifiableSet(new java.util.LinkedHashSet<>(scopes));
         }
     }
 
@@ -182,6 +193,8 @@ public final class MicrosoftCrawler {
     private final Map<String, SiteSecurityReader> security = new HashMap<>();
     /** Drive and list sweeps of the current pass; the pass runs them one after another. */
     private int sweeps;
+    /** Drives and lists the current pass enumerated in full, in sweep order. */
+    private final Set<SweepScope> crawled = new java.util.LinkedHashSet<>();
 
     /**
      * Creates a crawler with the first-revision defaults, without inlining bytes.
@@ -261,6 +274,7 @@ public final class MicrosoftCrawler {
                 : ChangeSource.CHANGE_SOURCE_CRAWL;
         boolean fullSweep = true;
         sweeps = 0;
+        crawled.clear();
 
         List<Site> sites = new ArrayList<>();
         for (String siteId : scopeSites()) {
@@ -294,6 +308,7 @@ public final class MicrosoftCrawler {
         return new Result(runId, fullSweep, complete,
                 complete ? enumeratedKinds(!sites.isEmpty(), options.includeLists(),
                         options.security()) : Set.of(),
+                complete ? Set.of() : crawled,
                 cursor.build());
     }
 
@@ -337,8 +352,7 @@ public final class MicrosoftCrawler {
      * folder, is a narrower pass that says nothing about the rest.
      */
     private boolean coversConnectionScope() {
-        if (!GraphPaths.encodePath(options.folderPath())
-                .equals(GraphPaths.encodePath(config.folderPath()))) {
+        if (!coversConnectionFolder()) {
             return false;
         }
         if (options.driveIds().isEmpty() && options.siteIds().isEmpty()) {
@@ -350,6 +364,15 @@ public final class MicrosoftCrawler {
         }
         return !config.siteId().isBlank() && options.driveIds().isEmpty()
                 && Set.copyOf(options.siteIds()).equals(Set.of(config.siteId()));
+    }
+
+    /**
+     * Whether a drive sweep of this pass reads everything the connection
+     * covers in that drive: the pass's folder is the connection's own.
+     */
+    private boolean coversConnectionFolder() {
+        return GraphPaths.encodePath(options.folderPath())
+                .equals(GraphPaths.encodePath(config.folderPath()));
     }
 
     private List<String> scopeSites() {
@@ -463,7 +486,11 @@ public final class MicrosoftCrawler {
                 .setCompletedAt(timestamp(Instant.now()))
                 .setSource(source[0])
                 .build());
-        return source[0] == ChangeSource.CHANGE_SOURCE_CRAWL;
+        boolean full = source[0] == ChangeSource.CHANGE_SOURCE_CRAWL;
+        if (full && coversConnectionFolder()) {
+            crawled.add(SweepScope.drive(drive.getId()));
+        }
+        return full;
     }
 
     private DriveItem enrich(DriveItem item) throws IOException, InterruptedException {
@@ -555,7 +582,11 @@ public final class MicrosoftCrawler {
                 .setCompletedAt(timestamp(Instant.now()))
                 .setSource(source[0])
                 .build());
-        return source[0] == ChangeSource.CHANGE_SOURCE_CRAWL;
+        boolean full = source[0] == ChangeSource.CHANGE_SOURCE_CRAWL;
+        if (full) {
+            crawled.add(SweepScope.list(siteId, list.getId()));
+        }
+        return full;
     }
 
     private void emit(MicrosoftEntity entity, ChangeOperation operation, ChangeSource source,

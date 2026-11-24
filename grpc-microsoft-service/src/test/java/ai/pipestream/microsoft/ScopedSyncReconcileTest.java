@@ -111,6 +111,8 @@ class ScopedSyncReconcileTest {
         sync(SyncRequest.newBuilder().addDriveIds("drive-a").build());
 
         assertThat(sink.fullSweeps()).containsExactly(false);
+        // It did read that one drive from scratch, and says so.
+        assertThat(sink.enumeratedScopes()).containsExactly(Set.of(SweepScope.drive("drive-a")));
     }
 
     @Test
@@ -140,8 +142,10 @@ class ScopedSyncReconcileTest {
 
         sync(SyncRequest.newBuilder().setFolderPath("/Shared").build());
 
-        // Everything outside /Shared was filtered out, not found missing.
+        // Everything outside /Shared was filtered out, not found missing:
+        // the pass read neither the connection nor the drive in full.
         assertThat(sink.fullSweeps()).containsExactly(false);
+        assertThat(sink.enumeratedScopes()).containsExactly(Set.of());
     }
 
     @Test
@@ -166,6 +170,7 @@ class ScopedSyncReconcileTest {
 
         assertThat(fake.requestsTo("/drives/drive-b/root/delta")).hasSize(1);
         assertThat(sink.fullSweeps()).containsExactly(true);
+        assertThat(sink.enumeratedScopes()).containsExactly(Set.of());
         // It asked for no lists and no security, so it says nothing about them.
         assertThat(sink.enumeratedKinds()).containsExactly(Set.of(
                 MicrosoftEntity.EntityCase.SITE, MicrosoftEntity.EntityCase.DRIVE,

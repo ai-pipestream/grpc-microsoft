@@ -24,6 +24,12 @@ import java.util.Set;
  * connection has enumerated anything in full there is nothing of that
  * connection to merge into, and such a run stands alone as an increment.</p>
  *
+ * <p>A run that merges may still have enumerated single drives or lists in
+ * full: a drive whose delta link expired is read again from scratch. Within
+ * each such {@link SweepScope} the run replaces its connection's entries
+ * with exactly what it emitted, so what is gone from that drive leaves the
+ * bundle, and everything outside the scope is kept.</p>
+ *
  * <p>Two passes running at once keep their own values until each completes,
  * so one Sync never writes, or discards, what another has emitted so far.</p>
  *
@@ -42,7 +48,7 @@ final class RunMirror<V> {
     record Completed<V>(List<V> values, boolean increment) {
     }
 
-    private record Held<V>(String owner, MicrosoftEntity.EntityCase kind, V value) {
+    private record Held<V>(String owner, MicrosoftEntity.EntityCase kind, String scope, V value) {
     }
 
     private final Map<String, Held<V>> mirror = new LinkedHashMap<>();
@@ -71,7 +77,7 @@ final class RunMirror<V> {
      * @param value the value to write for it
      */
     void put(String key, MicrosoftEntity.EntityCase kind, V value) {
-        own.put(key, kind, value);
+        own.put(key, kind, "", value);
     }
 
     /**
@@ -104,25 +110,52 @@ final class RunMirror<V> {
         }
 
         /**
-         * Records a value the pass emitted; the latest value for a key wins.
+         * Records a value the pass emitted, for an entity outside every
+         * drive and list; the latest value for a key wins.
          *
          * @param key the entity's key in the bundle
          * @param kind the kind of entity
          * @param value the value to write for it
          */
         void put(String key, MicrosoftEntity.EntityCase kind, V value) {
+            put(key, kind, "", value);
+        }
+
+        /**
+         * Records a value the pass emitted; the latest value for a key wins.
+         *
+         * @param key the entity's key in the bundle
+         * @param kind the kind of entity
+         * @param scope the entity's {@link SweepScope#idOf scope id}; empty
+         *        when it belongs to no drive or list
+         * @param value the value to write for it
+         */
+        void put(String key, MicrosoftEntity.EntityCase kind, String scope, V value) {
             synchronized (run) {
-                run.put(key, new Held<>(owner, kind, value));
+                run.put(key, new Held<>(owner, kind, scope, value));
             }
+        }
+
+        /**
+         * Ends a pass that enumerated no single drive or list on its own.
+         *
+         * @param enumerated the kinds of entity the pass enumerated in full
+         * @return what to write
+         */
+        Completed<V> complete(Set<MicrosoftEntity.EntityCase> enumerated) {
+            return complete(enumerated, Set.of());
         }
 
         /**
          * Ends the pass in progress and folds it into the mirror.
          *
          * @param enumerated the kinds of entity the pass enumerated in full
+         * @param scopes the drives and lists the pass enumerated in full on
+         *        their own
          * @return what to write
          */
-        Completed<V> complete(Set<MicrosoftEntity.EntityCase> enumerated) {
+        Completed<V> complete(Set<MicrosoftEntity.EntityCase> enumerated,
+                Set<SweepScope> scopes) {
             Map<String, Held<V>> emitted;
             synchronized (run) {
                 emitted = new LinkedHashMap<>(run);
@@ -135,6 +168,10 @@ final class RunMirror<V> {
                     baselines.add(owner);
                 } else if (!baselines.contains(owner)) {
                     return new Completed<>(values(emitted), true);
+                }
+                for (SweepScope scope : scopes) {
+                    mirror.values().removeIf(held -> held.owner().equals(owner)
+                            && scope.holds(held.kind(), held.scope()));
                 }
                 mirror.putAll(emitted);
                 return new Completed<>(values(mirror), false);

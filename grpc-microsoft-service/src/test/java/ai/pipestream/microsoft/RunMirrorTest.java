@@ -137,6 +137,57 @@ class RunMirrorTest {
     }
 
     @Test
+    void aDriveReadAgainReplacesItsOwnEntriesAndKeepsEveryOtherDrives() {
+        RunMirror<String> mirror = new RunMirror<>();
+        RunMirror<String>.Pass first = mirror.pass("x");
+        first.put("drives/a", EntityCase.DRIVE, "", "drive-a");
+        first.put("items/a/1", EntityCase.DRIVE_ITEM, "a", "a1");
+        first.put("items/a/2", EntityCase.DRIVE_ITEM, "a", "a2");
+        first.put("items/b/1", EntityCase.DRIVE_ITEM, "b", "b1");
+        first.put("lists/s/l/1", EntityCase.LIST_ITEM, "a", "list-item-with-the-same-id");
+        first.complete(MicrosoftChangeSink.ALL_KINDS);
+
+        // Drive a was read again from scratch and a2 is gone; b had no changes.
+        RunMirror<String>.Pass second = mirror.pass("x");
+        second.put("items/a/1", EntityCase.DRIVE_ITEM, "a", "a1-again");
+        RunMirror.Completed<String> completed =
+                second.complete(Set.of(), Set.of(SweepScope.drive("a")));
+
+        assertThat(completed.increment()).isFalse();
+        assertThat(completed.values()).containsExactlyInAnyOrder("drive-a", "a1-again", "b1",
+                "list-item-with-the-same-id");
+    }
+
+    @Test
+    void aDriveReadAgainByOneConnectionKeepsAnotherConnectionsEntriesOfThatDrive() {
+        RunMirror<String> mirror = new RunMirror<>();
+        RunMirror<String>.Pass x = mirror.pass("x");
+        x.put("x/items/a/1", EntityCase.DRIVE_ITEM, "a", "x-a1");
+        x.complete(MicrosoftChangeSink.ALL_KINDS);
+        RunMirror<String>.Pass y = mirror.pass("y");
+        y.put("y/items/a/1", EntityCase.DRIVE_ITEM, "a", "y-a1");
+        y.complete(MicrosoftChangeSink.ALL_KINDS);
+
+        RunMirror.Completed<String> completed =
+                mirror.pass("x").complete(Set.of(), Set.of(SweepScope.drive("a")));
+
+        assertThat(completed.values()).containsExactly("y-a1");
+    }
+
+    @Test
+    void aDriveReadInFullBeforeAnyBaselineStillStandsAloneAsAnIncrement() {
+        RunMirror<String> mirror = new RunMirror<>();
+        RunMirror<String>.Pass pass = mirror.pass("x");
+        pass.put("items/a/1", EntityCase.DRIVE_ITEM, "a", "a1");
+
+        RunMirror.Completed<String> completed =
+                pass.complete(Set.of(), Set.of(SweepScope.drive("a")));
+
+        assertThat(completed.increment()).isTrue();
+        assertThat(completed.values()).containsExactly("a1");
+    }
+
+    @Test
     void theUnnamedPassIsTheProcessDefaultConnection() {
         RunMirror<String> mirror = new RunMirror<>();
         mirror.put("a", EntityCase.DRIVE_ITEM, "a");

@@ -576,12 +576,21 @@ behaviour.
   Graph host and on the route of the drive, list or sites feed it is keyed
   to (`GraphLinks.requireDeltaLink`). Client-supplied `delta_link` values on
   the Delta rpcs are checked the same way. `"latest"` maps to `?token=latest`.
-- Sinks: `MicrosoftChangeSink.completeRun(runId, fullSweep)`.
-  - `fullSweep` is `MicrosoftCrawler.Result.complete()`: every sweep in the
-    run was a `CRAWL`, at least one drive or list was swept, and the request
-    named no narrower scope than the connection's own (other `drive_ids` or
-    `site_ids`, or another `folder_path`).
-  - The sync table reconciles only after a complete run.
+- Sinks: `MicrosoftChangeSink.completeRun(runId, enumerated, scopes)`.
+  - `enumerated` is not empty only when `MicrosoftCrawler.Result.complete()`:
+    every sweep in the run was a `CRAWL`, at least one drive or list was
+    swept, and the request named no narrower scope than the connection's
+    own (other `drive_ids` or `site_ids`, or another `folder_path`).
+  - `scopes` (`SweepScope`) names, for a run that is not complete, each
+    drive and list whose own sweep was a `CRAWL`: one restarted by a 410, or
+    one with no delta link yet. A drive swept under a `folder_path` other
+    than the connection's own is left out.
+  - The sync table reconciles whole kinds only after a complete run, and
+    one scope at a time otherwise: rows carry `Asset.scope` (the drive id,
+    or `site_id/list_id`) and the sink calls `ReconcileScope`. A sync table
+    without that rpc answers `UNIMPLEMENTED`, which fails the run.
+  - In the Output and OKF mirror a scope replaces the connection's entries
+    of that drive or list with what the run emitted.
   - The Output and OKF sinks keep a mirror. A complete run replaces it. An
     incremental or narrowed run merges into it, and deletes become tombstones (OKF
     `status: deprecated`). With no baseline in the process, the run writes
@@ -652,12 +661,14 @@ behaviour.
   one that wrote last owns the entry.
 - `Sync` emits permissions inline on drive items and list items, not as
   standalone `PERMISSION` entities.
-- A run that mixes `DELTA` and `CRAWL` sweeps (one drive restarted by a 410)
-  is not reconciled, and neither is a full enumeration of part of the
-  connection (a request with its own `drive_ids`, `site_ids` or
-  `folder_path`). `ReconcileRequest` has no drive or folder scope, so the
-  stale rows of the drives that were enumerated remain until the next
-  complete run.
+- A drive enumerated in full under a `folder_path` other than the
+  connection's own is not reconciled: nothing on a ledger row says which
+  folder it was read under, so its stale rows remain until the next
+  complete run. The same goes for ledger rows written before rows carried
+  `Asset.scope`.
+- A run that reads one drive again after a 410 removes that drive's items
+  that are gone. The ACL rows read with that drive, and the drives and
+  lists removed from a site, are still only reconciled by a complete run.
 - Reconcile is per entity kind (`ReconcileRequest.kind`), for the kinds a
   complete run read in full. A run with `include_security` but without
   `include_lists` on a site does not reconcile `site_acl` rows, since it

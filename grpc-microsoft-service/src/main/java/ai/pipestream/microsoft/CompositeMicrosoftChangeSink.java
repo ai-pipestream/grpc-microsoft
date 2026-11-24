@@ -42,9 +42,10 @@ public final class CompositeMicrosoftChangeSink implements MicrosoftChangeSink {
     }
 
     @Override
-    public void completeRun(String runId, Set<MicrosoftEntity.EntityCase> enumerated) {
+    public void completeRun(String runId, Set<MicrosoftEntity.EntityCase> enumerated,
+            Set<SweepScope> scopes) {
         for (MicrosoftChangeSink sink : sinks) {
-            sink.completeRun(runId, enumerated);
+            sink.completeRun(runId, enumerated, scopes);
         }
     }
 
