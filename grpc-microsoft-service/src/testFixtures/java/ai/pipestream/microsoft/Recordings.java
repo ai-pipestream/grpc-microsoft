@@ -55,11 +55,13 @@ final class Recordings {
         return Path.of(System.getProperty(DIR_PROPERTY, DEFAULT_DIR));
     }
 
-    /** The exchange files of one scenario, in order. */
+    /** The exchange files of one scenario, in order: the numbered JSON files. */
     static List<Path> exchanges(Path scenarioDir) throws IOException {
         try (Stream<Path> files = Files.list(scenarioDir)) {
-            return files.filter(file -> file.getFileName().toString().endsWith(".json")).sorted()
-                    .toList();
+            return files.filter(file -> {
+                String name = file.getFileName().toString();
+                return name.endsWith(".json") && Character.isDigit(name.charAt(0));
+            }).sorted().toList();
         }
     }
 

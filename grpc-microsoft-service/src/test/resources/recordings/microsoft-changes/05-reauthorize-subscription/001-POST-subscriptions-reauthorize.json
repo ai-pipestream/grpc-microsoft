@@ -1,0 +1,17 @@
+{
+  "request" : {
+    "method" : "POST",
+    "url" : "https://graph.microsoft.com/v1.0/subscriptions/00000000-0000-4000-8000-000000000001/reauthorize",
+    "authorized" : true,
+    "headers" : {
+      "content-type" : "application/json"
+    },
+    "body" : {
+      "json" : { }
+    }
+  },
+  "response" : {
+    "status" : 200,
+    "headers" : { }
+  }
+}

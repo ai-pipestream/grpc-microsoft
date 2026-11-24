@@ -879,6 +879,11 @@ public final class MicrosoftGrpcService
         });
     }
 
+    /** The connection resolver this service uses. */
+    MicrosoftSessions sessions() {
+        return sessions;
+    }
+
     // ------------------------------------------------------------ site security
 
     /** Replaces where SharePoint REST tokens come from. */

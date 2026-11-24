@@ -42,6 +42,15 @@ on:
         description: Commit the recordings artifact of this run id to the branch as replay data
         type: string
         default: ""
+      import_recordings_kind:
+        description: Which recordings the run id holds (write or changes)
+        type: choice
+        options: [write, changes]
+        default: write
+      run_live_changes:
+        description: Run the live change-notification test through a temporary tunnel (one file and one subscription, both removed)
+        type: boolean
+        default: false
       import_admin_recordings_run_id:
         description: Commit the admin-recordings artifact of this run id to the branch as replay data
         type: string
@@ -392,6 +401,92 @@ jobs:
           path: grpc-microsoft/grpc-microsoft-service/src/test/resources/recordings/microsoft/
           if-no-files-found: ignore
 
+  # Every MicrosoftChangeService rpc against the test site. Graph must reach the
+  # notification receiver, so a temporary Cloudflare quick tunnel (no account,
+  # random URL, gone when the job ends) forwards to it for this run only.
+  live-microsoft-changes:
+    if: github.event_name == 'workflow_dispatch' && inputs.run_live_changes
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          path: grpc-microsoft
+      - uses: actions/checkout@v5
+        with:
+          repository: ai-pipestream/grpc-integration
+          ref: ${{ env.INTEGRATION_REF }}
+          path: grpc-integration
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "25"
+      - name: Start a temporary tunnel to the receiver port
+        id: tunnel
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/cloudflared" \
+            https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64
+          chmod +x "$RUNNER_TEMP/cloudflared"
+          nohup "$RUNNER_TEMP/cloudflared" tunnel --no-autoupdate --url http://127.0.0.1:8089 \
+            > "$RUNNER_TEMP/tunnel.log" 2>&1 &
+          for i in $(seq 1 60); do
+            url=$(grep -oE 'https://[a-z0-9-]+\.trycloudflare\.com' "$RUNNER_TEMP/tunnel.log" | head -1 || true)
+            if [ -n "$url" ]; then break; fi
+            sleep 2
+          done
+          if [ -z "$url" ]; then
+            echo "::error::the tunnel did not come up"
+            exit 1
+          fi
+          # Kept in a file, not a step output: a masked value is dropped from outputs.
+          echo "$url" > "$RUNNER_TEMP/tunnel.url"
+          echo "::add-mask::$url"
+          # Give the tunnel's DNS name time to resolve for Graph.
+          sleep 20
+      - name: Live Microsoft Graph change test
+        working-directory: grpc-microsoft
+        env:
+          MICROSOFT_TENANT_ID: ${{ secrets.MICROSOFT_TENANT_ID }}
+          MICROSOFT_CLIENT_ID: ${{ secrets.MICROSOFT_CLIENT_ID }}
+          MICROSOFT_CLIENT_SECRET: ${{ secrets.MICROSOFT_CLIENT_SECRET }}
+          MICROSOFT_SITE_ID: ${{ inputs.live_write_site_id || env.LIVE_SITE_ID }}
+          MICROSOFT_DRIVE_IDS: ${{ secrets.MICROSOFT_DRIVE_IDS }}
+          MICROSOFT_LIVE_CHANGES: "1"
+          MICROSOFT_NOTIFICATION_PORT: "8089"
+        run: |
+          export MICROSOFT_NOTIFICATION_PUBLIC_URL="$(cat "$RUNNER_TEMP/tunnel.url")"
+          ./gradlew --no-daemon -PintegrationDir=../grpc-integration :grpc-microsoft-service:liveChangesTest --rerun-tasks
+          python3 - <<'PY'
+          import xml.etree.ElementTree as ET
+          from pathlib import Path
+          report = Path("grpc-microsoft-service/build/test-results/liveChangesTest/TEST-ai.pipestream.microsoft.MicrosoftLiveChangeIT.xml")
+          if not report.exists():
+              raise SystemExit("Missing live change report; no live evidence.")
+          suite = ET.parse(report).getroot()
+          if int(suite.get("skipped", "0")) or int(suite.get("tests", "0")) == 0:
+              raise SystemExit("The live change test was skipped; no live evidence.")
+          PY
+      - name: Publish the report
+        if: always()
+        working-directory: grpc-microsoft
+        run: |
+          if [ -f grpc-microsoft-service/build/live-changes.md ]; then
+            cat grpc-microsoft-service/build/live-changes.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: live-changes
+          path: |
+            grpc-microsoft/grpc-microsoft-service/build/live-changes.md
+            grpc-microsoft/grpc-microsoft-service/build/test-results/liveChangesTest/
+          if-no-files-found: ignore
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: change-recordings
+          path: grpc-microsoft/grpc-microsoft-service/src/test/resources/recordings/microsoft-changes/
+          if-no-files-found: ignore
+
   # Copies the recordings a live write run uploaded into the branch, after a
   # leak check and the recordings hygiene test. Only ever started by hand.
   import-microsoft-recordings:
@@ -420,15 +515,15 @@ jobs:
           ref: ${{ steps.core.outputs.ref }}
           path: grpc-integration
       - name: Drop the previous recordings
-        run: rm -rf grpc-microsoft/grpc-microsoft-service/src/test/resources/recordings/microsoft
+        run: rm -rf grpc-microsoft/grpc-microsoft-service/src/test/resources/recordings/${{ inputs.import_recordings_kind == 'changes' && 'microsoft-changes' || 'microsoft' }}
       - uses: actions/download-artifact@v4
         with:
-          name: recordings
+          name: ${{ inputs.import_recordings_kind == 'changes' && 'change-recordings' || 'recordings' }}
           run-id: ${{ inputs.import_recordings_run_id }}
           github-token: ${{ github.token }}
-          path: grpc-microsoft/grpc-microsoft-service/src/test/resources/recordings/microsoft/
+          path: grpc-microsoft/grpc-microsoft-service/src/test/resources/recordings/${{ inputs.import_recordings_kind == 'changes' && 'microsoft-changes' || 'microsoft' }}/
       - name: Leak check
-        working-directory: grpc-microsoft/grpc-microsoft-service/src/test/resources/recordings/microsoft
+        working-directory: grpc-microsoft/grpc-microsoft-service/src/test/resources/recordings/${{ inputs.import_recordings_kind == 'changes' && 'microsoft-changes' || 'microsoft' }}
         run: |
           echo "files: $(find . -type f | wc -l)"
           fail=0
@@ -460,6 +555,7 @@ jobs:
         env:
           BRANCH: ${{ github.ref_name }}
           RUN_ID: ${{ inputs.import_recordings_run_id }}
+          KIND: ${{ inputs.import_recordings_kind }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -468,7 +564,7 @@ jobs:
             echo "Nothing to commit"
             exit 0
           fi
-          git commit -m "Add recorded Graph write exchanges from live run ${RUN_ID}"
+          git commit -m "Add recorded Graph ${KIND} exchanges from live run ${RUN_ID}"
           git push origin "HEAD:${BRANCH}"
 
   # Copies the recordings a live admin run uploaded into the branch, after a
