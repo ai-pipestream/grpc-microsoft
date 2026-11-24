@@ -17,8 +17,10 @@ option java_package = "ai.pipestream.microsoft.v1";
 //
 // WatchChanges runs Sync passes back to back: one at start, then one each
 // poll interval, and one early whenever a Graph change notification for a
-// watched drive or list arrives. Polling is the baseline; notifications
-// only shorten the wait. The subscription rpcs map 1:1 to Graph
+// watched drive or list arrives, or a "missed" lifecycle notification.
+// Polling is the baseline; notifications only shorten the wait. A pass that
+// fails with UNAVAILABLE or RESOURCE_EXHAUSTED runs again from the same
+// cursor after Graph's Retry-After or a backoff of at most 5 minutes. The subscription rpcs map 1:1 to Graph
 // /subscriptions. The notification receiver is off unless the server is
 // started with a notification port.
 // ============================================================================
