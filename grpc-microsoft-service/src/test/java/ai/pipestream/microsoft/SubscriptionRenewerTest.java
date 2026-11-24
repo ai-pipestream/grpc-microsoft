@@ -80,6 +80,23 @@ class SubscriptionRenewerTest {
                 failuresLeft--;
                 return answer(request, 403, error("accessDenied"), handler);
             }
+            if (request.method().equals("GET")) {
+                ObjectNode listed = template.deepCopy().put("id", "sub-listed");
+                if (route.equals("GET /subscriptions")) {
+                    // Graph leaves the clientState out of a listing.
+                    listed.putNull("clientState");
+                    ObjectNode other = listed.deepCopy().put("id", "sub-other");
+                    ObjectNode page = Recordings.JSON.createObjectNode();
+                    page.putArray("value").add(listed).add(other);
+                    return answer(request, 200, page, handler);
+                }
+                if (route.endsWith("/sub-gone")) {
+                    return answer(request, 404, error("ResourceNotFound"), handler);
+                }
+                return answer(request, 200, route.endsWith("/sub-listed")
+                        ? listed.put("clientState", CLIENT_STATE)
+                        : listed.put("id", "sub-other").put("clientState", "another-state"), handler);
+            }
             if (request.method().equals("PATCH")) {
                 if (gone) {
                     return answer(request, 404, error("ResourceNotFound"), handler);
@@ -243,6 +260,26 @@ class SubscriptionRenewerTest {
         assertThat(renewer.seen("c-1", new GraphSubscriptions.Entry(mine, CLIENT_STATE))).isFalse();
         assertThat(only().getSubscription().getId()).isEqualTo("sub-mine");
         assertThat(only().getConnectionId()).isEqualTo("c-1");
+    }
+
+    @Test
+    void aListedSubscriptionIsReadOnItsOwnToLearnWhoseItIs() throws Exception {
+        assertThat(renewer.adopt("")).isEqualTo(1);
+        assertThat(graph.requests).containsExactly("GET /subscriptions",
+                "GET /subscriptions/sub-listed", "GET /subscriptions/sub-other");
+        assertThat(only().getSubscription().getId()).isEqualTo("sub-listed");
+
+        graph.requests.clear();
+        assertThat(renewer.adopt("")).isZero();
+        assertThat(graph.requests).containsExactly("GET /subscriptions", "GET /subscriptions/sub-other");
+    }
+
+    @Test
+    void aListedSubscriptionThatIsGoneWhenReadIsLeftOut() throws Exception {
+        Subscription gone = subscription("sub-gone", clock.instant().plus(Duration.ofDays(20)));
+        assertThat(renewer.adopt("", List.of(new GraphSubscriptions.Entry(gone, "")))).isZero();
+        assertThat(graph.requests).containsExactly("GET /subscriptions/sub-gone");
+        assertThat(renewer.renewals()).isEmpty();
     }
 
     @Test

@@ -51,6 +51,10 @@ on:
         description: Run the live change-notification test through a temporary tunnel (one file and its subscriptions, all removed)
         type: boolean
         default: false
+      live_changes_lifecycle_wait_minutes:
+        description: With run_live_changes, minutes to wait for Graph to ask for a reauthorization (default 2, at most 46)
+        type: string
+        default: ""
       import_admin_recordings_run_id:
         description: Commit the admin-recordings artifact of this run id to the branch as replay data
         type: string
@@ -451,6 +455,7 @@ jobs:
           MICROSOFT_SITE_ID: ${{ inputs.live_write_site_id || env.LIVE_SITE_ID }}
           MICROSOFT_DRIVE_IDS: ${{ secrets.MICROSOFT_DRIVE_IDS }}
           MICROSOFT_LIVE_CHANGES: "1"
+          MICROSOFT_LIVE_LIFECYCLE_WAIT_MINUTES: ${{ inputs.live_changes_lifecycle_wait_minutes }}
           MICROSOFT_NOTIFICATION_PORT: "8089"
         run: |
           export MICROSOFT_NOTIFICATION_PUBLIC_URL="$(cat "$RUNNER_TEMP/tunnel.url")"

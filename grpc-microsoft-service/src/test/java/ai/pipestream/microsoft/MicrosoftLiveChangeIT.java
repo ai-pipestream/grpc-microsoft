@@ -58,6 +58,8 @@ class MicrosoftLiveChangeIT {
     static final String ENV_PUBLIC_URL = "MICROSOFT_NOTIFICATION_PUBLIC_URL";
     /** Default receiver port. */
     static final int DEFAULT_PORT = 8089;
+    /** Minutes the run waits for Graph to ask for a reauthorization; unset = two. */
+    static final String ENV_LIFECYCLE_WAIT_MINUTES = "MICROSOFT_LIVE_LIFECYCLE_WAIT_MINUTES";
 
     private static final String TAG = "[MicrosoftLiveChangeIT] ";
 
@@ -187,6 +189,10 @@ class MicrosoftLiveChangeIT {
                     MicrosoftChangeServiceGrpc.newStub(channel), client, backend, receiverBus,
                     serviceBus, live, renewer, () -> ChangeScenarios.renewer(
                             changes::subscriptions, new NotificationBus(), backend));
+            String wait = System.getenv(ENV_LIFECYCLE_WAIT_MINUTES);
+            if (notBlank(wait)) {
+                scenarios.lifecycleWait(Duration.ofMinutes(Long.parseLong(wait.trim())));
+            }
             clear(recordings);
             ObjectNode run = Recordings.JSON.createObjectNode()
                     .put("suffix", suffix)

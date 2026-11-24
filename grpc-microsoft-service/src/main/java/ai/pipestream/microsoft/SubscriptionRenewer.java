@@ -193,13 +193,47 @@ final class SubscriptionRenewer implements AutoCloseable {
      * @throws Exception when Graph cannot be asked
      */
     int adopt(String connectionId) throws Exception {
+        return adopt(connectionId, graphs.of(connectionId).list());
+    }
+
+    /**
+     * Starts keeping the listed subscriptions that carry this server's
+     * clientState. Graph leaves the clientState out of a listing, so a listed
+     * subscription that is not kept yet is read on its own.
+     *
+     * @param connectionId the connection; empty = the process default
+     * @param listed what Graph listed for the connection
+     * @return how many were new to the renewer
+     * @throws Exception when Graph cannot be asked
+     */
+    int adopt(String connectionId, List<GraphSubscriptions.Entry> listed) throws Exception {
         int adopted = 0;
-        for (GraphSubscriptions.Entry entry : graphs.of(connectionId).list()) {
+        for (GraphSubscriptions.Entry entry : listed) {
+            String id = entry.subscription().getId();
             if (seen(connectionId, entry)) {
                 adopted++;
+            } else if (entry.clientState().isEmpty() && !keeps(id)) {
+                try {
+                    if (seen(connectionId, graphs.of(connectionId).get(id))) {
+                        adopted++;
+                    }
+                } catch (Exception e) {
+                    if (GraphErrors.toException(e).getStatus().getCode() != Status.Code.NOT_FOUND) {
+                        throw e;
+                    }
+                }
             }
         }
         return adopted;
+    }
+
+    private boolean keeps(String id) {
+        lock.lock();
+        try {
+            return kept.containsKey(id);
+        } finally {
+            lock.unlock();
+        }
     }
 
     /** Every kept subscription, in subscription id order. */

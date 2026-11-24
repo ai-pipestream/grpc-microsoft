@@ -41,6 +41,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.concurrent.TimeUnit;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -428,9 +429,19 @@ public final class MicrosoftChangeGrpcService
             StreamObserver<ListSubscriptionsResponse> observer) {
         unary(observer, () -> {
             ListSubscriptionsResponse.Builder out = ListSubscriptionsResponse.newBuilder();
-            for (GraphSubscriptions.Entry entry : subscriptions(request.getConnectionId()).list()) {
-                out.addSubscriptions(seen(request.getConnectionId(), entry));
+            List<GraphSubscriptions.Entry> listed = subscriptions(request.getConnectionId()).list();
+            SubscriptionRenewer keeper = renewer;
+            if (keeper != null) {
+                try {
+                    keeper.adopt(request.getConnectionId(), listed);
+                } catch (InterruptedException e) {
+                    throw e;
+                } catch (Exception e) {
+                    LOG.log(System.Logger.Level.WARNING,
+                            "a listed subscription could not be read: {0}", e.toString());
+                }
             }
+            listed.forEach(entry -> out.addSubscriptions(entry.subscription()));
             return out.build();
         });
     }

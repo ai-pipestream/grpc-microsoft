@@ -219,7 +219,9 @@ reach over HTTPS:
 The server keeps its own subscriptions alive: the ones created through
 `CreateSubscription` and, after a restart, the ones Graph lists with its
 clientState (default connection at start, other connections when
-`ListSubscriptions` or `GetSubscription` is called for them). It renews each
+`ListSubscriptions` or `GetSubscription` is called for them). Graph leaves the
+clientState out of a listing, so each listed subscription the server does not
+keep yet is read once more on its own. It renews each
 to the longest expiration Graph allows before it expires and when Graph asks
 for a reauthorization, and creates a subscription again when Graph no longer
 has it. `ListSubscriptionRenewals` shows what it keeps and the last error. A

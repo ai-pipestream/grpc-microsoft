@@ -53,7 +53,9 @@ final class ChangeScenarios {
     /** Lifetime of the subscription that should make Graph ask for a reauthorization. */
     static final Duration SHORT_LIFETIME = Duration.ofMinutes(50);
     /** How long after that subscription was created a live run waits for Graph to ask. */
-    static final Duration LIFECYCLE_WAIT = Duration.ofMinutes(17);
+    static final Duration LIFECYCLE_WAIT = Duration.ofMinutes(2);
+    /** The longest such wait: the subscription must still exist when the wait ends. */
+    static final Duration LONGEST_LIFECYCLE_WAIT = SHORT_LIFETIME.minusMinutes(4);
     /** Renewal margin of the run's renewer: longer than any lifetime, so every check renews. */
     static final Duration RENEW_BEFORE = Duration.ofDays(60);
     /** Step that waits for a lifecycle notification. */
@@ -113,6 +115,7 @@ final class ChangeScenarios {
     private String subscriptionId;
     private String shortLivedId;
     private long shortLivedCreated;
+    private Duration lifecycleWait = LIFECYCLE_WAIT;
     private String fileId;
     private Context.CancellableContext watch;
     private final BlockingQueue<WatchChangesResponse> watched = new LinkedBlockingQueue<>();
@@ -141,6 +144,15 @@ final class ChangeScenarios {
             Backend backend) {
         return new SubscriptionRenewer(graphs, bus, backend.clientState(),
                 java.time.Clock.fixed(backend.startedAt(), java.time.ZoneOffset.UTC), RENEW_BEFORE);
+    }
+
+    /**
+     * Sets how long the run waits for Graph to ask for a reauthorization.
+     *
+     * @param wait the wait, cut to {@link #LONGEST_LIFECYCLE_WAIT}
+     */
+    void lifecycleWait(Duration wait) {
+        lifecycleWait = wait.compareTo(LONGEST_LIFECYCLE_WAIT) > 0 ? LONGEST_LIFECYCLE_WAIT : wait;
     }
 
     /** Every step, in run order. */
@@ -377,7 +389,7 @@ final class ChangeScenarios {
     private String lifecycleRenewal() throws Exception {
         String id = need(shortLivedId, "the short-lived subscription");
         notifications.arrive(LIFECYCLE_STEP);
-        long deadline = shortLivedCreated + LIFECYCLE_WAIT.toNanos();
+        long deadline = shortLivedCreated + lifecycleWait.toNanos();
         ChangeNotification asked = null;
         while (asked == null) {
             ChangeNotification next = lifecycles.poll(500, TimeUnit.MILLISECONDS);
@@ -385,7 +397,7 @@ final class ChangeScenarios {
                 asked = next;
             } else if (System.nanoTime() > deadline) {
                 throw new Skip("Graph sent no lifecycle notification within "
-                        + LIFECYCLE_WAIT.toMinutes() + " min for a subscription that expires in "
+                        + lifecycleWait.toMinutes() + " min for a subscription that expires in "
                         + SHORT_LIFETIME.toMinutes() + " min");
             }
         }
