@@ -120,6 +120,25 @@ public final class GraphClient {
         public String body() {
             return body;
         }
+
+        /** Words Graph uses when the query options are what it rejects. */
+        private static final java.util.regex.Pattern QUERY_OPTIONS = java.util.regex.Pattern.compile(
+                "\\$?\\b(select|expand)\\b|query option|property named",
+                java.util.regex.Pattern.CASE_INSENSITIVE);
+
+        /**
+         * Whether this is Graph refusing the request's query options: a
+         * {@code 400} whose message or body names {@code $select},
+         * {@code $expand}, a query option or an unknown property. Any other
+         * {@code 400} is about the request itself, and asking again without
+         * the query options would not be the same request.
+         *
+         * @return whether the query options were rejected
+         */
+        public boolean rejectsQueryOptions() {
+            return status == 400
+                    && QUERY_OPTIONS.matcher(getMessage() + " " + body).find();
+        }
     }
 
     private static final ObjectMapper JSON = new ObjectMapper();

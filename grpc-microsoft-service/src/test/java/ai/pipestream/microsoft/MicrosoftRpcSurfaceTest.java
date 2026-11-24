@@ -984,7 +984,11 @@ class MicrosoftRpcSurfaceTest {
     @Test
     void unsupportedSelectFallsBackToGraphDefaults() {
         fake.stub("/drives/d1/items/x1?$select=" + GraphPaths.DRIVE_ITEM_SELECT,
-                FakeGraphServer.error(400, "BadRequest", Map.of()));
+                new FakeGraphServer.Stub(400, ("{\"error\":{\"code\":\"BadRequest\",\"message\":"
+                        + "\"Parsing OData Select and Expand failed: Could not find a property named "
+                        + "'sharepointIds' on type 'microsoft.graph.driveItem'.\"}}")
+                        .getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                        Map.of("content-type", "application/json")));
         fake.stub("/drives/d1/items/x1", MicrosoftFixtures.fileJson("x1", "a.txt", "d1"));
         DriveItem item = stub.getItem(GetItemRequest.newBuilder().setDriveId("d1").setItemId("x1")
                 .setInclude(DriveItemInclude.getDefaultInstance()).build()).getItem();

@@ -138,6 +138,18 @@ download turned out to be; read it with `DownloadContent`),
 item without `content` is never ambiguous. A read that did not ask for
 content leaves the state `UNSPECIFIED`.
 
+Reads ask Graph for an explicit property list, because `sharepointIds`,
+`publication`, the `system` facet and the download URL only come when
+selected. When Graph rejects that query (a 400 naming `$select`,
+`$expand`, a query option or an unknown property) the read is answered
+from Graph's default properties, and the entities lack those fields. That
+is never silent: it is logged at WARNING, and the rpc ends with a typed
+`DegradedProjections` message in its trailing metadata (key
+`ai.pipestream.microsoft.v1.DegradedProjections-bin`) naming the route, the
+rejected query, Graph's message and how many reads were answered that way.
+A call whose reads were all answered in full carries no such trailer. Any
+other 400 fails the rpc; it is not retried without the query.
+
 To land the OKF payload **on** a SharePoint library (markdown tree + zip +
 `.warc.gz`), set a destination drive. Files larger than 4 MiB use a Graph
 upload session; the session URL is called **without** `Authorization`.

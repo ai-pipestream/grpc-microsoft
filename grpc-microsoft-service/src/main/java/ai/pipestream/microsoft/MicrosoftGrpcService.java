@@ -147,14 +147,16 @@ public final class MicrosoftGrpcService
     /**
      * The service definition, with every server-streaming rpc behind
      * {@link FlowControlInterceptor} (isReady-aware sends that stop on
-     * cancellation).
+     * cancellation), and every rpc reporting the reads Graph answered from
+     * its default properties in its trailing metadata
+     * ({@link ProjectionReport}).
      *
      * @return the bound service
      */
     @Override
     public io.grpc.ServerServiceDefinition bindService() {
         return io.grpc.ServerInterceptors.intercept(MicrosoftServiceGrpc.bindService(this),
-                new FlowControlInterceptor());
+                new FlowControlInterceptor(), ProjectionReport.interceptor());
     }
 
 

@@ -373,6 +373,42 @@ message DeltaResync {
   string message = 2;
 }
 
+// Reads of one kind that Graph answered from its default property set,
+// because it rejected the query options (`$select`, `$expand`) the server
+// asked with. The entities read this way lack every property only the
+// rejected query asks for (`sharepointIds`, `publication`, the `system`
+// facet, the download URL, expanded `fields`).
+message DegradedProjection {
+  // Graph route of the first read answered this way, without its query
+  // (for example `/drives/{id}/root/delta`).
+  string route = 1;
+  // The query Graph rejected; cut to 200 characters.
+  string rejected_query = 2;
+  // The query the answer came from; empty = no query options at all. Cut
+  // to 200 characters.
+  string used_query = 3;
+  // Graph's error code for the rejection.
+  string graph_code = 4;
+  // Graph's error message for the rejection; cut to 200 characters.
+  string graph_message = 5;
+  // How many reads of the call were answered this way (same rejected
+  // query and same used query).
+  int64 reads = 6;
+}
+
+// Every degraded read of one call. Any rpc of MicrosoftService whose reads
+// were answered from Graph's default properties ends with this message in
+// its trailing metadata, under the key
+// `ai.pipestream.microsoft.v1.DegradedProjections-bin`; a call with no such
+// read carries no such trailer.
+message DegradedProjections {
+  // The degraded reads, one entry per distinct rejected query; at most
+  // four are listed.
+  repeated DegradedProjection projections = 1;
+  // Distinct degraded reads left out of `projections`.
+  int32 omitted = 2;
+}
+
 // Which auth mode the held token has.
 enum AuthMode {
   // Zero value; not determined.
