@@ -593,6 +593,10 @@ behaviour.
     `increments/{connection-id}/{run-id}`.
 - `MicrosoftCatalog` (grpc-okf) now maps `LIST`, `LIST_ITEM` and `PERMISSION`
   entities.
+- `MicrosoftCatalog` writes a drive item that came without bytes as a
+  not-fetched entry (`capture: not_fetched`, no WARC `resource` record), and
+  names every drive item by `web_url`, never by the pre-authenticated
+  `download_url`.
 - A permission's `entity_id` is `{target}/{permission_id}`, for example
   `drive_item/{drive}/{item}/{perm}`. A list item's is `{list_id}/{item_id}`.
 
