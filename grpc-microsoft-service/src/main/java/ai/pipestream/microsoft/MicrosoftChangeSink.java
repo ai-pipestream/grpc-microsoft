@@ -9,10 +9,13 @@ import ai.pipestream.microsoft.v1.MicrosoftSnapshot;
  * {@link OkfMicrosoftChangeSink} writes OKF + WARC when {@code OKF_DIR}
  * or {@code OKF_SPO_DRIVE_ID} is set.
  *
- * <p>A pass ends with {@link #completeRun(String, boolean)}. Only a pass whose
- * every sweep was a full enumeration ({@code fullSweep}) lets a sink treat
- * entities it holds but the pass did not emit as gone; after an incremental
- * (delta) pass unseen entities are unchanged and must be kept.</p>
+ * <p>A pass ends with {@link #completeRun(String, boolean)}. Only a complete
+ * pass ({@code fullSweep}: every sweep was a full enumeration and the pass
+ * covered everything the connection covers) lets a sink treat entities it
+ * holds but the pass did not emit as gone. After an incremental (delta)
+ * pass unseen entities are unchanged, and after a pass narrowed to some
+ * drives, some sites or a folder they were never looked at; both must be
+ * kept.</p>
  */
 public interface MicrosoftChangeSink {
 
@@ -41,12 +44,15 @@ public interface MicrosoftChangeSink {
     }
 
     /**
-     * A run finished. The default forwards full sweeps to
-     * {@link #completeRun(String)} and ignores incremental passes, so a sink that
-     * reconciles by run id never deletes unchanged entities.
+     * A run finished. The default forwards complete passes to
+     * {@link #completeRun(String)} and ignores incremental and narrowed
+     * passes, so a sink that reconciles by run id never deletes entities
+     * that are unchanged or were outside the pass.
      *
      * @param runId identifier of the completed run
-     * @param fullSweep whether every sweep of the run was a full enumeration
+     * @param fullSweep whether the pass was complete: every sweep a full
+     *        enumeration, over everything the connection covers
+     *        ({@link MicrosoftCrawler.Result#complete()})
      */
     default void completeRun(String runId, boolean fullSweep) {
         if (fullSweep) {

@@ -577,10 +577,13 @@ behaviour.
   to (`GraphLinks.requireDeltaLink`). Client-supplied `delta_link` values on
   the Delta rpcs are checked the same way. `"latest"` maps to `?token=latest`.
 - Sinks: `MicrosoftChangeSink.completeRun(runId, fullSweep)`.
-  - The sync table reconciles only when every sweep in the run was a
-    `CRAWL`.
-  - The Output and OKF sinks keep a mirror. A full sweep replaces it. An
-    incremental run merges into it, and deletes become tombstones (OKF
+  - `fullSweep` is `MicrosoftCrawler.Result.complete()`: every sweep in the
+    run was a `CRAWL`, at least one drive or list was swept, and the request
+    named no narrower scope than the connection's own (other `drive_ids` or
+    `site_ids`, or another `folder_path`).
+  - The sync table reconciles only after a complete run.
+  - The Output and OKF sinks keep a mirror. A complete run replaces it. An
+    incremental or narrowed run merges into it, and deletes become tombstones (OKF
     `status: deprecated`). With no baseline in the process, the run writes
     beside the bundle under `increments/{run-id}`.
 - `MicrosoftCatalog` (grpc-okf) now maps `LIST`, `LIST_ITEM` and `PERMISSION`
@@ -630,5 +633,8 @@ behaviour.
 - `Sync` emits permissions inline on drive items and list items, not as
   standalone `PERMISSION` entities.
 - A run that mixes `DELTA` and `CRAWL` sweeps (one drive restarted by a 410)
-  is not reconciled. `ReconcileRequest` has no scope, so the restarted
-  drive's stale rows remain until the next full sweep.
+  is not reconciled, and neither is a full enumeration of part of the
+  connection (a request with its own `drive_ids`, `site_ids` or
+  `folder_path`). `ReconcileRequest` has no drive or folder scope, so the
+  stale rows of the drives that were enumerated remain until the next
+  complete run.

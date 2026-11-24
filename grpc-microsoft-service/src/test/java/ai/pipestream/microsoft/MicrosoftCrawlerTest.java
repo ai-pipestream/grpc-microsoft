@@ -78,6 +78,7 @@ class MicrosoftCrawlerTest {
         assertThat(snapshot.getEntityCountsMap()).containsEntry("drive", 1L)
                 .containsEntry("file", 2L).containsEntry("folder", 1L).containsEntry("root", 1L);
         assertThat(result.fullSweep()).isTrue();
+        assertThat(result.complete()).isTrue();
         assertThat(result.cursor().getDriveDeltaLinksMap()).containsEntry("drive-1", link("d1"));
 
         DriveItem notes = item(sink, "file-1");
@@ -115,6 +116,7 @@ class MicrosoftCrawlerTest {
         assertThat(sink.snapshots().get(0).getSource()).isEqualTo(ChangeSource.CHANGE_SOURCE_DELTA);
         assertThat(sink.snapshots().get(0).getEntityCountsMap()).containsEntry("deleted", 1L);
         assertThat(result.fullSweep()).isFalse();
+        assertThat(result.complete()).isFalse();
         assertThat(result.cursor().getDriveDeltaLinksMap()).containsEntry("drive-1", link("d2"));
     }
 
