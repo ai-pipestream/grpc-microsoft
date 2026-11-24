@@ -11,7 +11,10 @@ import io.grpc.protobuf.StatusProto;
 
 import java.io.IOException;
 
-/** Maps failures of a Graph call to gRPC statuses and typed write errors. */
+/**
+ * Maps failures of a Graph call, and of a sync-table write made for one, to
+ * gRPC statuses and typed write errors.
+ */
 public final class GraphErrors {
 
     private GraphErrors() {
@@ -73,6 +76,15 @@ public final class GraphErrors {
     }
 
     private static Status toStatus(Throwable cause) {
+        if (cause instanceof SyncTableMicrosoftChangeSink.WriteFailedException e) {
+            // The ledger's own code is not passed through: its PERMISSION_DENIED
+            // or NOT_FOUND would read as Graph's answer to the caller.
+            return (switch (e.ledgerStatus()) {
+                case UNAVAILABLE, DEADLINE_EXCEEDED, RESOURCE_EXHAUSTED, CANCELLED, ABORTED ->
+                        Status.UNAVAILABLE;
+                default -> Status.INTERNAL;
+            }).withDescription(e.getMessage());
+        }
         if (cause instanceof GraphClient.GraphApiException e) {
             return (switch (e.status()) {
                 case 400 -> Status.INVALID_ARGUMENT;
