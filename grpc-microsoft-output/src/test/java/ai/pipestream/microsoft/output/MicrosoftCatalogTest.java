@@ -24,7 +24,7 @@ class MicrosoftCatalogTest {
     }
 
     @Test
-    void fileUsesDownloadUrlAndRendersColumns() {
+    void fileUsesWebUrlAndRendersColumns() {
         DriveItem item = DriveItem.newBuilder()
                 .setId("file-1")
                 .setName("notes.txt")
@@ -40,7 +40,10 @@ class MicrosoftCatalogTest {
                 .build();
         CatalogEntry entry = MicrosoftCatalog.from(change(item)).orElseThrow();
         assertThat(entry.path()).isEqualTo("items/drive-1/file-1.md");
-        assertThat(entry.targetUri()).isEqualTo("https://contoso.sharepoint.com/download/notes.txt");
+        assertThat(entry.targetUri()).isEqualTo("https://contoso.sharepoint.com/notes.txt");
+        assertThat(entry.capture()).isEqualTo(CatalogEntry.Capture.NOT_FETCHED);
+        assertThat(entry.resourceBody()).isEmpty();
+        assertThat(entry.mediaType()).isEqualTo("text/plain");
         assertThat(entry.concept().body()).contains("| Title | Notes |").contains("| Count | 3 |")
                 .contains("eTag: `etag-1`").contains("SHA-256: `abc`");
     }
@@ -115,6 +118,12 @@ class MicrosoftCatalogTest {
                                 .setDriveId("d")))
                 .build()).orElseThrow();
         assertThat(deleted.concept().status()).contains(OkfConcept.Status.DEPRECATED);
+        // A delete stays metadata only: it does not turn into a captured file.
+        assertThat(deleted.capture()).isEqualTo(CatalogEntry.Capture.NOT_FETCHED);
+        assertThat(deleted.resourceBody()).isEmpty();
+        assertThat(deleted.concept().extra()).containsEntry("capture", "not_fetched");
+        assertThat(folder.capture()).isEqualTo(CatalogEntry.Capture.NOT_FETCHED);
+        assertThat(site.captured()).isTrue();
     }
 
     @Test
@@ -127,7 +136,18 @@ class MicrosoftCatalogTest {
                 .build())).orElseThrow();
         assertThat(new String(entry.resourceBody())).isEqualTo("hello");
         assertThat(entry.mediaType()).isEqualTo("text/plain");
-        assertThat(entry.concept().extra()).containsKey("sha256");
+        assertThat(entry.captured()).isTrue();
+        assertThat(entry.concept().extra()).containsKey("sha256").doesNotContainKey("capture");
+    }
+
+    @Test
+    void fetchedBytesWithoutAMediaTypeAreOctetStream() {
+        CatalogEntry entry = MicrosoftCatalog.from(change(DriveItem.newBuilder()
+                .setId("f").setName("blob").setDriveId("d")
+                .setContent(ByteString.copyFromUtf8("\u0001\u0002"))
+                .build())).orElseThrow();
+        assertThat(entry.mediaType()).isEqualTo("application/octet-stream");
+        assertThat(entry.targetUri()).isEqualTo("urn:okf:0.2:microsoft:item:d/f");
     }
 
     private static MicrosoftChange change(DriveItem item) {

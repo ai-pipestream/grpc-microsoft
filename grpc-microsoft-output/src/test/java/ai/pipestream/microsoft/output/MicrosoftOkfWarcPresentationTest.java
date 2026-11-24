@@ -30,9 +30,10 @@ import java.util.zip.ZipFile;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * End-to-end OKF + WARC shape a Microsoft Graph crawl should present: download
- * URL as WARC-Target-URI, SharePoint columns in markdown (not JSON), zip as a
- * sibling never nested in WARC.
+ * End-to-end OKF + WARC shape a Microsoft Graph crawl should present: the
+ * stable web URL as WARC-Target-URI, a resource record only for fetched
+ * bytes, SharePoint columns in markdown (not JSON), zip as a sibling never
+ * nested in WARC.
  */
 class OkfMicrosoftWarcPresentationTest {
 
@@ -96,7 +97,10 @@ class OkfMicrosoftWarcPresentationTest {
         assertThat(fileMd).doesNotContain("\"Title\": \"Notes\"");
 
         String collection = Files.readString(tree.resolve("collection.html"));
-        assertThat(collection).contains("href=\"https://contoso.sharepoint.com/download/notes.txt\"");
+        assertThat(collection).contains("href=\"https://contoso.sharepoint.com/sites/ENG/notes.txt\"");
+        // The folder has no bytes: it is linked, and has no resource record.
+        assertThat(collection).contains("href=\"https://contoso.sharepoint.com/sites/ENG/Shared\"");
+        assertThat(collection).doesNotContain("contoso.sharepoint.com/download/");
         assertThat(collection).contains("href=\"https://contoso.sharepoint.com/sites/ENG\"");
         assertThat(collection).doesNotContain("href=\"items/drive-1/file-1.md\"");
 
@@ -118,14 +122,17 @@ class OkfMicrosoftWarcPresentationTest {
         List<WarcParse.Record> conversions = records.stream()
                 .filter(r -> "conversion".equals(r.type())).toList();
         assertThat(conversions).hasSize(entries.size());
-        assertThat(resources).hasSize(entries.size() + 1);
-
+        List<String> captured = entries.stream().filter(CatalogEntry::captured)
+                .map(CatalogEntry::targetUri).toList();
+        assertThat(captured).hasSize(3);
         assertThat(resources).extracting(WarcParse.Record::targetUri)
-                .containsAll(entries.stream().map(CatalogEntry::targetUri).toList())
-                .contains(WarcArchive.COLLECTION_URI);
+                .containsExactlyInAnyOrderElementsOf(
+                        java.util.stream.Stream.concat(captured.stream(),
+                                java.util.stream.Stream.of(WarcArchive.COLLECTION_URI)).toList())
+                .doesNotContain("https://contoso.sharepoint.com/sites/ENG/Shared");
 
         WarcParse.Record fileResource = records.stream()
-                .filter(r -> "https://contoso.sharepoint.com/download/notes.txt".equals(r.targetUri()))
+                .filter(r -> "https://contoso.sharepoint.com/sites/ENG/notes.txt".equals(r.targetUri()))
                 .findFirst().orElseThrow();
         assertThat(fileResource.block()).isEqualTo(notes);
 

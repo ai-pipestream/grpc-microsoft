@@ -22,15 +22,24 @@ import ai.pipestream.okf.OkfYaml;
 import ai.pipestream.okf.warc.WarcDigest;
 import com.google.protobuf.Timestamp;
 
-import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
 /**
- * Maps Microsoft Graph protobuf entities onto OKF catalog entries. Live
- * {@code web_url} / {@code download_url} is {@code WARC-Target-URI}. SharePoint
- * list columns are a markdown table in the concept body, not a JSON blob.
+ * Maps Microsoft Graph protobuf entities onto OKF catalog entries. The live
+ * {@code web_url} is {@code WARC-Target-URI}. SharePoint list columns are a
+ * markdown table in the concept body, not a JSON blob.
+ *
+ * <p>A drive item that came without bytes (a Sync without
+ * {@code include_content}, a file over the inline limit, a folder) becomes a
+ * {@link CatalogEntry#notFetched} entry: its concept and its link are
+ * written, and no resource record, because no bytes of it were read. Nothing
+ * is made up to stand in for content that was not fetched.
+ *
+ * <p>A drive item is never named by its {@code download_url}. That link is
+ * pre-authenticated and short-lived: it would change the item's identifier
+ * on every run and store a working credential in the bundle.
  */
 public final class MicrosoftCatalog {
 
@@ -54,7 +63,8 @@ public final class MicrosoftCatalog {
         if (change.getOperation() == ChangeOperation.CHANGE_OPERATION_DELETE) {
             entry = new CatalogEntry(entry.path(),
                     withStatus(entry.concept(), OkfConcept.Status.DEPRECATED),
-                    entry.targetUri(), entry.mediaType(), entry.resourceBody(), entry.kind());
+                    entry.targetUri(), entry.mediaType(), entry.resourceBody(), entry.kind(),
+                    entry.capture());
         }
         return Optional.of(entry);
     }
@@ -118,17 +128,10 @@ public final class MicrosoftCatalog {
     private static CatalogEntry driveItem(DriveItem item, Instant at) {
         String path = OkfPaths.join("items", OkfPaths.segment(item.getDriveId()),
                 OkfPaths.segment(item.getId()) + ".md");
-        String uri = firstNonBlank(item.getDownloadUrl(), item.getWebUrl());
-        uri = uriOrUrn(uri, "item", item.getDriveId() + "/" + item.getId());
-        byte[] payload;
-        String media;
-        if (item.hasContent() && !item.getContent().isEmpty()) {
-            payload = item.getContent().toByteArray();
-            media = item.getMimeType().isBlank() ? "application/octet-stream" : item.getMimeType();
-        } else {
-            payload = item.getName().getBytes(StandardCharsets.UTF_8);
-            media = "text/plain";
-        }
+        // web_url is stable; download_url is a pre-authenticated link that
+        // expires and must not be written anywhere.
+        String uri = uriOrUrn(item.getWebUrl(), "item", item.getDriveId() + "/" + item.getId());
+        boolean fetched = item.hasContent() && !item.getContent().isEmpty();
         String kind = item.getFolder() ? "folder" : "file";
         StringBuilder body = new StringBuilder();
         if (!item.getDescription().isBlank()) {
@@ -180,9 +183,13 @@ public final class MicrosoftCatalog {
                 .extra("mime_type", item.getMimeType())
                 .extra("size", Long.toString(item.getSize()))
                 .body(body.toString());
-        if (item.hasContent() && !item.getContent().isEmpty()) {
-            b.extra("sha256", WarcDigest.sha256Hex(payload));
+        if (!fetched) {
+            // Metadata only: the bytes were not downloaded, or there are none.
+            return CatalogEntry.notFetched(path, b.build(), uri, item.getMimeType(), kind);
         }
+        byte[] payload = item.getContent().toByteArray();
+        b.extra("sha256", WarcDigest.sha256Hex(payload));
+        String media = item.getMimeType().isBlank() ? "application/octet-stream" : item.getMimeType();
         return new CatalogEntry(path, b.build(), uri, media, payload, kind);
     }
 

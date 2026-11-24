@@ -142,6 +142,16 @@ Completed `Sync` runs write through the grpc-integration output SPI
 grpc-integration README). This repo adds the `microsoft-connector` format
 and the Graph OKF catalog mapping.
 
+In the OKF / WARC output a `resource` record exists only for bytes read
+from Graph. `Sync` without `include_content`, a file over
+`max_inline_bytes`, and every folder arrive as metadata. Those items keep
+their OKF markdown, marked `capture: not_fetched` in its frontmatter, and
+their link on the collection page, and they get no `resource` record:
+nothing is written in place of content that was not fetched. A drive item
+is named by its `web_url` (a `urn:okf:0.2:microsoft:item:<drive>/<item>`
+when Graph sent none), never by `download_url`: that link is
+pre-authenticated and short-lived, so it is not written to the bundle.
+
 `GetItem`, `DownloadItem`, and `Sync` flatten SharePoint list-item columns
 into typed `ListColumn`s (scalars and one-level nested objects; `@odata.*`
 skipped). `ListChildren` stays a listing RPC and does not fetch columns.
