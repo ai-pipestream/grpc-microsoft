@@ -604,7 +604,9 @@ behaviour.
 - `DownloadItem` (deprecated) still works. Inline content in `Sync` uses
   the request's `max_inline_bytes` when it is > 0, and otherwise the server
   `MICROSOFT_ATTACHMENT_MAX_BYTES`. PR #10's "0 = no cap" therefore applies
-  unchanged.
+  unchanged. Every drive item of such a `Sync` carries a typed
+  `content_state` (`ContentState`), so a file left out as over the limit is
+  told apart from an empty file, a folder and a malware-flagged file.
 
 ### Robustness without a tenant (fallbacks)
 

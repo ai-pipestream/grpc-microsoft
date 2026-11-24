@@ -1,6 +1,7 @@
 package ai.pipestream.microsoft.connector;
 
 import ai.pipestream.microsoft.v1.ChangeOperation;
+import ai.pipestream.microsoft.v1.ContentState;
 import ai.pipestream.microsoft.v1.DriveItem;
 import ai.pipestream.microsoft.v1.MicrosoftChange;
 import ai.pipestream.microsoft.v1.MicrosoftEntity;
@@ -310,6 +311,46 @@ class ContentOmissionTest {
         System.arraycopy(bom, 0, out, 0, bom.length);
         System.arraycopy(encoded, 0, out, bom.length, encoded.length);
         return out;
+    }
+
+    @Test
+    void aFileTheServiceFoundOverItsLimitIsMarkedTooLargeNotJustMissing() {
+        // Listed as 12 bytes, so nothing here could tell it was too large.
+        microsoft.changes.add(change(DriveItem.newBuilder()
+                .setId("txt-1").setName("notes.txt").setDriveId("drive-1")
+                .setMimeType("text/plain").setSize(12)
+                .setContentState(ContentState.CONTENT_STATE_OMITTED_OVER_LIMIT).build()));
+
+        CrawlStreamBit bit = fullCrawl(true).get(0);
+
+        assertThat(bit.getStatus().getResult()).isEqualTo(OperationResult.PartialSuccess);
+        assertThat(bit.getStatus().getStatusMessage())
+                .contains("drive-1/txt-1", "TOO_LARGE", "inline limit");
+    }
+
+    @Test
+    void aFileFlaggedAsMalwareSaysSo() {
+        microsoft.changes.add(change(DriveItem.newBuilder()
+                .setId("bad-1").setName("notes.txt").setDriveId("drive-1")
+                .setMimeType("text/plain").setSize(12)
+                .setContentState(ContentState.CONTENT_STATE_OMITTED_MALWARE).build()));
+
+        CrawlStreamBit bit = fullCrawl(true).get(0);
+
+        assertThat(bit.getCrawlItem().getContentItem().hasContent()).isFalse();
+        assertThat(bit.getStatus().getResult()).isEqualTo(OperationResult.PartialSuccess);
+        assertThat(bit.getStatus().getStatusMessage()).contains("drive-1/bad-1", "MALWARE");
+    }
+
+    @Test
+    void aPackageHasNoContentToLeaveOut() {
+        microsoft.changes.add(change(DriveItem.newBuilder()
+                .setId("nb-1").setName("Notebook").setDriveId("drive-1").setSize(4096)
+                .setContentState(ContentState.CONTENT_STATE_OMITTED_NOT_A_FILE).build()));
+
+        CrawlStreamBit bit = fullCrawl(true).get(0);
+
+        assertThat(bit.getStatus().getResult()).isEqualTo(OperationResult.Success);
     }
 
     private List<CrawlStreamBit> fullCrawl(boolean includeContent) {

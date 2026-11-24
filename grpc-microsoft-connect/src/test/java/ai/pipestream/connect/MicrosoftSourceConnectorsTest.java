@@ -238,6 +238,145 @@ class MicrosoftSourceConnectorsTest {
                 .containsEntry("drive-1", base + "/drives/drive-1/root/delta?token=d2");
     }
 
+    @Test
+    void directPollInlinesContentWhenAskedTo() throws Exception {
+        String base = startGraphWithOneFile();
+
+        List<MicrosoftChange> changes = directPoll(base, Map.of(
+                MicrosoftSourceConnector.INCLUDE_CONTENT, "true"));
+
+        assertThat(changes).filteredOn(c -> c.getEntity().getEntityId().equals("file-1"))
+                .singleElement()
+                .satisfies(c -> assertThat(c.getEntity().getDriveItem().getContent().toStringUtf8())
+                        .as("the file's bytes, with include.content=true in direct mode")
+                        .isEqualTo("hello world!"));
+    }
+
+    @Test
+    void directPollLeavesContentOutByDefault() throws Exception {
+        String base = startGraphWithOneFile();
+
+        List<MicrosoftChange> changes = directPoll(base, Map.of());
+
+        assertThat(changes).filteredOn(c -> c.getEntity().getEntityId().equals("file-1"))
+                .singleElement()
+                .satisfies(c -> assertThat(c.getEntity().getDriveItem().hasContent()).isFalse());
+    }
+
+    @Test
+    void directPollSaysWhenAFileIsOverTheInlineLimit() throws Exception {
+        String base = startGraphWithOneFile();
+
+        List<MicrosoftChange> changes = directPoll(base, Map.of(
+                MicrosoftSourceConnector.INCLUDE_CONTENT, "true",
+                MicrosoftSourceConnector.MAX_INLINE_BYTES, "5"));
+
+        assertThat(changes).filteredOn(c -> c.getEntity().getEntityId().equals("file-1"))
+                .singleElement()
+                .satisfies(c -> {
+                    assertThat(c.getEntity().getDriveItem().hasContent()).isFalse();
+                    assertThat(c.getEntity().getDriveItem().getContentState()).isEqualTo(
+                            ai.pipestream.microsoft.v1.ContentState.CONTENT_STATE_OMITTED_OVER_LIMIT);
+                });
+    }
+
+    @Test
+    void directPollMarksInlinedContent() throws Exception {
+        String base = startGraphWithOneFile();
+
+        List<MicrosoftChange> changes = directPoll(base, Map.of(
+                MicrosoftSourceConnector.INCLUDE_CONTENT, "true",
+                MicrosoftSourceConnector.MAX_INLINE_BYTES, "12"));
+
+        assertThat(changes).filteredOn(c -> c.getEntity().getEntityId().equals("file-1"))
+                .singleElement()
+                .satisfies(c -> assertThat(c.getEntity().getDriveItem().getContentState()).isEqualTo(
+                        ai.pipestream.microsoft.v1.ContentState.CONTENT_STATE_INLINED));
+    }
+
+    @Test
+    void aNegativeOrMalformedInlineLimitIsRefused() {
+        for (String bad : List.of("-1", "ten")) {
+            MicrosoftSourceTask task = new MicrosoftSourceTask();
+            task.initialize(ConnectTestContexts.empty());
+            assertThatThrownBy(() -> task.start(Map.of(
+                    MicrosoftSourceConnector.TOPIC, "ms.changes",
+                    MicrosoftSourceConnector.GRPC_TARGET, "127.0.0.1:1",
+                    MicrosoftSourceConnector.GRPC_PLAINTEXT, "true",
+                    MicrosoftSourceConnector.MAX_INLINE_BYTES, bad)))
+                    .as("max.inline.bytes=%s", bad)
+                    .isInstanceOf(org.apache.kafka.common.config.ConfigException.class);
+        }
+        assertThat(MicrosoftSourceConnector.definition().configKeys())
+                .containsKey(MicrosoftSourceConnector.MAX_INLINE_BYTES);
+    }
+
+    @Test
+    void grpcPollAsksForContentWithTheConfiguredLimit() throws Exception {
+        RecordingSync sync = new RecordingSync("cursor-1");
+        server = start(sync);
+        Map<String, String> props = new java.util.HashMap<>(grpcProps());
+        props.put(MicrosoftSourceConnector.INCLUDE_CONTENT, "true");
+        props.put(MicrosoftSourceConnector.MAX_INLINE_BYTES, "1048576");
+        MicrosoftSourceTask task = new MicrosoftSourceTask();
+        task.initialize(ConnectTestContexts.empty());
+        task.start(props);
+        task.poll();
+        task.stop();
+
+        assertThat(sync.requests.get(0).getIncludeContent()).isTrue();
+        assertThat(sync.requests.get(0).getMaxInlineBytes()).isEqualTo(1048576L);
+    }
+
+    /** A Graph with drive-1 holding the 12-byte notes.txt; returns its base URL. */
+    private String startGraphWithOneFile() throws IOException {
+        graph = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        String base = "http://127.0.0.1:" + graph.getAddress().getPort();
+        graph.createContext("/tenant-1/oauth2/v2.0/token", exchange -> reply(exchange, 200,
+                "{\"access_token\":\"t\",\"token_type\":\"Bearer\",\"expires_in\":3600}"));
+        graph.createContext("/drives/drive-1", exchange -> {
+            String path = exchange.getRequestURI().getPath();
+            if (path.equals("/drives/drive-1")) {
+                reply(exchange, 200, "{\"id\":\"drive-1\",\"name\":\"Docs\","
+                        + "\"driveType\":\"business\"}");
+            } else if (path.equals("/drives/drive-1/root/delta")) {
+                reply(exchange, 200, "{\"value\":[{\"id\":\"file-1\","
+                        + "\"name\":\"notes.txt\",\"size\":12,"
+                        + "\"file\":{\"mimeType\":\"text/plain\"},"
+                        + "\"parentReference\":{\"id\":\"root\",\"driveId\":\"drive-1\"}}],"
+                        + "\"@odata.deltaLink\":\"" + base
+                        + "/drives/drive-1/root/delta?token=d1\"}");
+            } else if (path.equals("/drives/drive-1/items/file-1/content")) {
+                reply(exchange, 200, "hello world!");
+            } else {
+                reply(exchange, 404, "{\"error\":{\"code\":\"notFound\",\"message\":\"none\"}}");
+            }
+        });
+        graph.start();
+        return base;
+    }
+
+    private static List<MicrosoftChange> directPoll(String base, Map<String, String> extra)
+            throws Exception {
+        Map<String, String> props = new java.util.HashMap<>(Map.of(
+                MicrosoftSourceConnector.TOPIC, "ms.changes",
+                MicrosoftSourceConnector.TENANT_ID, "tenant-1",
+                MicrosoftSourceConnector.CLIENT_ID, "client-1",
+                MicrosoftSourceConnector.CLIENT_SECRET, "secret-1",
+                MicrosoftSourceConnector.DRIVE_IDS, "drive-1",
+                MicrosoftSourceConnector.GRAPH_BASE_URL, base,
+                MicrosoftSourceConnector.AUTHORITY, base));
+        props.putAll(extra);
+        MicrosoftSourceTask task = new MicrosoftSourceTask();
+        task.initialize(ConnectTestContexts.empty());
+        task.start(props);
+        try {
+            return changes(task.poll());
+        } finally {
+            task.stop();
+        }
+    }
+
     private Map<String, String> grpcProps() {
         return Map.of(
                 MicrosoftSourceConnector.TOPIC, "ms.changes",

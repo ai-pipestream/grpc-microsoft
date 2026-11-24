@@ -42,6 +42,7 @@ public final class MicrosoftSourceTask extends ChangeSourceTask<MicrosoftChange>
     }
 
     private boolean includeContent;
+    private long maxInlineBytes;
     private List<String> driveIds = List.of();
     private String folderPath = "/";
     private MicrosoftConnectorConfig direct;
@@ -50,6 +51,8 @@ public final class MicrosoftSourceTask extends ChangeSourceTask<MicrosoftChange>
     protected void configure(Map<String, String> props, boolean directMode) {
         includeContent = Boolean.parseBoolean(
                 props.getOrDefault(MicrosoftSourceConnector.INCLUDE_CONTENT, "false"));
+        maxInlineBytes = maxInlineBytes(
+                props.getOrDefault(MicrosoftSourceConnector.MAX_INLINE_BYTES, "0"));
         driveIds = splitCsv(props.getOrDefault(MicrosoftSourceConnector.DRIVE_IDS, ""));
         folderPath = props.getOrDefault(MicrosoftSourceConnector.FOLDER_PATH, "/");
         if (directMode) {
@@ -72,12 +75,28 @@ public final class MicrosoftSourceTask extends ChangeSourceTask<MicrosoftChange>
         }
     }
 
+    private static long maxInlineBytes(String value) {
+        long bytes;
+        try {
+            bytes = Long.parseLong(value.trim());
+        } catch (NumberFormatException e) {
+            throw new org.apache.kafka.common.config.ConfigException(
+                    MicrosoftSourceConnector.MAX_INLINE_BYTES, value, "must be a whole number of bytes");
+        }
+        if (bytes < 0) {
+            throw new org.apache.kafka.common.config.ConfigException(
+                    MicrosoftSourceConnector.MAX_INLINE_BYTES, value, "must not be negative");
+        }
+        return bytes;
+    }
+
     @Override
     protected String pollGrpc(Channel channel, String lastCursor, List<MicrosoftChange> out) {
         MicrosoftServiceGrpc.MicrosoftServiceBlockingStub stub =
                 MicrosoftServiceGrpc.newBlockingStub(channel);
         SyncRequest.Builder request = SyncRequest.newBuilder()
                 .setIncludeContent(includeContent)
+                .setMaxInlineBytes(includeContent ? maxInlineBytes : 0)
                 .setSinceCursor(sinceCursor(lastCursor));
         request.addAllDriveIds(driveIds).setFolderPath(folderPath);
         Iterator<SyncResponse> events = stub.sync(request.build());
@@ -117,7 +136,8 @@ public final class MicrosoftSourceTask extends ChangeSourceTask<MicrosoftChange>
             return current.accessToken();
         }));
         MicrosoftCrawler.Result result = new MicrosoftCrawler(direct, files, sink,
-                MicrosoftCrawler.Options.defaults(direct, false, 0).withSince(since)).crawl();
+                MicrosoftCrawler.Options.defaults(direct, includeContent, maxInlineBytes)
+                        .withSince(since)).crawl();
         out.addAll(sink.changes());
         return SyncCursors.encode(result.cursor());
     }

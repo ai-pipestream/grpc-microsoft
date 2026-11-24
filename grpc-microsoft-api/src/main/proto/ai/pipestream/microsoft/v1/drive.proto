@@ -414,8 +414,34 @@ message DriveItem {
   // Entity id of the `site_acl` record whose role assignments apply to this
   // item; set by a sync that reads security, empty otherwise.
   string acl_owner_id = 46;
+  // What became of the file's bytes, on a read that was asked to inline
+  // content (Sync with include_content, GetItem with content). It tells an
+  // item whose `content` is unset because the file is over the inline limit
+  // from an empty file, a folder and a file Graph flagged as malware.
+  // UNSPECIFIED when the read did not ask for content.
+  ContentState content_state = 47;
   // Extensible key-value metadata (extension-metadata map - see convention).
   map<string, string> metadata = 99;
+}
+
+// What became of a drive item's bytes on a read that asked for content.
+enum ContentState {
+  // The read did not ask for content, or the server predates this field.
+  CONTENT_STATE_UNSPECIFIED = 0;
+  // `content` holds all of the file's bytes.
+  CONTENT_STATE_INLINED = 1;
+  // Graph reports the file as 0 bytes; nothing was downloaded and `content`
+  // is unset.
+  CONTENT_STATE_EMPTY = 2;
+  // The file is larger than the inline byte limit of the request or of the
+  // server, by its listed size or by what its download turned out to be;
+  // `content` is unset. Read it with the streaming DownloadContent rpc.
+  CONTENT_STATE_OMITTED_OVER_LIMIT = 3;
+  // The item is a folder or a package (a OneNote notebook): it has no
+  // binary of its own.
+  CONTENT_STATE_OMITTED_NOT_A_FILE = 4;
+  // Graph flagged the file as malware; it was not downloaded.
+  CONTENT_STATE_OMITTED_MALWARE = 5;
 }
 
 // One previous version of a drive item (the `driveItemVersion` resource).

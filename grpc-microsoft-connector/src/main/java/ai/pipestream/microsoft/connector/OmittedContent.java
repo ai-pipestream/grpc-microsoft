@@ -20,6 +20,8 @@ public record OmittedContent(Reason reason, String detail) {
         /** Content was asked for and MicrosoftService did not inline it. */
         NOT_INLINED,
         /** The bytes are not valid text in the file's charset. */
-        NOT_DECODABLE
+        NOT_DECODABLE,
+        /** Graph flagged the file as malware, so MicrosoftService did not download it. */
+        MALWARE
     }
 }

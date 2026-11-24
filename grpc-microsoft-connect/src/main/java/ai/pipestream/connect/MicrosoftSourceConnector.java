@@ -12,6 +12,11 @@ public final class MicrosoftSourceConnector extends ChangeSourceConnector {
 
     /** Config key: inline file bytes when the item is within the size cap. */
     public static final String INCLUDE_CONTENT = "include.content";
+    /**
+     * Config key for the largest file inlined with {@link #INCLUDE_CONTENT},
+     * in bytes; 0 = no limit (direct mode) or the service's limit (gRPC mode).
+     */
+    public static final String MAX_INLINE_BYTES = "max.inline.bytes";
     /** Config key for the Entra tenant id (direct mode). */
     public static final String TENANT_ID = "microsoft.tenant.id";
     /** Config key for the app registration id (direct mode). */
@@ -39,7 +44,14 @@ public final class MicrosoftSourceConnector extends ChangeSourceConnector {
     static ConfigDef definition() {
         return baseDefinition("MicrosoftChange", "MicrosoftService")
                 .define(INCLUDE_CONTENT, ConfigDef.Type.BOOLEAN, false, ConfigDef.Importance.MEDIUM,
-                        "Inline file bytes when size-capped")
+                        "Inline file bytes on each drive item, in both modes. A file over "
+                                + MAX_INLINE_BYTES + " is published without bytes and says so in "
+                                + "DriveItem.content_state")
+                .define(MAX_INLINE_BYTES, ConfigDef.Type.LONG, 0L, ConfigDef.Range.atLeast(0L),
+                        ConfigDef.Importance.MEDIUM,
+                        "Largest file inlined with " + INCLUDE_CONTENT + ", in bytes. 0 = no limit "
+                                + "in direct mode, and the service's own limit in gRPC mode. Keep "
+                                + "it under the producer's max.request.size")
                 .define(TENANT_ID, ConfigDef.Type.STRING, "", ConfigDef.Importance.HIGH,
                         "Entra tenant id (direct mode)")
                 .define(CLIENT_ID, ConfigDef.Type.STRING, "", ConfigDef.Importance.HIGH,
