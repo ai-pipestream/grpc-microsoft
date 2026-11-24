@@ -91,6 +91,8 @@ import ai.pipestream.microsoft.v1.CreateListItemRequest;
 import ai.pipestream.microsoft.v1.CreateListItemResponse;
 import ai.pipestream.microsoft.v1.DeleteDriveItemRequest;
 import ai.pipestream.microsoft.v1.DeleteDriveItemResponse;
+import ai.pipestream.microsoft.v1.SetSiteRoleInheritanceRequest;
+import ai.pipestream.microsoft.v1.SetSiteRoleInheritanceResponse;
 import ai.pipestream.microsoft.v1.DeleteListItemRequest;
 import ai.pipestream.microsoft.v1.DeleteListItemResponse;
 import ai.pipestream.microsoft.v1.EnsureColumnsRequest;
@@ -239,7 +241,7 @@ public final class MicrosoftGrpcService
         this.attachmentMaxBytes = attachmentMaxBytes;
         this.downstream = downstream;
         this.downloadChunkBytes = downloadChunkBytes;
-        this.plans = new WritePlans(mapper);
+        this.plans = new WritePlans(mapper, () -> sharePoint);
     }
 
     /**
@@ -346,6 +348,20 @@ public final class MicrosoftGrpcService
             session.pager().forEach(List.of(route), Map.of(), node -> {
                 observer.onNext(ListGroupTransitiveMembersResponse.newBuilder()
                         .setMember(valid(mapper.toMember(node))).build());
+                return true;
+            });
+        });
+    }
+
+    @Override
+    public void listGroupOwners(ai.pipestream.microsoft.v1.ListGroupOwnersRequest request,
+            StreamObserver<ai.pipestream.microsoft.v1.ListGroupOwnersResponse> observer) {
+        stream(observer, () -> {
+            MicrosoftSessions.Session session = sessions.resolve(request.getConnectionId());
+            String route = "/groups/" + GraphPaths.segment(request.getGroupId(), "group_id") + "/owners";
+            session.pager().forEach(List.of(route), Map.of(), node -> {
+                observer.onNext(ai.pipestream.microsoft.v1.ListGroupOwnersResponse.newBuilder()
+                        .setOwner(valid(mapper.toMember(node))).build());
                 return true;
             });
         });
@@ -875,6 +891,68 @@ public final class MicrosoftGrpcService
         this.sharePoint = new SharePointRest(tokens);
     }
 
+    private static String termStore(String siteId) {
+        return "/sites/" + GraphPaths.site(siteId) + "/termStore";
+    }
+
+    @Override
+    public void getTermStore(ai.pipestream.microsoft.v1.GetTermStoreRequest request,
+            StreamObserver<ai.pipestream.microsoft.v1.GetTermStoreResponse> observer) {
+        unary(observer, () -> {
+            MicrosoftSessions.Session session = sessions.resolve(request.getConnectionId());
+            return ai.pipestream.microsoft.v1.GetTermStoreResponse.newBuilder()
+                    .setStore(TermStoreMapper.toStore(session.graph().get(termStore(request.getSiteId()))))
+                    .build();
+        });
+    }
+
+    @Override
+    public void listTermGroups(ai.pipestream.microsoft.v1.ListTermGroupsRequest request,
+            StreamObserver<ai.pipestream.microsoft.v1.ListTermGroupsResponse> observer) {
+        stream(observer, () -> {
+            MicrosoftSessions.Session session = sessions.resolve(request.getConnectionId());
+            session.pager().forEach(List.of(termStore(request.getSiteId()) + "/groups"), Map.of(), node -> {
+                observer.onNext(ai.pipestream.microsoft.v1.ListTermGroupsResponse.newBuilder()
+                        .setGroup(TermStoreMapper.toGroup(node)).build());
+                return true;
+            });
+        });
+    }
+
+    @Override
+    public void listTermSets(ai.pipestream.microsoft.v1.ListTermSetsRequest request,
+            StreamObserver<ai.pipestream.microsoft.v1.ListTermSetsResponse> observer) {
+        stream(observer, () -> {
+            MicrosoftSessions.Session session = sessions.resolve(request.getConnectionId());
+            String path = termStore(request.getSiteId()) + "/groups/"
+                    + GraphPaths.segment(request.getGroupId(), "group_id") + "/sets";
+            session.pager().forEach(List.of(path), Map.of(), node -> {
+                observer.onNext(ai.pipestream.microsoft.v1.ListTermSetsResponse.newBuilder()
+                        .setSet(TermStoreMapper.toSet(node, request.getGroupId())).build());
+                return true;
+            });
+        });
+    }
+
+    @Override
+    public void listTerms(ai.pipestream.microsoft.v1.ListTermsRequest request,
+            StreamObserver<ai.pipestream.microsoft.v1.ListTermsResponse> observer) {
+        stream(observer, () -> {
+            MicrosoftSessions.Session session = sessions.resolve(request.getConnectionId());
+            String set = termStore(request.getSiteId()) + "/sets/"
+                    + GraphPaths.segment(request.getSetId(), "set_id");
+            String path = request.getParentTermId().isBlank() ? set + "/children"
+                    : set + "/terms/" + GraphPaths.segment(request.getParentTermId(), "parent_term_id")
+                            + "/children";
+            session.pager().forEach(List.of(path), Map.of(), node -> {
+                observer.onNext(ai.pipestream.microsoft.v1.ListTermsResponse.newBuilder()
+                        .setTerm(TermStoreMapper.toTerm(node, request.getSetId(),
+                                request.getParentTermId())).build());
+                return true;
+            });
+        });
+    }
+
     @Override
     public void listSiteGroups(ListSiteGroupsRequest request,
             StreamObserver<ListSiteGroupsResponse> observer) {
@@ -935,6 +1013,28 @@ public final class MicrosoftGrpcService
         });
     }
 
+    @Override
+    public void setSiteRoleInheritance(SetSiteRoleInheritanceRequest request,
+            StreamObserver<SetSiteRoleInheritanceResponse> observer) {
+        unary(observer, () -> {
+            MicrosoftSessions.Session session = sessions.resolve(request.getConnectionId());
+            SiteSecurable securable = request.getSecurable();
+            if (securable.getSecurableCase() == SiteSecurable.SecurableCase.SITE_ID) {
+                throw new IllegalArgumentException("a site's role inheritance cannot be changed here");
+            }
+            SharePointRest.Web web = sharePoint.web(session, SharePointRest.siteId(securable));
+            String path = SharePointRest.path(securable);
+            web.post(path + (request.getInherit() ? "/resetroleinheritance"
+                    : "/breakroleinheritance(copyRoleAssignments=" + request.getCopyRoleAssignments()
+                            + ",clearSubscopes=" + request.getClearSubscopes() + ")"),
+                    com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode());
+            return SetSiteRoleInheritanceResponse.newBuilder()
+                    .setHasUniqueRoleAssignments(web.get(path + "?$select=HasUniqueRoleAssignments")
+                            .path("HasUniqueRoleAssignments").asBoolean(false))
+                    .build();
+        });
+    }
+
     // ------------------------------------------------------------ sync
 
     @Override
@@ -952,7 +1052,8 @@ public final class MicrosoftGrpcService
                     request.getIncludeContent(), inlineLimit(request.getMaxInlineBytes()),
                     flags.listColumns(), flags.permissions(), flags.retentionLabel(), flags.publication(),
                     request.getIncludeLists(), listInclude.getDriveItem(), listInclude.getPermissions(),
-                    request.getDeltaPreferences(), request.getIncludeSystem(), since);
+                    request.getDeltaPreferences(), request.getIncludeSystem(),
+                    request.getIncludeSecurity(), since);
             DeltaHeaders.prefer(options.preferences());
             Object lock = new Object();
             MicrosoftChangeSink observerSink = new MicrosoftChangeSink() {
@@ -974,8 +1075,8 @@ public final class MicrosoftGrpcService
                     : new CompositeMicrosoftChangeSink(List.of(observerSink,
                             downstream.forConnection(session.connectionId())));
             MicrosoftCrawler.Result result = new MicrosoftCrawler(session.config(), session.files(), sink,
-                    options).crawl();
-            sink.completeRun(result.runId(), result.fullSweep());
+                    options, siteId -> sharePoint.web(session, siteId)).crawl();
+            sink.completeRun(result.runId(), result.complete());
             synchronized (lock) {
                 observer.onNext(SyncResponse.newBuilder()
                         .setResumeCursor(SyncCursors.encode(result.cursor())).build());
@@ -1176,7 +1277,9 @@ public final class MicrosoftGrpcService
                     outcome.setState(EnsureState.ENSURE_STATE_WOULD_CREATE);
                 } else {
                     try {
-                        JsonNode created = session.graph().post(route, bodies.get(spec.getName()));
+                        JsonNode created = ColumnSpecs.needsSharePoint(spec)
+                                ? createThroughSharePoint(session, siteId, listId, route, spec)
+                                : session.graph().post(route, bodies.get(spec.getName()));
                         outcome.setActual(valid(mapper.toColumn(created, siteId, listId, "")))
                                 .setState(EnsureState.ENSURE_STATE_CREATED);
                     } catch (GraphClient.GraphApiException e) {
@@ -1188,6 +1291,39 @@ public final class MicrosoftGrpcService
             }
             return response.build();
         });
+    }
+
+    /** Creates a column with SharePoint's own API and reads it back from Graph. */
+    private JsonNode createThroughSharePoint(MicrosoftSessions.Session session, String siteId,
+            String listId, String route, ColumnSpec spec) throws IOException, InterruptedException {
+        SharePointRest.Web web = sharePoint.web(session, siteId);
+        String create = SharePointRest.fields(listId) + "/CreateFieldAsXml";
+        String termStoreId = spec.getTermStoreId();
+        String noteColumnId = "";
+        if (ColumnSpecs.isTerm(spec)) {
+            if (termStoreId.isBlank()) {
+                termStoreId = web.get(SharePointRest.KEYWORDS_TERM_STORE).path("SspId").asText("");
+            }
+            if (termStoreId.isBlank()) {
+                throw Status.FAILED_PRECONDITION.withDescription("the site names no term store for "
+                        + "column " + spec.getName() + "; set term_store_id").asRuntimeException();
+            }
+            noteColumnId = web.post(create, ColumnSpecs.toSharePointTermNote(spec))
+                    .path("Id").asText("");
+        }
+        web.post(create, ColumnSpecs.toSharePoint(spec, termStoreId, noteColumnId));
+        JsonNode[] created = new JsonNode[1];
+        session.pager().forEach(List.of(route), Map.of(), node -> {
+            if (node.path("name").asText("").equals(spec.getName())) {
+                created[0] = node;
+            }
+            return created[0] == null;
+        });
+        if (created[0] == null) {
+            throw Status.INTERNAL.withDescription("SharePoint created column " + spec.getName()
+                    + " but Graph does not list it").asRuntimeException();
+        }
+        return created[0];
     }
 
     @Override

@@ -174,6 +174,9 @@ public final class MicrosoftValidator {
                 case LIST -> entity.getList();
                 case LIST_ITEM -> entity.getListItem();
                 case PERMISSION -> entity.getPermission();
+                case SITE_GROUP -> entity.getSiteGroup();
+                case SITE_ACL -> entity.getSiteAcl();
+                case SITE_ADMINS -> entity.getSiteAdmins();
                 case ENTITY_NOT_SET -> entity;
             };
             visit(child(prefix, entity.getEntityCase().name().toLowerCase()), nested, out);

@@ -292,6 +292,24 @@ class MicrosoftRpcSurfaceTest {
     }
 
     @Test
+    void groupOwnersKeepEachOwnersKind() {
+        fake.stub("/groups/g1/owners", """
+                {"value":[{"@odata.type":"#microsoft.graph.user","id":"u1","displayName":"Ada"},
+                  {"@odata.type":"#microsoft.graph.servicePrincipal","id":"sp1","displayName":"App"}]}""");
+
+        List<DirectoryMember> owners = drain(appStub.listGroupOwners(
+                ai.pipestream.microsoft.v1.ListGroupOwnersRequest.newBuilder().setGroupId("g1").build()))
+                .stream().map(r -> r.getOwner()).toList();
+
+        assertThat(owners).hasSize(2);
+        assertThat(owners.get(0).getUser().getId()).isEqualTo("u1");
+        assertThat(owners.get(1).getOther().getType()).isEqualTo("servicePrincipal");
+        assertThat(code(() -> drain(appStub.listGroupOwners(
+                ai.pipestream.microsoft.v1.ListGroupOwnersRequest.getDefaultInstance()))))
+                .isEqualTo(Status.Code.INVALID_ARGUMENT);
+    }
+
+    @Test
     void transitiveMembershipKeepsEachMembersKind() {
         fake.stub("/groups/g1/transitiveMembers", """
                 {"value":[{"@odata.type":"#microsoft.graph.user","id":"u1","displayName":"Ada"},

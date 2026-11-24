@@ -24,6 +24,12 @@ final class RecordingScrubber {
     static final String EMAIL_DOMAIN = "example.invalid";
     /** Start of every placeholder URL. */
     static final String URL_PREFIX = "https://redacted.example/url/";
+    /** A reserved documentation origin; URLs on it are kept. */
+    static final String DOCUMENTATION_ORIGIN = "https://example.com";
+    /** Origin of the XML schema namespaces, which name a standard and no tenant. */
+    static final String XML_SCHEMA_ORIGIN = "http://www.w3.org";
+    /** A percent-encoded {@code @}. */
+    static final String ENCODED_AT = "%40";
 
     /** Start of a site permission id that encodes the application and tenant it was granted to. */
     static final String ENCODED_GRANTEE = "aTowaS50fG1zLnNwLmV4dH";
@@ -63,6 +69,16 @@ final class RecordingScrubber {
         this.graphOrigin = origin(graphBaseUrl);
     }
 
+    /** Placeholder of the address named with {@link #joinProof}. */
+    static final String JOIN_PROOF = "join-proof@" + EMAIL_DOMAIN;
+
+    /** Names the one address that always gets {@link #JOIN_PROOF}, in any case. */
+    synchronized void joinProof(String email) {
+        if (email != null && !email.isBlank()) {
+            placeholders.put("email\n" + email.strip().toLowerCase(Locale.ROOT), JOIN_PROOF);
+        }
+    }
+
     /** Scrubs every string value of a JSON tree; keys stay. */
     synchronized JsonNode json(JsonNode node) {
         return json(node, "");
@@ -82,6 +98,10 @@ final class RecordingScrubber {
                 } else if (principal && value.isTextual() && (PRINCIPAL_NAMES.contains(entry.getKey())
                         || (entry.getKey().equals("LoginName") && value.asText().indexOf('|') < 0))) {
                     out.put(entry.getKey(), name("principal", value.asText(), "Principal %d"));
+                } else if (value.isTextual() && (node.has(entry.getKey() + "LookupId")
+                        || (entry.getKey().equals("LookupValue") && node.has("LookupId")))) {
+                    // The shown value of a lookup or person column can be a person's name.
+                    out.put(entry.getKey(), name("lookup", value.asText(), "Lookup value %d"));
                 } else if (entry.getKey().equals("NameId") && value.isTextual()) {
                     out.put(entry.getKey(), name("nameid", value.asText(), "nameid-%04d"));
                 } else if (entry.getKey().equals("displayName") && value.isTextual()
@@ -156,7 +176,14 @@ final class RecordingScrubber {
                 String value = guidless.substring(i, url);
                 String origin = origin(value);
                 int api = apiStart(value);
-                if (origin.equalsIgnoreCase(graphOrigin)) {
+                if (origin.equalsIgnoreCase(XML_SCHEMA_ORIGIN)) {
+                    out.append(value);
+                    i = url;
+                } else if (origin.equalsIgnoreCase(DOCUMENTATION_ORIGIN)) {
+                    // A reserved documentation address, which the tests write themselves.
+                    out.append(origin);
+                    i += origin.length();
+                } else if (origin.equalsIgnoreCase(graphOrigin)) {
                     out.append(graphOrigin);
                     i += origin.length();
                 } else if (api > 0) {
@@ -207,9 +234,30 @@ final class RecordingScrubber {
                 i = end;
                 continue;
             }
-            if (boundary && wordChar(c)) {
-                int end = run(guidless, i, ch -> wordChar(ch) || ch == '@');
-                out.append(word(guidless.substring(i, end)));
+            if (c == '%' && !guidless.startsWith(ENCODED_AT, i) && i + 2 < guidless.length()
+                    && hex(guidless.charAt(i + 1)) && hex(guidless.charAt(i + 2))) {
+                // A percent-encoded character of a URL; the word after it starts fresh.
+                out.append(guidless, i, i + 3);
+                i += 3;
+                continue;
+            }
+            if ((boundary || escaped(guidless, i)) && wordChar(c)) {
+                int end = i;
+                while (end < guidless.length()) {
+                    char ch = guidless.charAt(end);
+                    if (wordChar(ch) || ch == '@') {
+                        end++;
+                    } else if (guidless.startsWith(ENCODED_AT, end)) {
+                        end += ENCODED_AT.length();
+                    } else {
+                        break;
+                    }
+                }
+                String word = guidless.substring(i, end);
+                // An address inside a URL has its '@' percent-encoded.
+                out.append(word.contains(ENCODED_AT) && emailLike(word.replace(ENCODED_AT, "@"))
+                        ? word(word.replace(ENCODED_AT, "@")).replace("@", ENCODED_AT)
+                        : word(word));
                 i = end;
                 continue;
             }
@@ -217,6 +265,12 @@ final class RecordingScrubber {
             i++;
         }
         return out.toString();
+    }
+
+    /** Whether the character at {@code at} follows a percent-encoded character. */
+    private static boolean escaped(String text, int at) {
+        return at >= 3 && text.charAt(at - 3) == '%' && hex(text.charAt(at - 2))
+                && hex(text.charAt(at - 1)) && !text.startsWith(ENCODED_AT, at - 3);
     }
 
     private String word(String word) {
@@ -367,6 +421,13 @@ final class RecordingScrubber {
      */
     static List<String> violations(String text) {
         List<String> found = new ArrayList<>();
+        if (text.contains(ENCODED_AT)) {
+            // Addresses inside URLs, with the '@' percent-encoded and an encoded character before.
+            if (violations(text.replace(ENCODED_AT, "@").replace('%', ' ')).stream()
+                    .anyMatch(finding -> finding.startsWith("email address"))) {
+                found.add("percent-encoded email address");
+            }
+        }
         String lower = text.toLowerCase(Locale.ROOT);
         for (String suffix : TENANT_HOSTS) {
             if (lower.contains(suffix.substring(1))) {

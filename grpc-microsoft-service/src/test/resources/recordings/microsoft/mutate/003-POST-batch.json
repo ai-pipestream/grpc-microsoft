@@ -39,31 +39,31 @@
           "status" : 204,
           "headers" : {
             "Cache-Control" : "no-store, no-cache",
-            "SPLogId" : "00000000-0000-4000-8000-000000000069"
+            "SPLogId" : "00000000-0000-4000-8000-000000000107"
           },
           "body" : null
         }, {
           "id" : "0",
           "status" : 201,
           "headers" : {
-            "Location" : "https://redacted.example/url/50",
+            "Location" : "https://redacted.example/url/77",
             "Cache-Control" : "no-store, no-cache",
-            "SPLogId" : "00000000-0000-4000-8000-000000000070",
-            "SPRequestDuration" : "187",
+            "SPLogId" : "00000000-0000-4000-8000-000000000108",
+            "SPRequestDuration" : "193",
             "OData-Version" : "4.0",
             "Content-Type" : "application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8",
-            "ETag" : "\"{00000000-0000-4000-8000-000000000071},1\""
+            "ETag" : "\"{00000000-0000-4000-8000-000000000109},1\""
           },
           "body" : {
             "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#drives('b%21drive-0001')/items('item-0001')/children/$entity",
-            "@odata.etag" : "\"{00000000-0000-4000-8000-000000000071},1\"",
-            "eTag" : "\"{00000000-0000-4000-8000-000000000071},1\"",
-            "lastModifiedDateTime" : "2026-11-22T16:51:19Z",
-            "createdDateTime" : "2026-11-22T16:51:19Z",
+            "@odata.etag" : "\"{00000000-0000-4000-8000-000000000109},1\"",
+            "eTag" : "\"{00000000-0000-4000-8000-000000000109},1\"",
+            "lastModifiedDateTime" : "2026-11-23T02:27:08Z",
+            "createdDateTime" : "2026-11-23T02:27:08Z",
             "id" : "item-0009",
             "name" : "batch-b",
             "size" : 0,
-            "webUrl" : "https://redacted.example/url/51",
+            "webUrl" : "https://redacted.example/url/78",
             "commentSettings" : {
               "commentingDisabled" : {
                 "isDisabled" : false
@@ -72,7 +72,7 @@
             "createdBy" : {
               "application" : {
                 "displayName" : "Identity 1",
-                "id" : "00000000-0000-4000-8000-000000000004"
+                "id" : "00000000-0000-4000-8000-000000000007"
               },
               "user" : {
                 "displayName" : "Identity 2"
@@ -81,7 +81,7 @@
             "lastModifiedBy" : {
               "application" : {
                 "displayName" : "Identity 1",
-                "id" : "00000000-0000-4000-8000-000000000004"
+                "id" : "00000000-0000-4000-8000-000000000007"
               },
               "user" : {
                 "displayName" : "Identity 2"
@@ -91,19 +91,19 @@
               "driveId" : "b!drive-0001",
               "driveType" : "documentLibrary",
               "id" : "item-0001",
-              "path" : "/drives/b!drive-0001/root:/pipestream-live-write-20261122-165044-79eec5c4",
+              "path" : "/drives/b!drive-0001/root:/pipestream-live-write-20261123-022631-a8adaf87",
               "sharepointIds" : {
-                "listId" : "00000000-0000-4000-8000-000000000005",
-                "listItemUniqueId" : "00000000-0000-4000-8000-000000000003",
+                "listId" : "00000000-0000-4000-8000-000000000008",
+                "listItemUniqueId" : "00000000-0000-4000-8000-000000000006",
                 "siteId" : "00000000-0000-4000-8000-000000000001",
                 "siteUrl" : "https://redacted.example/url/3",
-                "tenantId" : "00000000-0000-4000-8000-000000000007",
+                "tenantId" : "00000000-0000-4000-8000-000000000010",
                 "webId" : "00000000-0000-4000-8000-000000000002"
               }
             },
             "fileSystemInfo" : {
-              "createdDateTime" : "2026-11-22T16:51:19Z",
-              "lastModifiedDateTime" : "2026-11-22T16:51:19Z"
+              "createdDateTime" : "2026-11-23T02:27:08Z",
+              "lastModifiedDateTime" : "2026-11-23T02:27:08Z"
             },
             "folder" : {
               "childCount" : 0

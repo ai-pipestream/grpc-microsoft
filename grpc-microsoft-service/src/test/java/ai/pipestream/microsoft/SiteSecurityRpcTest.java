@@ -3,7 +3,14 @@ package ai.pipestream.microsoft;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import ai.pipestream.microsoft.v1.DriveItemInclude;
 import ai.pipestream.microsoft.v1.GetSiteRoleInheritanceRequest;
+import ai.pipestream.microsoft.v1.MicrosoftEntity;
+import ai.pipestream.microsoft.v1.SetSiteRoleInheritanceRequest;
+import ai.pipestream.microsoft.v1.SiteGroupMembers;
+import ai.pipestream.microsoft.v1.SyncRequest;
+import ai.pipestream.microsoft.v1.SyncResponse;
+import ai.pipestream.sync.v1.AclCompleteness;
 import ai.pipestream.microsoft.v1.ListItemRef;
 import ai.pipestream.microsoft.v1.ListRef;
 import ai.pipestream.microsoft.v1.ListSiteGroupMembersRequest;
@@ -127,6 +134,8 @@ class SiteSecurityRpcTest {
         assertThat(members.get(0).getSiteAdmin()).isTrue();
         assertThat(members).extracting(SitePrincipal::getDirectoryObjectId).containsExactly("",
                 "0f8fad5b-d9cb-469f-a165-70867728950e", "7c9e6679-7425-40de-944b-e07fc1f90ae7", "");
+        assertThat(members).extracting(SitePrincipal::getDirectoryGroupOwners)
+                .containsExactly(false, false, true, false);
         assertInvalid(() -> drain(stub.listSiteGroupMembers(
                 ListSiteGroupMembersRequest.newBuilder().setSiteId("s1").build())));
     }
@@ -210,6 +219,129 @@ class SiteSecurityRpcTest {
                     assertThat(e.getStatus().getDescription()).contains("MICROSOFT_CLIENT_CERT_PEM");
                 });
         assertThat(fake.requestsTo(WEB + "/web/sitegroups")).isEmpty();
+    }
+
+    @Test
+    void roleInheritanceIsBrokenAndRestoredOnAListItemOnly() {
+        String item = WEB + "/web/lists(guid'" + LIST_ID + "')/items(42)";
+        fake.stub("POST", item + "/breakroleinheritance(copyRoleAssignments=true,clearSubscopes=false)",
+                FakeGraphServer.json(200, "{}", Map.of()));
+        fake.stub("POST", item + "/resetroleinheritance", FakeGraphServer.json(200, "{}", Map.of()));
+        SiteSecurable securable = SiteSecurable.newBuilder().setListItem(ListItemRef.newBuilder()
+                .setSiteId("s1").setListId(LIST_ID).setItemId("42")).build();
+
+        fake.stub(item, "{\"HasUniqueRoleAssignments\":true}");
+        assertThat(stub.setSiteRoleInheritance(SetSiteRoleInheritanceRequest.newBuilder()
+                .setSecurable(securable).setCopyRoleAssignments(true).build())
+                .getHasUniqueRoleAssignments()).isTrue();
+        fake.stub(item, "{\"HasUniqueRoleAssignments\":false}");
+        assertThat(stub.setSiteRoleInheritance(SetSiteRoleInheritanceRequest.newBuilder()
+                .setSecurable(securable).setInherit(true).build()).getHasUniqueRoleAssignments()).isFalse();
+
+        assertThat(fake.requestsTo(item
+                + "/breakroleinheritance(copyRoleAssignments=true,clearSubscopes=false)")).hasSize(1);
+        assertThat(fake.requestsTo(item + "/resetroleinheritance")).hasSize(1);
+        assertInvalid(() -> stub.setSiteRoleInheritance(SetSiteRoleInheritanceRequest.newBuilder()
+                .setSecurable(SiteSecurable.newBuilder().setSiteId("s1")).build()));
+    }
+
+    @Test
+    void aSecuritySyncEmitsGroupsAclsAndTheOwnerOfEveryItem() {
+        String list = WEB + "/web/lists(guid'" + LIST_ID + "')";
+        fake.stub(WEB + "/web/sitegroups", """
+                {"value":[{"Id":5,"LoginName":"Team Owners","Title":"Team Owners","PrincipalType":8}]}""");
+        fake.stub(WEB + "/web/sitegroups/getbyid(5)/users", """
+                {"value":[{"Id":12,"LoginName":"c:0t.c|tenant|0f8fad5b-d9cb-469f-a165-70867728950e",
+                  "Title":"Engineers","PrincipalType":4}]}""");
+        fake.stub(WEB + "/web/roleassignments", """
+                {"value":[{"PrincipalId":5,"Member":{"Id":5,"LoginName":"Team Owners","Title":"Team Owners",
+                  "PrincipalType":8},"RoleDefinitionBindings":[{"Id":1073741829,"Name":"Full Control",
+                  "RoleTypeKind":5}]}]}""");
+        fake.stub(WEB + "/web/siteusers", """
+                {"value":[{"Id":3,"LoginName":"i:0#.f|membership|root@contoso.com","Title":"Root",
+                  "PrincipalType":1,"IsSiteAdmin":true}]}""");
+        fake.stub("/sites/s1/drives", """
+                {"value":[{"id":"drive-1","name":"Docs","driveType":"documentLibrary",
+                  "sharePointIds":{"listId":"%s"}}]}""".formatted(LIST_ID));
+        fake.stub(list, "{\"HasUniqueRoleAssignments\":false}");
+        fake.stub(list + "/items", """
+                {"value":[
+                 {"Id":1,"HasUniqueRoleAssignments":true,"FileRef":"/sites/Team/Docs/Secret",
+                  "FileDirRef":"/sites/Team/Docs"},
+                 {"Id":2,"HasUniqueRoleAssignments":false,"FileRef":"/sites/Team/Docs/Secret/in/a.txt",
+                  "FileDirRef":"/sites/Team/Docs/Secret/in"},
+                 {"Id":3,"HasUniqueRoleAssignments":false,"FileRef":"/sites/Team/Docs/open.txt",
+                  "FileDirRef":"/sites/Team/Docs"}]}""");
+        fake.stub(list + "/items(1)/roleassignments", """
+                {"value":[{"PrincipalId":11,"Member":{"Id":11,"LoginName":"i:0#.f|membership|ada@contoso.com",
+                  "Title":"Ada","PrincipalType":1,"Email":"ada@contoso.com"},
+                  "RoleDefinitionBindings":[{"Id":1073741826,"Name":"Read","RoleTypeKind":2}]}]}""");
+        fake.stub("/drives/drive-1/root/delta", MicrosoftFixtures.deltaJson(
+                fake.baseUrl() + "/drives/drive-1/root/delta?token=d1",
+                MicrosoftFixtures.rootJson("drive-1"), driveItem("folder-1", "1", true),
+                driveItem("file-1", "2", false), driveItem("file-2", "3", false)));
+
+        List<MicrosoftEntity> entities = drain(stub.sync(SyncRequest.newBuilder().addSiteIds("s1")
+                .setInclude(DriveItemInclude.getDefaultInstance()).setIncludeSecurity(true).build()))
+                .stream().filter(SyncResponse::hasChange).map(r -> r.getChange().getEntity()).toList();
+
+        String siteAcl = "site_acl/site/s1";
+        String folderAcl = "site_acl/list_item/s1/" + LIST_ID + "/1";
+        assertThat(entities).extracting(MicrosoftEntity::getEntityId).containsExactly("s1",
+                "site_group/s1/5", "site_admins/s1", siteAcl, folderAcl, "drive-1", "root", "folder-1",
+                "file-1", "file-2");
+        assertThat(entities.get(2).getSiteAdmins().getCompleteness())
+                .isEqualTo(AclCompleteness.ACL_COMPLETENESS_COMPLETE);
+        assertThat(entities.get(2).getSiteAdmins().getAdminsList()).extracting(SitePrincipal::getUserPrincipalName)
+                .containsExactly("root@contoso.com");
+        SiteGroupMembers group = entities.get(1).getSiteGroup();
+        assertThat(group.getCompleteness()).isEqualTo(AclCompleteness.ACL_COMPLETENESS_COMPLETE);
+        assertThat(group.getMembersList()).extracting(SitePrincipal::getDirectoryObjectId)
+                .containsExactly("0f8fad5b-d9cb-469f-a165-70867728950e");
+        assertThat(entities.get(3).getSiteAcl().getCompleteness())
+                .isEqualTo(AclCompleteness.ACL_COMPLETENESS_COMPLETE);
+        assertThat(entities.get(3).getSiteAcl().getAssignments(0).getRoles(0).getName())
+                .isEqualTo("Full Control");
+        SitePrincipal reader = entities.get(4).getSiteAcl().getAssignments(0).getMember();
+        assertThat(reader.getUserPrincipalName()).isEqualTo("ada@contoso.com");
+        assertThat(reader.getEmail()).isEqualTo("ada@contoso.com");
+        assertThat(entities.get(5).getDrive().getAclOwnerId()).isEqualTo(siteAcl);
+        assertThat(entities.subList(6, 10)).extracting(e -> e.getDriveItem().getAclOwnerId())
+                .containsExactly(siteAcl, folderAcl, folderAcl, siteAcl);
+    }
+
+    @Test
+    void aListWhoseSecurityIsRefusedIsMarkedUnavailable() {
+        String list = WEB + "/web/lists(guid'" + LIST_ID + "')";
+        fake.stub(WEB + "/web/sitegroups", "{\"value\":[]}");
+        fake.stub(WEB + "/web/roleassignments", "{\"value\":[]}");
+        fake.stub("/sites/s1/drives", """
+                {"value":[{"id":"drive-1","name":"Docs","driveType":"documentLibrary",
+                  "sharePointIds":{"listId":"%s"}}]}""".formatted(LIST_ID));
+        fake.stub(list, "{\"HasUniqueRoleAssignments\":false}");
+        fake.stub(list + "/items", FakeGraphServer.json(403, """
+                {"odata.error":{"code":"-2147024891, System.UnauthorizedAccessException",
+                  "message":{"lang":"en-US","value":"Access denied."}}}""", Map.of()));
+        fake.stub("/drives/drive-1/root/delta", MicrosoftFixtures.deltaJson(
+                fake.baseUrl() + "/drives/drive-1/root/delta?token=d1", driveItem("file-1", "2", false)));
+
+        List<MicrosoftEntity> entities = drain(stub.sync(SyncRequest.newBuilder().addSiteIds("s1")
+                .setInclude(DriveItemInclude.getDefaultInstance()).setIncludeSecurity(true).build()))
+                .stream().filter(SyncResponse::hasChange).map(r -> r.getChange().getEntity()).toList();
+
+        String listAcl = "site_acl/list/s1/" + LIST_ID;
+        MicrosoftEntity acl = entities.stream().filter(e -> e.getEntityId().equals(listAcl)).findFirst()
+                .orElseThrow();
+        assertThat(acl.getSiteAcl().getCompleteness()).isEqualTo(AclCompleteness.ACL_COMPLETENESS_UNAVAILABLE);
+        assertThat(acl.getSiteAcl().getAssignmentsList()).isEmpty();
+        assertThat(entities.getLast().getDriveItem().getAclOwnerId()).isEqualTo(listAcl);
+    }
+
+    private static String driveItem(String id, String listItemId, boolean folder) {
+        return """
+                {"id":"%s","name":"%s",%s,"parentReference":{"driveId":"drive-1","id":"root"},
+                 "sharepointIds":{"listId":"%s","listItemId":"%s"}}"""
+                .formatted(id, id, folder ? "\"folder\":{\"childCount\":1}" : "\"file\":{}", LIST_ID, listItemId);
     }
 
     private static void assertInvalid(org.assertj.core.api.ThrowableAssert.ThrowingCallable call) {

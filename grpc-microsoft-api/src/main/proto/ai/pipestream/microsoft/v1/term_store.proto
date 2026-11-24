@@ -1,0 +1,100 @@
+syntax = "proto3";
+
+package ai.pipestream.microsoft.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option java_multiple_files = true;
+option java_package = "ai.pipestream.microsoft.v1";
+option java_outer_classname = "TermStoreProto";
+
+// ============================================================================
+// TERM STORE - the managed-metadata taxonomy a site draws its term columns
+// from: one store, its groups, their term sets and the terms in each set.
+// ============================================================================
+
+// A name in one language.
+message LocalizedName {
+  // Language tag, e.g. "en-US".
+  string language_tag = 1;
+  // The name in that language.
+  string name = 2;
+}
+
+// A label of a term in one language.
+message TermLabel {
+  // Language tag, e.g. "en-US".
+  string language_tag = 1;
+  // The label.
+  string name = 2;
+  // True for the default label of that language; false for a synonym.
+  bool is_default = 3;
+}
+
+// The term store of a site.
+message TermStore {
+  // Term store id (GUID).
+  string id = 1;
+  // Default language tag of the store.
+  string default_language_tag = 2;
+  // Every language tag the store works in.
+  repeated string language_tags = 3;
+}
+
+// Who a term group belongs to.
+enum TermGroupScope {
+  // Unknown or not reported.
+  TERM_GROUP_SCOPE_UNSPECIFIED = 0;
+  // Shared by the whole tenant.
+  TERM_GROUP_SCOPE_GLOBAL = 1;
+  // A system group.
+  TERM_GROUP_SCOPE_SYSTEM = 2;
+  // Local to one site collection.
+  TERM_GROUP_SCOPE_SITE_COLLECTION = 3;
+}
+
+// A group of term sets.
+message TermGroup {
+  // Group id (GUID).
+  string id = 1;
+  // Display name.
+  string display_name = 2;
+  // Description.
+  string description = 3;
+  // Who the group belongs to.
+  TermGroupScope scope = 4;
+  // When the group was created.
+  google.protobuf.Timestamp created_at = 5;
+}
+
+// A term set.
+message TermSet {
+  // Term set id (GUID).
+  string id = 1;
+  // Id of the group the set is in.
+  string group_id = 2;
+  // The set's name in each language.
+  repeated LocalizedName localized_names = 3;
+  // Description.
+  string description = 4;
+  // When the set was created.
+  google.protobuf.Timestamp created_at = 5;
+}
+
+// A term.
+message Term {
+  // Term id (GUID).
+  string id = 1;
+  // Id of the term set the term was listed from.
+  string set_id = 2;
+  // Id of the parent term; empty for a term at the root of the set.
+  string parent_term_id = 3;
+  // The term's labels.
+  repeated TermLabel labels = 4;
+  // The term's description in each language.
+  repeated LocalizedName descriptions = 5;
+  // When the term was created.
+  google.protobuf.Timestamp created_at = 6;
+  // When the term was last modified.
+  google.protobuf.Timestamp last_modified_at = 7;
+}

@@ -8,7 +8,7 @@
       "content-type" : "application/octet-stream"
     },
     "body" : {
-      "sha256" : "9a2754adcd81626da437a318a2bd3d9c8928260404653e03434105bd38e9d672",
+      "sha256" : "4a635af351a0699cdad39e240af5fe918aaa1d9e66d353f6d24680e1259e973c",
       "length" : 1311497
     }
   },
@@ -24,49 +24,49 @@
         "@content.downloadUrlNoAuth" : "https://redacted.example/url/16",
         "createdBy" : {
           "application" : {
-            "id" : "00000000-0000-4000-8000-000000000004",
+            "id" : "00000000-0000-4000-8000-000000000007",
             "displayName" : "Identity 1"
           },
           "user" : {
             "displayName" : "Identity 2"
           }
         },
-        "createdDateTime" : "2026-11-22T16:50:53Z",
-        "eTag" : "\"{00000000-0000-4000-8000-000000000012},2\"",
+        "createdDateTime" : "2026-11-23T02:26:37Z",
+        "eTag" : "\"{00000000-0000-4000-8000-000000000015},2\"",
         "id" : "item-0005",
         "lastModifiedBy" : {
           "application" : {
-            "id" : "00000000-0000-4000-8000-000000000004",
+            "id" : "00000000-0000-4000-8000-000000000007",
             "displayName" : "Identity 1"
           },
           "user" : {
             "displayName" : "Identity 2"
           }
         },
-        "lastModifiedDateTime" : "2026-11-22T16:50:56Z",
+        "lastModifiedDateTime" : "2026-11-23T02:26:38Z",
         "name" : "resumed.bin",
         "parentReference" : {
           "driveType" : "documentLibrary",
           "driveId" : "b!drive-0001",
           "id" : "item-0001",
-          "name" : "pipestream-live-write-20261122-165044-79eec5c4",
-          "path" : "/drives/b!drive-0001/root:/pipestream-live-write-20261122-165044-79eec5c4",
+          "name" : "pipestream-live-write-20261123-022631-a8adaf87",
+          "path" : "/drives/b!drive-0001/root:/pipestream-live-write-20261123-022631-a8adaf87",
           "siteId" : "00000000-0000-4000-8000-000000000001"
         },
         "webUrl" : "https://redacted.example/url/17",
-        "cTag" : "\"c:{00000000-0000-4000-8000-000000000012},2\"",
+        "cTag" : "\"c:{00000000-0000-4000-8000-000000000015},2\"",
         "file" : {
           "fileExtension" : ".bin",
           "hashes" : {
-            "quickXorHash" : "ONJGDGtBgpmD/jrDhigbgXTj4kY="
+            "quickXorHash" : "H4OMzuYHpJ1BVb2YcyP0ogWeahA="
           },
           "irmEffectivelyEnabled" : false,
           "irmEnabled" : false,
           "mimeType" : "application/octet-stream"
         },
         "fileSystemInfo" : {
-          "createdDateTime" : "2026-11-22T16:50:53Z",
-          "lastModifiedDateTime" : "2026-11-22T16:50:56Z"
+          "createdDateTime" : "2026-11-23T02:26:37Z",
+          "lastModifiedDateTime" : "2026-11-23T02:26:38Z"
         },
         "isAuthoritative" : false,
         "shared" : {

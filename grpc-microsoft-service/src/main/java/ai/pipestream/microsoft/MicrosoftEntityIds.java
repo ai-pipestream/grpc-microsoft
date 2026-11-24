@@ -26,6 +26,45 @@ public final class MicrosoftEntityIds {
     }
 
     /**
+     * The entity id of a SharePoint group with its members.
+     *
+     * @param siteId the site id
+     * @param groupId the group's id within the site collection
+     * @return {@code site_group/{site}/{group}}
+     */
+    public static String siteGroup(String siteId, int groupId) {
+        return "site_group/" + siteId + "/" + groupId;
+    }
+
+    /**
+     * The entity id of the site collection administrators of a site.
+     *
+     * @param siteId the site id
+     * @return {@code site_admins/{site}}
+     */
+    public static String siteAdmins(String siteId) {
+        return "site_admins/" + siteId;
+    }
+
+    /**
+     * The entity id of the role assignments of a securable.
+     *
+     * @param securable the site, list or list item
+     * @return {@code site_acl/site/{site}}, {@code site_acl/list/{site}/{list}} or
+     *         {@code site_acl/list_item/{site}/{list}/{item}}
+     */
+    public static String siteAcl(ai.pipestream.microsoft.v1.SiteSecurable securable) {
+        return switch (securable.getSecurableCase()) {
+            case SITE_ID -> "site_acl/site/" + securable.getSiteId();
+            case LIST -> "site_acl/list/" + securable.getList().getSiteId() + "/"
+                    + securable.getList().getListId();
+            case LIST_ITEM -> "site_acl/list_item/" + securable.getListItem().getSiteId() + "/"
+                    + securable.getListItem().getListId() + "/" + securable.getListItem().getItemId();
+            case SECURABLE_NOT_SET -> throw new IllegalArgumentException("securable is required");
+        };
+    }
+
+    /**
      * The entity id of a permission.
      *
      * @param permission the permission (with {@code target} set)

@@ -41,9 +41,9 @@ final class MutateHandler implements StreamObserver<MutateRequest> {
     private record Planned<R>(MutateRequest request, MicrosoftSessions.Session session,
             WritePlans.Plan<R> plan, BiConsumer<MutateResponse.Builder, R> setter) {
 
-        MutateResponse answer(GraphClient.Reply reply) {
+        MutateResponse answer(GraphClient.Reply reply) throws IOException, InterruptedException {
             MutateResponse.Builder answer = MutateResponse.newBuilder().setOpId(request.getOpId());
-            setter.accept(answer, plan.mapper().map(reply));
+            setter.accept(answer, plan.finish(reply));
             return answer.build();
         }
     }
@@ -209,6 +209,8 @@ final class MutateHandler implements StreamObserver<MutateRequest> {
                 if (e.getStatus().getCode() == io.grpc.Status.Code.CANCELLED) {
                     throw e;
                 }
+                refuse(op.request(), GraphErrors.toWriteError(e));
+            } catch (IOException e) {
                 refuse(op.request(), GraphErrors.toWriteError(e));
             }
         }

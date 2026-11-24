@@ -265,6 +265,9 @@ message ColumnSpec {
   bool required = 15;
   // DATE_TIME: how values are shown.
   DateTimeColumnFormat date_time_format = 16;
+  // TERM and MULTITERM: the term store that holds the set; empty = the store
+  // the site's Enterprise Keywords column uses.
+  string term_store_id = 17;
 }
 
 // How an ensure rpc left a column or list.

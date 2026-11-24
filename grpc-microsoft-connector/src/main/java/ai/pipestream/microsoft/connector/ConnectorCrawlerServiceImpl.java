@@ -21,9 +21,22 @@ import java.util.Optional;
 
 /**
  * GCA crawl streams: one {@code MicrosoftService.Sync} pass, mapped onto
- * {@link CrawlItem} / {@link IncrementalCrawlItem}. Checkpoint
- * {@code customMarkerData} is the last emitted item id, then the Sync
- * resume cursor.
+ * {@link CrawlItem} / {@link IncrementalCrawlItem}.
+ *
+ * <p>Checkpoint {@code customMarkerData} is only ever a Sync resume cursor
+ * (or empty): every checkpoint written while a pass runs repeats the cursor
+ * the request carried, and the last bit carries the cursor the pass ended
+ * with. So a crawl resumed from any checkpoint has a cursor Sync issued.
+ *
+ * <p>An incremental crawl hands the stored cursor back as
+ * {@code SyncRequest.since_cursor}, which makes the pass a delta pass:
+ * only changes since that cursor, deletes included. With no stored cursor
+ * it is a full enumeration, which carries no deletes. A full crawl never
+ * sends a cursor; the platform works out its deletes from what the crawl
+ * did not return.
+ *
+ * <p>A Sync stream that ends without its terminal resume cursor was cut
+ * short, so the crawl ends with an error status and no new checkpoint.
  */
 public final class ConnectorCrawlerServiceImpl
         extends ConnectorCrawlerServiceGrpc.ConnectorCrawlerServiceImplBase {
@@ -34,6 +47,9 @@ public final class ConnectorCrawlerServiceImpl
 
     private static final System.Logger LOG =
             System.getLogger(ConnectorCrawlerServiceImpl.class.getName());
+
+    /** Why a pass whose stream had no terminal cursor fails. */
+    static final String NO_RESUME_CURSOR = "Sync ended without its resume cursor";
 
     @Override
     public void getCrawlStream(GetCrawlStreamRequest request,
@@ -53,9 +69,10 @@ public final class ConnectorCrawlerServiceImpl
         try {
             MicrosoftServiceGrpc.MicrosoftServiceBlockingStub stub =
                     MicrosoftServiceClients.stub(channel);
-            Iterator<SyncResponse> sync = stub.sync(syncRequest(config));
+            String stored = request.getCrawlProgressMarker().getCustomMarkerData();
+            Iterator<SyncResponse> sync = stub.sync(syncRequest(config, ""));
             int emitted = 0;
-            String marker = request.getCrawlProgressMarker().getCustomMarkerData();
+            String next = "";
             while (sync.hasNext()) {
                 SyncResponse event = sync.next();
                 if (event.getEventCase() == SyncResponse.EventCase.CHANGE) {
@@ -64,19 +81,21 @@ public final class ConnectorCrawlerServiceImpl
                         continue;
                     }
                     emitted++;
-                    marker = item.get().getItemId();
                     observer.onNext(CrawlStreamBit.newBuilder()
                             .setStatus(OperationStatuses.success())
                             .setCrawlItem(item.get())
-                            .setCrawlProgressMarker(checkpoint(emitted, marker))
+                            .setCrawlProgressMarker(checkpoint(emitted, stored))
                             .build());
                 } else if (event.getEventCase() == SyncResponse.EventCase.RESUME_CURSOR) {
-                    marker = event.getResumeCursor();
+                    next = event.getResumeCursor();
                 }
+            }
+            if (next.isEmpty()) {
+                throw new IllegalStateException(NO_RESUME_CURSOR);
             }
             observer.onNext(CrawlStreamBit.newBuilder()
                     .setStatus(OperationStatuses.success("emitted " + emitted))
-                    .setCrawlProgressMarker(checkpoint(emitted, marker))
+                    .setCrawlProgressMarker(checkpoint(emitted, next))
                     .build());
             observer.onCompleted();
         } catch (Throwable t) {
@@ -108,12 +127,10 @@ public final class ConnectorCrawlerServiceImpl
         try {
             MicrosoftServiceGrpc.MicrosoftServiceBlockingStub stub =
                     MicrosoftServiceClients.stub(channel);
-            Iterator<SyncResponse> sync = stub.sync(syncRequest(config));
+            String stored = request.getCrawlProgressMarker().getCustomMarkerData();
+            Iterator<SyncResponse> sync = stub.sync(syncRequest(config, stored));
             int emitted = 0;
-            String marker = request.getCrawlProgressMarker().getCustomMarkerData();
-            if (marker.isEmpty() && request.hasPreviousCrawlStartTimeInUtc()) {
-                marker = request.getPreviousCrawlStartTimeInUtc().toString();
-            }
+            String next = "";
             while (sync.hasNext()) {
                 SyncResponse event = sync.next();
                 if (event.getEventCase() == SyncResponse.EventCase.CHANGE) {
@@ -124,19 +141,21 @@ public final class ConnectorCrawlerServiceImpl
                         continue;
                     }
                     emitted++;
-                    marker = item.get().getItemId();
                     observer.onNext(IncrementalCrawlStreamBit.newBuilder()
                             .setStatus(OperationStatuses.success())
                             .setCrawlItem(item.get())
-                            .setCrawlProgressMarker(checkpoint(emitted, marker))
+                            .setCrawlProgressMarker(checkpoint(emitted, stored))
                             .build());
                 } else if (event.getEventCase() == SyncResponse.EventCase.RESUME_CURSOR) {
-                    marker = event.getResumeCursor();
+                    next = event.getResumeCursor();
                 }
+            }
+            if (next.isEmpty()) {
+                throw new IllegalStateException(NO_RESUME_CURSOR);
             }
             observer.onNext(IncrementalCrawlStreamBit.newBuilder()
                     .setStatus(OperationStatuses.success("emitted " + emitted))
-                    .setCrawlProgressMarker(checkpoint(emitted, marker))
+                    .setCrawlProgressMarker(checkpoint(emitted, next))
                     .build());
             observer.onCompleted();
         } catch (Throwable t) {
@@ -152,19 +171,22 @@ public final class ConnectorCrawlerServiceImpl
         }
     }
 
-    private static SyncRequest syncRequest(ConnectorCustomConfig config) {
+    /** One pass over the configured scope; an empty cursor asks for a full enumeration. */
+    private static SyncRequest syncRequest(ConnectorCustomConfig config, String sinceCursor) {
         return SyncRequest.newBuilder()
                 .addAllDriveIds(config.driveIds())
                 .setFolderPath(config.folderPath())
                 .setIncludeContent(config.includeContent())
+                .setSinceCursor(sinceCursor)
                 .build();
     }
 
-    private static CrawlCheckpoint checkpoint(int emitted, String marker) {
+    /** A checkpoint whose marker is a Sync resume cursor, or empty for none. */
+    private static CrawlCheckpoint checkpoint(int emitted, String resumeCursor) {
         return CrawlCheckpoint.newBuilder()
                 .setPagenumber(1)
                 .setBatchSize(emitted)
-                .setCustomMarkerData(marker == null ? "" : marker)
+                .setCustomMarkerData(resumeCursor)
                 .build();
     }
 }

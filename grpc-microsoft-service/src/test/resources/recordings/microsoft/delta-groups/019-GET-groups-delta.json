@@ -1,7 +1,7 @@
 {
   "request" : {
     "method" : "GET",
-    "url" : "https://graph.microsoft.com/v1.0/groups/delta?$skiptoken=cursor-0018",
+    "url" : "https://graph.microsoft.com/v1.0/groups/delta?$deltatoken=cursor-0018",
     "authorized" : true,
     "headers" : { }
   },

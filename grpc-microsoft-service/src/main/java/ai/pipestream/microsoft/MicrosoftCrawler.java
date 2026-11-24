@@ -11,6 +11,8 @@ import ai.pipestream.microsoft.v1.MicrosoftEntity;
 import ai.pipestream.microsoft.v1.MicrosoftSnapshot;
 import ai.pipestream.microsoft.v1.SharePointList;
 import ai.pipestream.microsoft.v1.Site;
+import ai.pipestream.microsoft.v1.SiteAcl;
+import ai.pipestream.microsoft.v1.SiteGroupMembers;
 import ai.pipestream.microsoft.v1.SyncCursor;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.protobuf.ByteString;
@@ -24,6 +26,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.UUID;
 
@@ -65,13 +68,14 @@ public final class MicrosoftCrawler {
      * @param listItemPermissions fetch each list item's permissions
      * @param preferences Graph {@code Prefer} preferences for drive sweeps
      * @param includeSystem also sweep system drives and hidden / system lists
+     * @param security read the SharePoint security of the sites in scope
      * @param since the previous pass's cursor; empty = full enumeration
      */
     public record Options(List<String> driveIds, List<String> siteIds, String folderPath,
             boolean includeContent, long maxInlineBytes, boolean listColumns, boolean permissions,
             boolean retentionLabel, boolean publication, boolean includeLists,
             boolean listItemDriveItem, boolean listItemPermissions, DeltaPreferences preferences,
-            boolean includeSystem, SyncCursor since) {
+            boolean includeSystem, boolean security, SyncCursor since) {
 
         /** Copies the lists and defaults nulls. */
         public Options {
@@ -80,6 +84,18 @@ public final class MicrosoftCrawler {
             folderPath = folderPath == null ? "" : folderPath;
             preferences = preferences == null ? DeltaPreferences.getDefaultInstance() : preferences;
             since = since == null ? SyncCursor.getDefaultInstance() : since;
+        }
+
+        /**
+         * These options for a pass that resumes from {@code since}.
+         *
+         * @param since the previous pass's cursor; empty = full enumeration
+         * @return a copy with {@code since} replaced
+         */
+        public Options withSince(SyncCursor since) {
+            return new Options(driveIds, siteIds, folderPath, includeContent, maxInlineBytes,
+                    listColumns, permissions, retentionLabel, publication, includeLists,
+                    listItemDriveItem, listItemPermissions, preferences, includeSystem, security, since);
         }
 
         /**
@@ -94,7 +110,8 @@ public final class MicrosoftCrawler {
                 long maxInlineBytes) {
             return new Options(List.of(), List.of(), config.folderPath(), includeContent,
                     maxInlineBytes, true, false, false, false, false, false, false,
-                    DeltaPreferences.getDefaultInstance(), false, SyncCursor.getDefaultInstance());
+                    DeltaPreferences.getDefaultInstance(), false, false,
+                    SyncCursor.getDefaultInstance());
         }
     }
 
@@ -102,12 +119,30 @@ public final class MicrosoftCrawler {
      * What a pass produced.
      *
      * @param runId the pass's run id (the cursor of its full-sweep changes)
-     * @param fullSweep true when every sweep in the pass was a full enumeration,
-     *        so a sink may delete what the pass did not emit
+     * @param fullSweep true when every sweep in the pass was a full enumeration
+     * @param complete true when the pass enumerated everything the connection
+     *        covers: every sweep was a full enumeration, at least one drive or
+     *        list was swept, and the options named no narrower scope (drives,
+     *        sites or folder) than the connection's own. Only then may a sink
+     *        treat what the pass did not emit as gone
      * @param cursor every delta link for the next pass (links of drives and lists
      *        outside this pass's scope are carried over unchanged)
      */
-    public record Result(String runId, boolean fullSweep, SyncCursor cursor) {
+    public record Result(String runId, boolean fullSweep, boolean complete, SyncCursor cursor) {
+    }
+
+    /** Gives the crawler the SharePoint REST API of a site. */
+    @FunctionalInterface
+    interface SiteWebs {
+        /**
+         * The REST API of a site.
+         *
+         * @param siteId Graph site id
+         * @return the site's REST API
+         * @throws IOException if the site cannot be resolved
+         * @throws InterruptedException if the calling thread is interrupted while waiting
+         */
+        SharePointRest.Web web(String siteId) throws IOException, InterruptedException;
     }
 
     private final MicrosoftConnectorConfig config;
@@ -118,6 +153,10 @@ public final class MicrosoftCrawler {
     private final Options options;
     private final DriveItemExpander expander;
     private final MicrosoftValidator validator = MicrosoftValidator.create();
+    private final SiteWebs webs;
+    private final Map<String, SiteSecurityReader> security = new HashMap<>();
+    /** Drive and list sweeps of the current pass; the pass runs them one after another. */
+    private int sweeps;
 
     /**
      * Creates a crawler with the first-revision defaults, without inlining bytes.
@@ -161,6 +200,15 @@ public final class MicrosoftCrawler {
      */
     public MicrosoftCrawler(MicrosoftConnectorConfig config, GraphFiles files,
             MicrosoftChangeSink sink, Options options) {
+        this(config, files, sink, options, null);
+    }
+
+    MicrosoftCrawler(MicrosoftConnectorConfig config, GraphFiles files, MicrosoftChangeSink sink,
+            Options options, SiteWebs webs) {
+        if (options.security() && webs == null) {
+            throw new IllegalArgumentException("a security sync needs the SharePoint REST API");
+        }
+        this.webs = webs;
         this.config = Objects.requireNonNull(config, "config");
         this.files = Objects.requireNonNull(files, "files");
         this.pager = new GraphPager(files.client());
@@ -187,6 +235,7 @@ public final class MicrosoftCrawler {
         ChangeSource passSource = incrementalPass ? ChangeSource.CHANGE_SOURCE_DELTA
                 : ChangeSource.CHANGE_SOURCE_CRAWL;
         boolean fullSweep = true;
+        sweeps = 0;
 
         List<Site> sites = new ArrayList<>();
         for (String siteId : scopeSites()) {
@@ -196,6 +245,17 @@ public final class MicrosoftCrawler {
             sites.add(site);
             emit(entity(site.getId()).setSite(site).build(), ChangeOperation.CHANGE_OPERATION_UPSERT,
                     passSource, runId);
+            if (options.security()) {
+                SiteSecurityReader reader = securityOf(site.getId());
+                for (SiteGroupMembers group : reader.groups()) {
+                    emit(entity(MicrosoftEntityIds.siteGroup(site.getId(), group.getGroup().getId()))
+                            .setSiteGroup(group).build(), ChangeOperation.CHANGE_OPERATION_UPSERT,
+                            passSource, runId);
+                }
+                emit(entity(MicrosoftEntityIds.siteAdmins(site.getId())).setSiteAdmins(reader.admins()).build(),
+                        ChangeOperation.CHANGE_OPERATION_UPSERT, passSource, runId);
+                emitAcl(reader.site(), passSource, runId);
+            }
         }
         for (Drive drive : scopeDrives(sites)) {
             fullSweep &= sweepDrive(drive, runId, passSource, cursor);
@@ -205,7 +265,30 @@ public final class MicrosoftCrawler {
                 fullSweep &= sweepLists(site, runId, passSource, cursor);
             }
         }
-        return new Result(runId, fullSweep, cursor.build());
+        boolean complete = fullSweep && sweeps > 0 && coversConnectionScope();
+        return new Result(runId, fullSweep, complete, cursor.build());
+    }
+
+    /**
+     * Whether this pass sweeps everything the connection's configuration
+     * covers. Options that name the same drives, or the same site, as the
+     * configuration do; any other explicit drive or site list, or another
+     * folder, is a narrower pass that says nothing about the rest.
+     */
+    private boolean coversConnectionScope() {
+        if (!GraphPaths.encodePath(options.folderPath())
+                .equals(GraphPaths.encodePath(config.folderPath()))) {
+            return false;
+        }
+        if (options.driveIds().isEmpty() && options.siteIds().isEmpty()) {
+            return true;
+        }
+        if (config.hasDriveAllowlist()) {
+            return options.siteIds().isEmpty()
+                    && Set.copyOf(options.driveIds()).equals(Set.copyOf(config.driveIds()));
+        }
+        return !config.siteId().isBlank() && options.driveIds().isEmpty()
+                && Set.copyOf(options.siteIds()).equals(Set.of(config.siteId()));
     }
 
     private List<String> scopeSites() {
@@ -246,10 +329,21 @@ public final class MicrosoftCrawler {
     }
 
     /** Returns whether the sweep was a full enumeration. */
-    private boolean sweepDrive(Drive drive, String runId, ChangeSource passSource,
+    private boolean sweepDrive(Drive found, String runId, ChangeSource passSource,
             SyncCursor.Builder cursor) throws IOException, InterruptedException {
+        sweeps++;
         Instant started = Instant.now();
         Map<String, Long> counts = new TreeMap<>();
+        SiteSecurityReader.ListSecurity acls = options.security() && !found.getSiteId().isEmpty()
+                && !found.getListId().isEmpty()
+                        ? securityOf(found.getSiteId()).list(found.getListId()) : null;
+        if (acls != null) {
+            for (SiteAcl acl : acls.acls()) {
+                emitAcl(acl, passSource, runId);
+            }
+            counts.merge("site_acl", (long) acls.acls().size(), Long::sum);
+        }
+        Drive drive = acls == null ? found : found.toBuilder().setAclOwnerId(acls.listOwner()).build();
         emit(entity(drive.getId()).setDrive(drive).build(), ChangeOperation.CHANGE_OPERATION_UPSERT,
                 passSource, runId);
         counts.merge("drive", 1L, Long::sum);
@@ -287,6 +381,10 @@ public final class MicrosoftCrawler {
                             return;
                         }
                         item = enrich(item);
+                        if (acls != null) {
+                            item = item.toBuilder().setAclOwnerId(item.getIsRoot() ? acls.listOwner()
+                                    : acls.owner(item.getSharepointIds().getListItemId())).build();
+                        }
                         emit(entity(item.getId()).setDriveItem(item).build(),
                                 ChangeOperation.CHANGE_OPERATION_UPSERT, source[0], readUnder[0]);
                         counts.merge(item.getIsRoot() ? COUNT_ROOT : item.getFolder() ? "folder" : "file",
@@ -342,10 +440,21 @@ public final class MicrosoftCrawler {
         return full;
     }
 
-    private boolean sweepList(String siteId, SharePointList list, String runId,
+    private boolean sweepList(String siteId, SharePointList found, String runId,
             ChangeSource passSource, SyncCursor.Builder cursor) throws IOException, InterruptedException {
+        sweeps++;
         Instant started = Instant.now();
         Map<String, Long> counts = new TreeMap<>();
+        SiteSecurityReader.ListSecurity acls = options.security()
+                ? securityOf(siteId).list(found.getId()) : null;
+        if (acls != null) {
+            for (SiteAcl acl : acls.acls()) {
+                emitAcl(acl, passSource, runId);
+            }
+            counts.merge("site_acl", (long) acls.acls().size(), Long::sum);
+        }
+        SharePointList list = acls == null ? found
+                : found.toBuilder().setAclOwnerId(acls.listOwner()).build();
         emit(entity(list.getId()).setList(list).build(), ChangeOperation.CHANGE_OPERATION_UPSERT,
                 passSource, runId);
         counts.merge("list", 1L, Long::sum);
@@ -371,6 +480,9 @@ public final class MicrosoftCrawler {
                             return;
                         }
                         boolean deleted = item.hasDeleted();
+                        if (acls != null && !deleted) {
+                            item = item.toBuilder().setAclOwnerId(acls.owner(item.getId())).build();
+                        }
                         emit(entity(MicrosoftEntityIds.listItem(item)).setListItem(item).build(),
                                 deleted ? ChangeOperation.CHANGE_OPERATION_DELETE
                                         : ChangeOperation.CHANGE_OPERATION_UPSERT,
@@ -404,6 +516,20 @@ public final class MicrosoftCrawler {
                 .build();
         validator.requireValid(change);
         sink.emit(change);
+    }
+
+    private SiteSecurityReader securityOf(String siteId) throws IOException, InterruptedException {
+        SiteSecurityReader reader = security.get(siteId);
+        if (reader == null) {
+            reader = new SiteSecurityReader(webs.web(siteId), siteId);
+            security.put(siteId, reader);
+        }
+        return reader;
+    }
+
+    private void emitAcl(SiteAcl acl, ChangeSource source, String cursor) {
+        emit(entity(MicrosoftEntityIds.siteAcl(acl.getSecurable())).setSiteAcl(acl).build(),
+                ChangeOperation.CHANGE_OPERATION_UPSERT, source, cursor);
     }
 
     private void snapshot(MicrosoftSnapshot snapshot) {

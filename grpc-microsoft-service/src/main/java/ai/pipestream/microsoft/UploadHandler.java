@@ -246,8 +246,15 @@ final class UploadHandler implements StreamObserver<UploadItemRequest> {
                 plans.driveLookups(session, header.getDriveId()),
                 FieldWriteState.FIELD_WRITE_STATE_WRITTEN);
         String route = GraphPaths.item(header.getDriveId(), item.getId());
-        JsonNode fields = session.graph().execute(new GraphClient.Call("PATCH",
-                route + "/listItem/fields", Map.of(), patch.fields())).body();
+        JsonNode fields = GraphClient.object();
+        if (!patch.fields().isEmpty()) {
+            fields = session.graph().execute(new GraphClient.Call("PATCH",
+                    route + "/listItem/fields", Map.of(), patch.fields())).body();
+        }
+        if (!patch.links().isEmpty()) {
+            plans.writeLinks(session, route + "/listItem", patch.links());
+            fields = session.graph().get(route + "/listItem/fields", Map.of());
+        }
         DriveItem current = mapper.toDriveItem(session.graph().get(route, Map.of()),
                 header.getDriveId());
         MicrosoftValidator.create().requireValid(current);

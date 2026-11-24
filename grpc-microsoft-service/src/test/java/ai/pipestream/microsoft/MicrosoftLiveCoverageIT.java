@@ -134,14 +134,20 @@ class MicrosoftLiveCoverageIT {
             Map.entry("DeltaListItems", "GET /sites/{site-id}/lists/{list-id}/items/delta"),
             Map.entry("ListColumns", "GET /sites/{site-id}[/lists/{id}|/contentTypes/{id}]/columns"),
             Map.entry("ListPermissions", "GET .../permissions"),
+            Map.entry("GetTermStore", "GET /sites/{site-id}/termStore"),
+            Map.entry("ListTermGroups", "GET /sites/{site-id}/termStore/groups"),
+            Map.entry("ListTermSets", "GET /sites/{site-id}/termStore/groups/{id}/sets"),
+            Map.entry("ListTerms", "GET /sites/{site-id}/termStore/sets/{id}/children"),
             Map.entry("ListSiteGroups", "GET {web}/_api/web/sitegroups"),
             Map.entry("ListSiteGroupMembers", "GET {web}/_api/web/sitegroups/getbyid({id})/users"),
             Map.entry("ListSiteRoleAssignments", "GET {web}/_api/{securable}/roleassignments"),
             Map.entry("GetSiteRoleInheritance", "GET {web}/_api/{securable}?$select=HasUniqueRoleAssignments"),
+            Map.entry("SetSiteRoleInheritance", "POST {web}/_api/{securable}/breakroleinheritance"),
             Map.entry("ListUsers", "GET /users"),
             Map.entry("ListGroups", "GET /groups"),
             Map.entry("DeltaGroups", "GET /groups/delta"),
             Map.entry("ListGroupTransitiveMembers", "GET /groups/{group-id}/transitiveMembers"),
+            Map.entry("ListGroupOwners", "GET /groups/{group-id}/owners"),
             Map.entry("ListUserTransitiveMemberOf", "GET /users/{user-id}/transitiveMemberOf"),
             Map.entry("Sync", "delta crawl of one drive"));
 
@@ -162,6 +168,72 @@ class MicrosoftLiveCoverageIT {
     private final Map<String, String> discovered = new LinkedHashMap<>();
     private final List<String> deltaLines = new ArrayList<>();
     private String directoryLine = "";
+    private String termStoreLine = "";
+
+    /** Which term store routes answer the app; statuses and error codes only. */
+    private String termStoreRoutes(String siteId) {
+        StringBuilder line = new StringBuilder("- Term store routes:");
+        try {
+            GraphAuth auth = new GraphAuth(config.authConfig());
+            String graph = GraphLinks.stripTrailingSlashes(config.graphBaseUrl());
+            String graphRoot = graph.substring(0, graph.lastIndexOf('/'));
+            String graphToken = MicrosoftSessions.tokenSupplier(auth).get();
+            java.net.http.HttpClient http = java.net.http.HttpClient.newHttpClient();
+            String site = "/sites/" + GraphPaths.site(siteId);
+            String webUrl = new com.fasterxml.jackson.databind.ObjectMapper().readTree(
+                    fetch(http, graph + site + "?$select=webUrl", graphToken).body()).path("webUrl").asText("");
+            Map<String, String> graphRoutes = new java.util.LinkedHashMap<>();
+            graphRoutes.put("site store", graph + site + "/termStore");
+            graphRoutes.put("site store, id only", graph + site + "/termStore?$select=id");
+            graphRoutes.put("site stores", graph + site + "/termStores");
+            graphRoutes.put("tenant store", graph + "/termStore");
+            graphRoutes.put("site store, beta", graphRoot + "/beta" + site + "/termStore");
+            graphRoutes.put("site groups", graph + site + "/termStore/groups");
+            for (Map.Entry<String, String> route : graphRoutes.entrySet()) {
+                line.append(' ').append(route.getKey()).append(" = ")
+                        .append(outcome(fetch(http, route.getValue(), graphToken))).append(';');
+            }
+            com.fasterxml.jackson.databind.JsonNode groups = new com.fasterxml.jackson.databind.ObjectMapper()
+                    .readTree(fetch(http, graph + site + "/termStore/groups", graphToken).body()).path("value");
+            int named = 0;
+            Map<String, Integer> scopes = new java.util.TreeMap<>();
+            for (com.fasterxml.jackson.databind.JsonNode group : groups) {
+                scopes.merge(group.path("scope").asText("?"), 1, Integer::sum);
+                if (group.path("displayName").asText("").equals(WriteScenarios.TERM_GROUP)) {
+                    named++;
+                    line.append(" test group sets = ").append(outcome(fetch(http, graph + site
+                            + "/termStore/groups/" + group.path("id").asText("") + "/sets", graphToken)))
+                            .append(';');
+                }
+            }
+            line.append(' ').append(groups.size()).append(" group(s), scopes ").append(scopes)
+                    .append(", named like the test group ").append(named).append(';');
+        } catch (IOException | RuntimeException e) {
+            line.append(" probe failed: ").append(e.getClass().getSimpleName());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+        return line.toString();
+    }
+
+    private static java.net.http.HttpResponse<String> fetch(java.net.http.HttpClient http, String url,
+            String token) throws IOException, InterruptedException {
+        return http.send(java.net.http.HttpRequest.newBuilder(URI.create(url))
+                .header("authorization", "Bearer " + token).header("accept", "application/json")
+                .GET().build(), java.net.http.HttpResponse.BodyHandlers.ofString());
+    }
+
+    private static String outcome(java.net.http.HttpResponse<String> response) {
+        String code = "";
+        try {
+            code = new com.fasterxml.jackson.databind.ObjectMapper().readTree(response.body())
+                    .path("error").path("code").asText("");
+        } catch (IOException e) {
+            code = "";
+        }
+        return response.statusCode() + (code.isEmpty() ? "" : " " + code);
+    }
+
     private final List<String> syncLines = new ArrayList<>();
     /** Credential values to scrub: the client secret and every access / refresh token issued. */
     private final Set<String> secrets = ConcurrentHashMap.newKeySet();
@@ -459,8 +531,13 @@ class MicrosoftLiveCoverageIT {
                 r -> r.getEventCase() == DeltaGroupsResponse.EventCase.RESYNC);
         if (groups == null || groups.isEmpty()) {
             skip("ListGroupTransitiveMembers", "no group was listed");
+            skip("ListGroupOwners", "no group was listed");
         } else {
             String groupId = groups.get(0).getGroup().getId();
+            stream("ListGroupOwners", "ListGroupOwners", LIST_CAP,
+                    s -> s.listGroupOwners(ai.pipestream.microsoft.v1.ListGroupOwnersRequest.newBuilder()
+                            .setGroupId(groupId).build()),
+                    l -> l.size() + " owner(s)");
             stream("ListGroupTransitiveMembers", "ListGroupTransitiveMembers", LIST_CAP,
                     s -> s.listGroupTransitiveMembers(ListGroupTransitiveMembersRequest.newBuilder()
                             .setGroupId(groupId).build()),
@@ -501,6 +578,41 @@ class MicrosoftLiveCoverageIT {
                 s -> s.getSiteRoleInheritance(GetSiteRoleInheritanceRequest.newBuilder()
                         .setSecurable(siteSecurable).build()),
                 r -> "unique " + r.getHasUniqueRoleAssignments());
+
+        // --------------------------------------------------- term store --
+        termStoreLine = termStoreRoutes(chosenSite);
+        unary("GetTermStore", "GetTermStore",
+                s -> s.getTermStore(ai.pipestream.microsoft.v1.GetTermStoreRequest.newBuilder()
+                        .setSiteId(chosenSite).build()),
+                r -> r.getStore().getLanguageTagsCount() + " language(s)");
+        List<ai.pipestream.microsoft.v1.ListTermGroupsResponse> termGroups = stream("ListTermGroups",
+                "ListTermGroups", LIST_CAP,
+                s -> s.listTermGroups(ai.pipestream.microsoft.v1.ListTermGroupsRequest.newBuilder()
+                        .setSiteId(chosenSite).build()),
+                l -> l.size() + " group(s), scopes " + l.stream()
+                        .map(r -> r.getGroup().getScope().name()).distinct().sorted().toList());
+        String termGroup = termGroups == null ? "" : termGroups.stream()
+                .filter(r -> r.getGroup().getDisplayName().equals(WriteScenarios.TERM_GROUP))
+                .map(r -> r.getGroup().getId()).findFirst().orElse("");
+        if (termGroup.isEmpty()) {
+            skip("ListTermSets", "no test term group was listed");
+            skip("ListTerms", "no test term group was listed");
+        } else {
+            List<ai.pipestream.microsoft.v1.ListTermSetsResponse> termSets = stream("ListTermSets",
+                    "ListTermSets", LIST_CAP,
+                    s -> s.listTermSets(ai.pipestream.microsoft.v1.ListTermSetsRequest.newBuilder()
+                            .setSiteId(chosenSite).setGroupId(termGroup).build()),
+                    l -> l.size() + " set(s)");
+            if (termSets == null || termSets.isEmpty()) {
+                skip("ListTerms", "no term set was listed");
+            } else {
+                String termSet = termSets.get(0).getSet().getId();
+                stream("ListTerms", "ListTerms", LIST_CAP,
+                        s -> s.listTerms(ai.pipestream.microsoft.v1.ListTermsRequest.newBuilder()
+                                .setSiteId(chosenSite).setSetId(termSet).build()),
+                        l -> l.size() + " term(s)");
+            }
+        }
 
         // -------------------------------------------------------- sync --
         if (syncDrive != null) {
@@ -1245,7 +1357,8 @@ class MicrosoftLiveCoverageIT {
     private static final List<String> WRITE_RPCS = List.of(
             "UploadItem", "CreateFolder", "UpdateDriveItem", "DeleteDriveItem",
             "RestoreDriveItemVersion", "CopyDriveItem", "CreateListItem",
-            "UpdateListItemFields", "DeleteListItem", "EnsureColumns", "EnsureList", "Mutate");
+            "UpdateListItemFields", "DeleteListItem", "EnsureColumns", "EnsureList", "Mutate",
+            "SetSiteRoleInheritance");
 
     private void skip(String rpc, String reason) {
         skip(rpc, rpc, reason);
@@ -1292,6 +1405,9 @@ class MicrosoftLiveCoverageIT {
         long failures = rows.stream().filter(Row::failure).count();
         Map<String, Integer> outcomes = new TreeMap<>();
         rows.forEach(row -> outcomes.merge(row.outcome(), 1, Integer::sum));
+        if (!termStoreLine.isEmpty()) {
+            md.append(termStoreLine).append('\n');
+        }
         if (!directoryLine.isEmpty()) {
             md.append(directoryLine).append('\n');
         }

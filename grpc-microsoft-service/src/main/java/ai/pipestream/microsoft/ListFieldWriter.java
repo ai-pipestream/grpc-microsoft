@@ -44,12 +44,23 @@ final class ListFieldWriter {
     }
 
     /**
+     * A hyperlink value; Graph refuses these, so SharePoint's own API writes them.
+     *
+     * @param column internal column name
+     * @param url the URL
+     * @param description the display text
+     */
+    record Link(String column, String url, String description) {
+    }
+
+    /**
      * A translated patch.
      *
      * @param fields the Graph {@code fields} object
      * @param outcomes one outcome per value, in patch order
+     * @param links the hyperlink values, which are not in {@code fields}
      */
-    record Patch(ObjectNode fields, List<FieldOutcome> outcomes) {
+    record Patch(ObjectNode fields, List<FieldOutcome> outcomes, List<Link> links) {
     }
 
     private ListFieldWriter() {
@@ -70,6 +81,7 @@ final class ListFieldWriter {
             throws IOException, InterruptedException {
         ObjectNode fields = GraphClient.object();
         List<FieldOutcome> outcomes = new ArrayList<>();
+        List<Link> links = new ArrayList<>();
         Set<String> seen = new HashSet<>();
         for (FieldValue value : values) {
             String name = value.getName();
@@ -79,14 +91,15 @@ final class ListFieldWriter {
             if (!seen.add(name)) {
                 throw new IllegalArgumentException("column " + name + " is named twice");
             }
-            String key = write(fields, value, lookups);
+            String key = write(fields, links, value, lookups);
             outcomes.add(FieldOutcome.newBuilder().setName(name).setState(state).setGraphField(key)
                     .build());
         }
-        return new Patch(fields, List.copyOf(outcomes));
+        return new Patch(fields, List.copyOf(outcomes), List.copyOf(links));
     }
 
-    private static String write(ObjectNode fields, FieldValue value, Lookups lookups)
+    private static String write(ObjectNode fields, List<Link> links, FieldValue value,
+            Lookups lookups)
             throws IOException, InterruptedException {
         String name = value.getName();
         String lookupKey = name + "LookupId";
@@ -131,8 +144,10 @@ final class ListFieldWriter {
             case HYPERLINK -> {
                 String url = value.getHyperlink().getUrl();
                 String description = value.getHyperlink().getDescription();
-                fields.putObject(name).put("Url", url)
-                        .put("Description", description.isEmpty() ? url : description);
+                if (url.isBlank()) {
+                    throw new IllegalArgumentException("hyperlink " + name + " needs a url");
+                }
+                links.add(new Link(name, url, description.isEmpty() ? url : description));
             }
             case LOOKUP -> {
                 fields.put(lookupKey, value.getLookup());

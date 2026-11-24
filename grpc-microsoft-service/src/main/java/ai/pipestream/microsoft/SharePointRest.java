@@ -44,7 +44,7 @@ final class SharePointRest {
     static Supplier<String> certificateTokens(MicrosoftSessions.Session session, String resource) {
         GraphAuth.Config auth = session.config().authConfig();
         if (auth.certificate() == null) {
-            throw Status.FAILED_PRECONDITION.withDescription("SharePoint site security needs a certificate "
+            throw Status.FAILED_PRECONDITION.withDescription("this SharePoint call needs a certificate "
                     + "credential (" + MicrosoftConnectorConfig.ENV_CLIENT_CERT_PEM + "); SharePoint refuses "
                     + "app-only tokens issued for a client secret").asRuntimeException();
         }
@@ -62,6 +62,11 @@ final class SharePointRest {
         /** GET one object. */
         JsonNode get(String path) throws IOException, InterruptedException {
             return client.get(path, ACCEPT);
+        }
+
+        /** POST JSON and return the answer's body. */
+        JsonNode post(String path, JsonNode body) throws IOException, InterruptedException {
+            return client.execute(new GraphClient.Call("POST", path, ACCEPT, body)).body();
         }
 
         /** GET a collection, following {@code odata.nextLink}. */
@@ -96,6 +101,17 @@ final class SharePointRest {
         if (webUrl.isEmpty()) {
             throw Status.NOT_FOUND.withDescription("site " + siteId + " has no web URL").asRuntimeException();
         }
+        return webAt(session, webUrl);
+    }
+
+    /**
+     * The REST API of the site at this URL.
+     *
+     * @param session the connection
+     * @param webUrl the site's URL
+     * @return the site's REST API
+     */
+    Web webAt(MicrosoftSessions.Session session, String webUrl) {
         URI uri = URI.create(webUrl);
         String resource = uri.getScheme() + "://" + uri.getAuthority();
         Supplier<String> bearer = cached.computeIfAbsent(session.connectionId() + "\n" + resource,
@@ -124,6 +140,31 @@ final class SharePointRest {
             }
             case SECURABLE_NOT_SET -> throw new IllegalArgumentException("securable is required");
         };
+    }
+
+    /** The REST path that names the term store of the site's Enterprise Keywords column. */
+    static final String KEYWORDS_TERM_STORE =
+            "/web/fields/getbyinternalnameortitle('TaxKeyword')?$select=SspId";
+
+    /**
+     * The REST path of the columns of a list or of the site.
+     *
+     * @param listId the list's GUID; empty = the site's columns
+     * @return the path, relative to {@code {web}/_api}
+     */
+    static String fields(String listId) {
+        return (listId.isBlank() ? "/web" : list(listId)) + "/fields";
+    }
+
+    /**
+     * The REST path of a list item.
+     *
+     * @param listId the list's GUID
+     * @param itemId the item's number
+     * @return the path, relative to {@code {web}/_api}
+     */
+    static String item(String listId, String itemId) {
+        return list(listId) + "/items(" + itemId(itemId) + ")";
     }
 
     private static String list(String listId) {

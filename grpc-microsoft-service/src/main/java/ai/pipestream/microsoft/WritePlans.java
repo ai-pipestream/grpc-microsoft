@@ -22,13 +22,16 @@ import ai.pipestream.microsoft.v1.UpdateDriveItemResponse;
 import ai.pipestream.microsoft.v1.UpdateListItemFieldsRequest;
 import ai.pipestream.microsoft.v1.UpdateListItemFieldsResponse;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.protobuf.Timestamp;
 import io.grpc.Status;
 
 import java.io.IOException;
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 
 /** Builds the Graph request and the typed response of each batchable write. */
 final class WritePlans {
@@ -51,13 +54,50 @@ final class WritePlans {
     }
 
     /**
+     * Work that follows the Graph request of a plan.
+     *
+     * @param <R> the rpc response type
+     */
+    @FunctionalInterface
+    interface After<R> {
+
+        /**
+         * Finishes the write.
+         *
+         * @param result the response built from the Graph answer
+         * @return the final response
+         * @throws IOException if a call returns an error
+         * @throws InterruptedException if a call is interrupted
+         */
+        R apply(R result) throws IOException, InterruptedException;
+    }
+
+    /**
      * One write, ready to send.
      *
      * @param call the Graph request; {@code null} when nothing is sent
      * @param mapper builds the response
+     * @param after what follows the Graph request; {@code null} when nothing does
      * @param <R> the response type
      */
-    record Plan<R>(GraphClient.Call call, ReplyMapper<R> mapper) {
+    record Plan<R>(GraphClient.Call call, ReplyMapper<R> mapper, After<R> after) {
+
+        Plan(GraphClient.Call call, ReplyMapper<R> mapper) {
+            this(call, mapper, null);
+        }
+
+        /**
+         * Builds the response from the Graph answer and does what follows.
+         *
+         * @param reply the Graph response; {@code null} when the plan has no call
+         * @return the rpc response
+         * @throws IOException if a following call returns an error
+         * @throws InterruptedException if a following call is interrupted
+         */
+        R finish(GraphClient.Reply reply) throws IOException, InterruptedException {
+            R result = mapper.map(reply);
+            return after == null ? result : after.apply(result);
+        }
 
         /**
          * Sends the request on its own.
@@ -68,14 +108,55 @@ final class WritePlans {
          * @throws InterruptedException if the HTTP call is interrupted
          */
         R run(GraphClient graph) throws IOException, InterruptedException {
-            return mapper.map(call == null ? null : graph.execute(call));
+            return finish(call == null ? null : graph.execute(call));
         }
     }
 
     private final MicrosoftMapper mapper;
+    private final Supplier<SharePointRest> sharePoint;
 
-    WritePlans(MicrosoftMapper mapper) {
+    WritePlans(MicrosoftMapper mapper, Supplier<SharePointRest> sharePoint) {
         this.mapper = mapper;
+        this.sharePoint = sharePoint;
+    }
+
+    /**
+     * Writes hyperlink values with SharePoint's own API.
+     *
+     * @param session the connection
+     * @param listItemRoute Graph route of the list item
+     * @param links the values
+     * @throws IOException if a call returns an error
+     * @throws InterruptedException if a call is interrupted
+     */
+    void writeLinks(MicrosoftSessions.Session session, String listItemRoute,
+            List<ListFieldWriter.Link> links) throws IOException, InterruptedException {
+        JsonNode ids = session.graph().get(listItemRoute + "?$select=id,sharepointIds", Map.of())
+                .path("sharepointIds");
+        String webUrl = ids.path("siteUrl").asText("");
+        if (webUrl.isBlank()) {
+            throw Status.FAILED_PRECONDITION
+                    .withDescription("Graph names no site URL to write the hyperlink through")
+                    .asRuntimeException();
+        }
+        ObjectNode body = GraphClient.object();
+        ArrayNode values = body.putArray("formValues");
+        for (ListFieldWriter.Link link : links) {
+            // SharePoint's text form of a link: the URL with commas doubled, then the text.
+            values.addObject().put("FieldName", link.column())
+                    .put("FieldValue", link.url().replace(",", ",,") + ", " + link.description());
+        }
+        body.put("bNewDocumentUpdate", false);
+        JsonNode answer = sharePoint.get().webAt(session, webUrl).post(SharePointRest.item(
+                ids.path("listId").asText(""), ids.path("listItemId").asText(""))
+                + "/ValidateUpdateListItem", body);
+        for (JsonNode value : answer.path("value")) {
+            if (value.path("HasException").asBoolean(false)) {
+                throw Status.INVALID_ARGUMENT.withDescription("column "
+                        + value.path("FieldName").asText("") + ": "
+                        + value.path("ErrorMessage").asText("")).asRuntimeException();
+            }
+        }
     }
 
     /**
@@ -198,11 +279,21 @@ final class WritePlans {
             body.putObject("contentType").put("id", request.getContentTypeId());
         }
         body.set("fields", patch.fields());
+        After<CreateListItemResponse> after = patch.links().isEmpty() ? null : created -> {
+            String itemRoute = route + "/items/"
+                    + GraphPaths.segment(created.getItem().getId(), "item_id");
+            writeLinks(session, itemRoute, patch.links());
+            return CreateListItemResponse.newBuilder()
+                    .setItem(valid(mapper.toListItem(
+                            session.graph().get(itemRoute + "?$expand=fields", Map.of()),
+                            list.getSiteId(), list.getListId())))
+                    .build();
+        };
         return new Plan<>(new GraphClient.Call("POST", route + "/items", Map.of(), body),
                 reply -> CreateListItemResponse.newBuilder()
                         .setItem(valid(mapper.toListItem(reply.body(), list.getSiteId(),
                                 list.getListId())))
-                        .build());
+                        .build(), after);
     }
 
     Plan<UpdateListItemFieldsResponse> updateListItemFields(MicrosoftSessions.Session session,
@@ -237,6 +328,32 @@ final class WritePlans {
             return new Plan<>(null, reply -> UpdateListItemFieldsResponse.newBuilder()
                     .addAllOutcomes(patch.outcomes()).build());
         }
+        String itemRoute = fieldsRoute.substring(0, fieldsRoute.length() - "/fields".length());
+        After<UpdateListItemFieldsResponse> after = patch.links().isEmpty() ? null : written -> {
+            writeLinks(session, itemRoute, patch.links());
+            JsonNode fields = session.graph().get(fieldsRoute, Map.of());
+            return UpdateListItemFieldsResponse.newBuilder()
+                    .addAllOutcomes(patch.outcomes())
+                    .addAllFields(mapper.toListColumns(fields))
+                    .setEtag(fields.path("@odata.etag").asText(""))
+                    .build();
+        };
+        if (patch.fields().isEmpty()) {
+            // Only hyperlinks: nothing for Graph to write, so the eTag is checked by reading.
+            String expected = request.getExpectedEtag();
+            return new Plan<>(
+                    new GraphClient.Call("GET", itemRoute + "?$select=id,eTag", Map.of(), null),
+                    reply -> {
+                        if (!expected.isEmpty()
+                                && !expected.equals(reply.body().path("eTag").asText(""))
+                                && !expected.equals(reply.body().path("@odata.etag").asText(""))) {
+                            throw Status.ABORTED.withDescription("the item changed: its eTag is "
+                                    + "not " + expected).asRuntimeException();
+                        }
+                        return UpdateListItemFieldsResponse.newBuilder()
+                                .addAllOutcomes(patch.outcomes()).build();
+                    }, after);
+        }
         return new Plan<>(
                 new GraphClient.Call("PATCH", fieldsRoute, ifMatch(request.getExpectedEtag()),
                         patch.fields()),
@@ -244,7 +361,7 @@ final class WritePlans {
                         .addAllOutcomes(patch.outcomes())
                         .addAllFields(mapper.toListColumns(reply.body()))
                         .setEtag(reply.body().path("@odata.etag").asText(""))
-                        .build());
+                        .build(), after);
     }
 
     Plan<DeleteListItemResponse> deleteListItem(DeleteListItemRequest request) {
@@ -285,12 +402,12 @@ final class WritePlans {
             @Override
             public String termNoteColumn(String termColumn)
                     throws IOException, InterruptedException {
-                return WritePlans.termNoteColumn(session, listRoute, termColumn);
+                return WritePlans.this.termNoteColumn(session, listRoute, termColumn);
             }
         };
     }
 
-    private static ListFieldWriter.Lookups lookups(MicrosoftSessions.Session session,
+    private ListFieldWriter.Lookups lookups(MicrosoftSessions.Session session,
             String listRoute, String siteId) {
         return new ListFieldWriter.Lookups() {
             @Override
@@ -301,7 +418,7 @@ final class WritePlans {
             @Override
             public String termNoteColumn(String termColumn)
                     throws IOException, InterruptedException {
-                return WritePlans.termNoteColumn(session, listRoute, termColumn);
+                return WritePlans.this.termNoteColumn(session, listRoute, termColumn);
             }
         };
     }
@@ -327,7 +444,7 @@ final class WritePlans {
         }
     }
 
-    private static String termNoteColumn(MicrosoftSessions.Session session, String listRoute,
+    private String termNoteColumn(MicrosoftSessions.Session session, String listRoute,
             String termColumn) throws IOException, InterruptedException {
         Map<String, String> displayNames = new java.util.HashMap<>();
         Map<String, String> namesByDisplayName = new java.util.HashMap<>();
@@ -343,12 +460,35 @@ final class WritePlans {
         String displayName = displayNames.get(termColumn);
         String note = displayName == null ? null : namesByDisplayName.get(displayName + "_0");
         if (note == null) {
+            note = termNoteColumnFromSharePoint(session, listRoute, termColumn);
+        }
+        if (note.isBlank()) {
             throw Status.FAILED_PRECONDITION
                     .withDescription("no hidden note column found for term column " + termColumn
                             + "; set term_note_column")
                     .asRuntimeException();
         }
         return note;
+    }
+
+    /** The note column SharePoint names for a term column; empty when it names none. */
+    private String termNoteColumnFromSharePoint(MicrosoftSessions.Session session,
+            String listRoute, String termColumn) throws IOException, InterruptedException {
+        JsonNode ids = session.graph().get(listRoute + "?$select=id,sharepointIds", Map.of())
+                .path("sharepointIds");
+        String webUrl = ids.path("siteUrl").asText("");
+        if (webUrl.isBlank()) {
+            return "";
+        }
+        SharePointRest.Web web = sharePoint.get().webAt(session, webUrl);
+        String fields = SharePointRest.fields(ids.path("listId").asText(""));
+        String noteId = web.get(fields + "/getbyinternalnameortitle('"
+                + GraphPaths.query(termColumn.replace("'", "''")) + "')").path("TextField").asText("");
+        if (noteId.isBlank()) {
+            return "";
+        }
+        return web.get(fields + "(guid'" + GraphPaths.segment(noteId, "note column id")
+                + "')?$select=InternalName").path("InternalName").asText("");
     }
 
     private static <T extends com.google.protobuf.Message> T valid(T message) {

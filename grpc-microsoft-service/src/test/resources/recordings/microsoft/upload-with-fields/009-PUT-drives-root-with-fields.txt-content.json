@@ -1,0 +1,74 @@
+{
+  "request" : {
+    "method" : "PUT",
+    "url" : "https://graph.microsoft.com/v1.0/drives/b!drive-0013/root:/with-fields.txt:/content",
+    "authorized" : true,
+    "headers" : {
+      "content-type" : "application/octet-stream"
+    },
+    "body" : {
+      "sha256" : "44ab0daa7a259e6e1e11c17ff62113d636ab71190af64f917c8bff3de6386d26",
+      "length" : 59
+    }
+  },
+  "response" : {
+    "status" : 201,
+    "headers" : {
+      "content-type" : "application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8"
+    },
+    "body" : {
+      "json" : {
+        "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#drives('b%21drive-0013')/root/$entity",
+        "@microsoft.graph.downloadUrl" : "https://redacted.example/url/86",
+        "createdDateTime" : "2026-11-23T02:27:11Z",
+        "eTag" : "\"{00000000-0000-4000-8000-000000000132},1\"",
+        "id" : "item-0010",
+        "lastModifiedDateTime" : "2026-11-23T02:27:11Z",
+        "name" : "with-fields.txt",
+        "webUrl" : "https://redacted.example/url/87",
+        "cTag" : "\"c:{00000000-0000-4000-8000-000000000132},1\"",
+        "isAuthoritative" : false,
+        "size" : 59,
+        "createdBy" : {
+          "application" : {
+            "id" : "00000000-0000-4000-8000-000000000007",
+            "displayName" : "Identity 1"
+          },
+          "user" : {
+            "displayName" : "Identity 2"
+          }
+        },
+        "lastModifiedBy" : {
+          "application" : {
+            "id" : "00000000-0000-4000-8000-000000000007",
+            "displayName" : "Identity 1"
+          },
+          "user" : {
+            "displayName" : "Identity 2"
+          }
+        },
+        "parentReference" : {
+          "driveType" : "documentLibrary",
+          "driveId" : "b!drive-0013",
+          "id" : "item-0002",
+          "name" : "pipestreamlivewrite20261123022631a8adaf87lib",
+          "path" : "/drives/b!drive-0013/root:",
+          "siteId" : "00000000-0000-4000-8000-000000000001"
+        },
+        "file" : {
+          "mimeType" : "text/plain",
+          "hashes" : {
+            "quickXorHash" : "zePoa1ZyeEcDr8vn1Lgu8I2k9yY="
+          }
+        },
+        "fileSystemInfo" : {
+          "createdDateTime" : "2026-11-23T02:27:11Z",
+          "lastModifiedDateTime" : "2026-11-23T02:27:11Z"
+        },
+        "shared" : {
+          "scope" : "users"
+        }
+      }
+    }
+  }
+}

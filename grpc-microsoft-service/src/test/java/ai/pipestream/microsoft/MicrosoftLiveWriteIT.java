@@ -2,6 +2,7 @@ package ai.pipestream.microsoft;
 
 import ai.pipestream.microsoft.v1.AuthMode;
 import ai.pipestream.microsoft.v1.MicrosoftServiceGrpc;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.grpc.ManagedChannel;
 import io.grpc.MethodDescriptor;
@@ -51,6 +52,12 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  */
 class MicrosoftLiveWriteIT {
 
+    /** The test tenant's term set "Departments" in group {@link WriteScenarios#TERM_GROUP}. */
+    private static final String TERM_SET = "a3d60745-8927-44b1-94ea-2421b4bcbac4";
+    /** Its terms {@link WriteScenarios#TERM_LABELS}. */
+    private static final List<String> TERMS = List.of("199d241d-d93f-4188-8169-2dc025e327f9",
+            "8b1ff4b6-549e-4af1-aeb4-dea39fd59f8a");
+
     /** Environment switch that allows writing to the tenant. */
     static final String ENV_LIVE_WRITE = "MICROSOFT_LIVE_WRITE";
 
@@ -60,7 +67,7 @@ class MicrosoftLiveWriteIT {
     private static final Set<String> WRITE_RPCS = Set.of("UploadItem", "CreateFolder",
             "UpdateDriveItem", "DeleteDriveItem", "RestoreDriveItemVersion", "CopyDriveItem",
             "CreateListItem", "UpdateListItemFields", "DeleteListItem", "EnsureColumns",
-            "EnsureList", "Mutate");
+            "EnsureList", "Mutate", "SetSiteRoleInheritance");
 
     private record Row(String rpc, String label, String outcome, String detail) {
     }
@@ -133,6 +140,7 @@ class MicrosoftLiveWriteIT {
 
         Map<String, byte[]> blobs = new ConcurrentHashMap<>();
         RecordingScrubber scrubber = new RecordingScrubber(graphBaseUrl);
+        scrubber.joinProof(System.getenv("JOIN_PROOF_EMAIL"));
         RecordingTransport recorder = RecordingTransport.overHttp(scrubber, blobs, graphBaseUrl);
         GraphClient client = new GraphClient(graphBaseUrl, bearer, AuthMode.AUTH_MODE_APPLICATION,
                 recorder);
@@ -151,7 +159,8 @@ class MicrosoftLiveWriteIT {
         try {
             WriteScenarios scenarios = new WriteScenarios(MicrosoftServiceGrpc.newBlockingStub(channel),
                     MicrosoftServiceGrpc.newStub(channel), client,
-                    new WriteScenarios.Backend(siteId, driveId, suffix, null, blobs));
+                    new WriteScenarios.Backend(siteId, driveId, suffix, null, blobs, TERM_SET,
+                            TERMS));
             folderName = scenarios.folderName();
             listName = scenarios.listName();
             clear(recordings);
@@ -159,7 +168,10 @@ class MicrosoftLiveWriteIT {
                     .put("suffix", suffix)
                     .put("graphBaseUrl", graphBaseUrl)
                     .put("siteId", scrubber.text(siteId))
-                    .put("driveId", scrubber.text(driveId));
+                    .put("driveId", scrubber.text(driveId))
+                    .put("termSetId", scrubber.text(TERM_SET));
+            ArrayNode termIds = run.putArray("termIds");
+            TERMS.forEach(id -> termIds.add(scrubber.text(id)));
             int saved = 0;
             for (WriteScenarios.Scenario scenario : scenarios.all()) {
                 recorder.drop();

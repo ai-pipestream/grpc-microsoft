@@ -89,6 +89,14 @@ for large files, resumable), `CreateFolder`, `UpdateDriveItem`,
 into Graph `$batch` requests). Updates and deletes take `expected_etag`
 (sent as `If-Match`); a mismatch is `ABORTED`.
 
+`Sync` with `include_security` also reads SharePoint's own security: each
+site's groups with their members (`site_group`), the role assignments of the
+site and of every list and item that has its own (`site_acl`), and on every
+drive, list and item the id of the `site_acl` that applies to it
+(`acl_owner_id`). `SetSiteRoleInheritance` makes a list or list item stop
+inheriting, or inherit again. Both need the certificate credential and the
+site grant `fullcontrol`.
+
 Point the proxy at a running sync-table (from grpc-integration) to record
 crawl / update / delete rows:
 
@@ -96,6 +104,21 @@ crawl / update / delete rows:
 SYNC_TABLE_TARGET=localhost:9097
 SYNC_TABLE_PLAINTEXT=true
 ```
+
+A sync-table write that fails ends the `Sync` with an error whose text names
+the ledger RPC and the row: `UNAVAILABLE` when the ledger could not be
+reached in time (run the `Sync` again from the cursor you hold), `INTERNAL`
+for any other refusal. No resume cursor is sent, so the delta link never
+moves past a change the ledger did not record, and the ledger is not
+reconciled against a run whose rows did not all land.
+
+The ledger is reconciled (rows the run did not write are marked deleted)
+only after a complete run: no `since_cursor`, at least one drive or list
+swept, and no narrower scope in the request than the connection's own. A
+`Sync` that names some of the connection's drives or sites, or a folder,
+never looked at the rest, so it leaves their rows and the output mirror as
+they were. Naming exactly the configured drives, or the configured site,
+still counts as complete.
 
 Completed `Sync` runs write through the grpc-integration output SPI
 (`OUTPUT_DIR` / `OKF_DIR`, `OUTPUT_STORE`, `OUTPUT_FORMATS`, ...; see the
@@ -191,6 +214,16 @@ Custom configuration JSON (GCA does not interpret this string):
 a `host:port` or `grpc://host:port` datasource URL is treated as the
 MicrosoftService target.
 
+Crawl checkpoints: `customMarkerData` is only ever a `Sync` resume cursor,
+or empty. Every checkpoint written while a crawl runs repeats the cursor
+the request carried, and the last one carries the cursor the pass ended
+with. An incremental crawl hands the stored cursor back as
+`SyncRequest.since_cursor`, so it is a delta pass: only what changed since
+that cursor, with each delete as a `DeletedItem`. With no stored cursor it
+is a full enumeration, which reports no deletes. A full crawl never sends a
+cursor. A `Sync` stream that ends without its terminal resume cursor was
+cut short: the crawl ends with `DatasourceError` and no new checkpoint.
+
 ```
 MICROSOFT_GRPC_TARGET=localhost:9096
 CONNECTOR_GRPC_PORT=30303
@@ -238,6 +271,20 @@ already-running proxy (one credential surface).
   }
 }
 ```
+
+The Connect offset is the pass's resume cursor (an encoded `SyncCursor`),
+in both modes. Each poll resumes from it, so after the first full
+enumeration a poll publishes only what changed, deletes included
+(`CHANGE_OPERATION_DELETE`). A `Sync` stream that ends without its resume
+cursor fails the poll, and nothing of it is committed. An offset written by
+a version that stored the poll's wall-clock time is read as "no cursor":
+the next pass is one full enumeration, logged at WARNING.
+
+Direct mode (no `grpc.target`) takes `microsoft.tenant.id`,
+`microsoft.client.id`, `microsoft.client.secret`, and optionally
+`microsoft.site.id`, `microsoft.drive.ids`, `microsoft.folder.path`,
+`microsoft.graph.base.url` and `microsoft.authority` (the Entra authority
+host, for a national cloud whose Graph root the base URL names).
 
 ## Proto lint (Buf)
 

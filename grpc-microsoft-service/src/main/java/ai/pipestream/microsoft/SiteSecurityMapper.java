@@ -11,6 +11,9 @@ import java.util.UUID;
 /** Maps SharePoint REST security objects to their messages. */
 final class SiteSecurityMapper {
 
+    /** Start of the login name of an Entra user. */
+    private static final String MEMBERSHIP_LOGIN = "i:0#.f|membership|";
+
     private SiteSecurityMapper() {
     }
 
@@ -26,6 +29,9 @@ final class SiteSecurityMapper {
                 .build();
     }
 
+    /** Ends the login name of the claim for a group's owners. */
+    private static final String OWNERS_SUFFIX = "_o";
+
     static SitePrincipal toPrincipal(JsonNode node) {
         String login = node.path("LoginName").asText("");
         SitePrincipalType type = principalType(node.path("PrincipalType").asInt(0));
@@ -35,13 +41,25 @@ final class SiteSecurityMapper {
                 .setLoginName(login)
                 .setTitle(node.path("Title").asText(""))
                 .setEmail(node.path("Email").asText(""))
-                .setUserPrincipalName(node.path("UserPrincipalName").asText(""))
+                .setUserPrincipalName(userPrincipalName(node, type, login))
                 .setSiteAdmin(node.path("IsSiteAdmin").asBoolean(false))
                 .setHidden(node.path("IsHiddenInUI").asBoolean(false));
         if (type == SitePrincipalType.SITE_PRINCIPAL_TYPE_SECURITY_GROUP) {
-            principal.setDirectoryObjectId(directoryObjectId(login));
+            String objectId = directoryObjectId(login);
+            principal.setDirectoryObjectId(objectId)
+                    .setDirectoryGroupOwners(!objectId.isEmpty() && login.endsWith(OWNERS_SUFFIX));
         }
         return principal.build();
+    }
+
+    /** The user's principal name; when SharePoint omits it, the one in a membership login name. */
+    private static String userPrincipalName(JsonNode node, SitePrincipalType type, String login) {
+        String reported = node.path("UserPrincipalName").asText("");
+        if (!reported.isEmpty() || type != SitePrincipalType.SITE_PRINCIPAL_TYPE_USER
+                || !login.startsWith(MEMBERSHIP_LOGIN)) {
+            return reported;
+        }
+        return login.substring(MEMBERSHIP_LOGIN.length());
     }
 
     static SiteRoleDefinition toRoleDefinition(JsonNode node) {
@@ -86,8 +104,8 @@ final class SiteSecurityMapper {
      */
     static String directoryObjectId(String loginName) {
         String last = loginName.substring(loginName.lastIndexOf('|') + 1);
-        if (last.endsWith("_o")) {
-            last = last.substring(0, last.length() - 2);
+        if (last.endsWith(OWNERS_SUFFIX)) {
+            last = last.substring(0, last.length() - OWNERS_SUFFIX.length());
         }
         if (last.length() != 36) {
             return "";

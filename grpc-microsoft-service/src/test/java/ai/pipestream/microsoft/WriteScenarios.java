@@ -2,7 +2,13 @@ package ai.pipestream.microsoft;
 
 import ai.pipestream.microsoft.v1.ColumnOutcome;
 import ai.pipestream.microsoft.v1.ColumnScope;
+import ai.pipestream.microsoft.v1.ClearValue;
 import ai.pipestream.microsoft.v1.ColumnSpec;
+import ai.pipestream.microsoft.v1.HyperlinkValue;
+import ai.pipestream.microsoft.v1.MultiChoiceValue;
+import ai.pipestream.microsoft.v1.MultiLookupValue;
+import ai.pipestream.microsoft.v1.MultiPersonValue;
+import ai.pipestream.microsoft.v1.PersonValue;
 import ai.pipestream.microsoft.v1.ColumnType;
 import ai.pipestream.microsoft.v1.ConflictBehavior;
 import ai.pipestream.microsoft.v1.CopyDriveItemRequest;
@@ -84,6 +90,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
@@ -124,9 +131,11 @@ final class WriteScenarios {
      * @param suffix end of the test folder and list names; also seeds the content
      * @param copyPollInterval time between copy progress checks; {@code null} for the default
      * @param blobs every content the scenarios produced, by sha256
+     * @param termSetId the term set that term columns draw from; empty when there is none
+     * @param termIds ids of the terms {@link #TERM_LABELS} of that set, in that order
      */
     record Backend(String siteId, String driveId, String suffix, Duration copyPollInterval,
-            Map<String, byte[]> blobs) {
+            Map<String, byte[]> blobs, String termSetId, List<String> termIds) {
     }
 
     /** How a scenario ended. */
@@ -244,6 +253,8 @@ final class WriteScenarios {
     private final String listName;
 
     private String folderId;
+    private SiteSecurable folderSecurable;
+    private boolean inheritanceBroken;
     private String listId;
     private DriveItem small;
     private byte[] smallBytes;
@@ -254,6 +265,10 @@ final class WriteScenarios {
     private String userId;
     private String groupId;
     private Integer siteGroupId;
+    private String userMail;
+    private boolean linkColumn;
+    private String libraryId;
+    private boolean libraryTried;
 
     /**
      * Creates the scenarios of one run.
@@ -334,6 +349,8 @@ final class WriteScenarios {
                         this::groupChanges),
                 new Scenario("list-group-transitive-members", "ListGroupTransitiveMembers",
                         "ListGroupTransitiveMembers", this::membersOfAGroup),
+                new Scenario("list-group-owners", "ListGroupOwners", "ListGroupOwners",
+                        this::ownersOfAGroup),
                 new Scenario("list-user-transitive-member-of", "ListUserTransitiveMemberOf",
                         "ListUserTransitiveMemberOf", this::groupsOfAUser),
                 new Scenario("list-site-groups", "ListSiteGroups", "ListSiteGroups",
@@ -352,11 +369,36 @@ final class WriteScenarios {
                         "GetSiteRoleInheritance [list item]", this::inheritanceOfTheListItem),
                 new Scenario("list-site-role-assignments-list-item", "ListSiteRoleAssignments",
                         "ListSiteRoleAssignments [list item]", this::roleAssignmentsOfTheListItem),
+                new Scenario("set-site-role-inheritance-break", "SetSiteRoleInheritance",
+                        "SetSiteRoleInheritance [list item and folder stop inheriting]",
+                        this::breakInheritance),
+                new Scenario("sync-security", "Sync",
+                        "Sync [site security: groups, role assignments, owner of every item]",
+                        this::syncSecurity),
+                new Scenario("set-site-role-inheritance-reset", "SetSiteRoleInheritance",
+                        "SetSiteRoleInheritance [list item and folder inherit again]",
+                        this::restoreInheritance),
                 new Scenario("update-list-item-fields", "UpdateListItemFields",
                         "UpdateListItemFields [every column type]", this::updateListItemFields),
+                new Scenario("update-list-item-rich-fields", "UpdateListItemFields",
+                        "UpdateListItemFields [note, multi choice, currency, link, lookups, clear]",
+                        this::updateRichFields),
+                new Scenario("update-list-item-person-fields", "UpdateListItemFields",
+                        "UpdateListItemFields [person by id, by email, several people]",
+                        this::updatePersonFields),
+                new Scenario("term-store", "ListTerms",
+                        "GetTermStore, ListTermGroups, ListTermSets, ListTerms [test term set]",
+                        this::termStore),
+                new Scenario("update-list-item-term-fields", "UpdateListItemFields",
+                        "UpdateListItemFields [term, several terms]", this::updateTermFields),
                 new Scenario("update-list-item-fields-drive-item", "UpdateListItemFields",
                         "UpdateListItemFields [drive item]", this::updateDriveItemFields),
                 new Scenario("mutate", "Mutate", "Mutate", this::mutate),
+                new Scenario("links-create-and-mutate", "CreateListItem",
+                        "CreateListItem and Mutate [link values]", this::linksThroughCreateAndMutate),
+                new Scenario("upload-with-fields", "UploadItem",
+                        "UploadItem [text and link fields, into a new library]",
+                        this::uploadWithFields),
                 new Scenario("delete-list-item", "DeleteListItem", "DeleteListItem",
                         this::deleteListItem),
                 new Scenario("delete-drive-item", "DeleteDriveItem",
@@ -686,6 +728,232 @@ final class WriteScenarios {
         return "text, number, boolean, choice and date-time read back";
     }
 
+    private String updateRichFields() {
+        need(itemId, "the list item");
+        ColumnSpec.Builder column = ColumnSpec.newBuilder();
+        List<String> problems = new ArrayList<>();
+        Set<String> created = ensureMoreColumns(problems, List.of(
+                column.clone().setName("PsNote").setType(ColumnType.COLUMN_TYPE_NOTE).build(),
+                column.clone().setName("PsMulti").setType(ColumnType.COLUMN_TYPE_MULTICHOICE)
+                        .addChoices("A").addChoices("B").addChoices("C").build(),
+                column.clone().setName("PsMoney").setType(ColumnType.COLUMN_TYPE_CURRENCY).build(),
+                column.clone().setName("PsLink").setType(ColumnType.COLUMN_TYPE_URL).build(),
+                column.clone().setName("PsLookup").setType(ColumnType.COLUMN_TYPE_LOOKUP)
+                        .setLookupListId(listId).build(),
+                column.clone().setName("PsLookups").setType(ColumnType.COLUMN_TYPE_LOOKUP)
+                        .setLookupListId(listId).setMultiValued(true).build()));
+        int self = Integer.parseInt(itemId);
+        String id = Integer.toString(self);
+        if (created.contains("PsNote")) {
+            writeAndRead(problems, FieldValue.newBuilder().setName("PsNote")
+                    .setNote("line one\nline two"), "PsNote", List.of("line one\nline two"));
+            writeAndRead(problems, FieldValue.newBuilder().setName("PsNote")
+                    .setClear(ClearValue.getDefaultInstance()), "PsNote", List.of());
+        }
+        if (created.contains("PsMulti")) {
+            writeAndRead(problems, FieldValue.newBuilder().setName("PsMulti").setMultiChoice(
+                    MultiChoiceValue.newBuilder().addChoices("A").addChoices("C")),
+                    "PsMulti", List.of("A", "C"));
+        }
+        if (created.contains("PsMoney")) {
+            writeAndRead(problems, FieldValue.newBuilder().setName("PsMoney").setNumber(12.5),
+                    "PsMoney", List.of("12.5"));
+        }
+        linkColumn = created.contains("PsLink");
+        if (linkColumn) {
+            writeAndRead(problems, FieldValue.newBuilder().setName("PsLink").setHyperlink(
+                    HyperlinkValue.newBuilder().setUrl("https://example.com/page")
+                            .setDescription("A page")),
+                    "PsLink.Url", List.of("https://example.com/page"));
+        }
+        if (created.contains("PsLookup")) {
+            writeAndRead(problems, FieldValue.newBuilder().setName("PsLookup").setLookup(self),
+                    "PsLookupLookupId", List.of(id));
+        }
+        if (created.contains("PsLookups")) {
+            writeAndRead(problems, FieldValue.newBuilder().setName("PsLookups").setMultiLookup(
+                    MultiLookupValue.newBuilder().addLookupIds(self)),
+                    "PsLookups.LookupId", List.of(id));
+        }
+        check(problems.isEmpty(), String.join("; ", problems));
+        return "note, multi choice, currency, link, lookup and multi lookup read back; clear emptied"
+                + " the note";
+    }
+
+    /** Name of the term group the live tenant keeps for this test. */
+    static final String TERM_GROUP = "pipestream-live-test";
+
+    /** Default labels of the two terms the test writes, in the order of {@link Backend#termIds}. */
+    static final List<String> TERM_LABELS = List.of("Engineering", "Research");
+
+    private List<ai.pipestream.microsoft.v1.TermValue> terms() {
+        if (backend.termSetId().isBlank() || backend.termIds().size() != TERM_LABELS.size()) {
+            throw new Skip("needs a term set and its " + TERM_LABELS.size() + " test terms");
+        }
+        List<ai.pipestream.microsoft.v1.TermValue> terms = new ArrayList<>();
+        for (int i = 0; i < TERM_LABELS.size(); i++) {
+            terms.add(ai.pipestream.microsoft.v1.TermValue.newBuilder()
+                    .setLabel(TERM_LABELS.get(i)).setTermId(backend.termIds().get(i)).build());
+        }
+        return terms;
+    }
+
+    private String termStore() {
+        List<ai.pipestream.microsoft.v1.TermValue> terms = terms();
+        String termSet = backend.termSetId();
+        ai.pipestream.microsoft.v1.TermStore store;
+        try {
+            store = stub().getTermStore(ai.pipestream.microsoft.v1.GetTermStoreRequest.newBuilder()
+                    .setSiteId(siteId).build()).getStore();
+        } catch (StatusRuntimeException e) {
+            if (e.getStatus().getCode() == io.grpc.Status.Code.NOT_FOUND) {
+                throw new Skip("Graph shows an application token no term store: "
+                        + e.getStatus().getDescription());
+            }
+            throw notGranted(e);
+        }
+        check(!store.getId().isEmpty(), "the term store has no id");
+        check(!store.getDefaultLanguageTag().isEmpty(), "the term store has no default language");
+        List<ai.pipestream.microsoft.v1.TermGroup> groups = new ArrayList<>();
+        stub().listTermGroups(ai.pipestream.microsoft.v1.ListTermGroupsRequest.newBuilder()
+                .setSiteId(siteId).build()).forEachRemaining(r -> groups.add(r.getGroup()));
+        String groupId = "";
+        for (ai.pipestream.microsoft.v1.TermGroup group : groups) {
+            check(!group.getId().isEmpty(), "a term group has no id");
+            if (group.getDisplayName().equals(TERM_GROUP)) {
+                groupId = group.getId();
+            }
+        }
+        check(!groupId.isEmpty(), "the term store has no group named " + TERM_GROUP);
+        List<ai.pipestream.microsoft.v1.TermSet> sets = new ArrayList<>();
+        stub().listTermSets(ai.pipestream.microsoft.v1.ListTermSetsRequest.newBuilder()
+                .setSiteId(siteId).setGroupId(groupId).build())
+                .forEachRemaining(r -> sets.add(r.getSet()));
+        check(sets.stream().anyMatch(set -> set.getId().equals(termSet)),
+                "the test term group does not hold the test term set");
+        List<ai.pipestream.microsoft.v1.Term> found = new ArrayList<>();
+        stub().listTerms(ai.pipestream.microsoft.v1.ListTermsRequest.newBuilder()
+                .setSiteId(siteId).setSetId(termSet).build())
+                .forEachRemaining(r -> found.add(r.getTerm()));
+        for (ai.pipestream.microsoft.v1.TermValue wanted : terms) {
+            check(found.stream().anyMatch(term -> term.getId().equals(wanted.getTermId())
+                    && term.getLabelsList().stream().anyMatch(label -> label.getIsDefault()
+                            && label.getName().equals(wanted.getLabel()))),
+                    "the test term set does not list " + wanted.getLabel());
+        }
+        return groups.size() + " group(s), " + sets.size() + " set(s) in the test group, "
+                + found.size() + " term(s) in the test set";
+    }
+
+    private String updateTermFields() {
+        need(itemId, "the list item");
+        List<ai.pipestream.microsoft.v1.TermValue> terms = terms();
+        ColumnSpec.Builder column = ColumnSpec.newBuilder().setTermSetId(backend.termSetId());
+        List<String> problems = new ArrayList<>();
+        Set<String> created = ensureMoreColumns(problems, List.of(
+                column.clone().setName("PsTerm").setType(ColumnType.COLUMN_TYPE_TERM).build(),
+                column.clone().setName("PsTerms").setType(ColumnType.COLUMN_TYPE_MULTITERM).build()));
+        ai.pipestream.microsoft.v1.TermValue first = terms.get(0);
+        ai.pipestream.microsoft.v1.TermValue second = terms.get(1);
+        if (created.contains("PsTerm")) {
+            writeAndRead(problems, FieldValue.newBuilder().setName("PsTerm").setTerm(first),
+                    "PsTerm.TermGuid", List.of(first.getTermId()));
+        }
+        if (created.contains("PsTerms")) {
+            writeAndRead(problems, FieldValue.newBuilder().setName("PsTerms").setMultiTerm(
+                    ai.pipestream.microsoft.v1.MultiTermValue.newBuilder()
+                            .addTerms(first).addTerms(second)),
+                    "PsTerms.TermGuid", List.of(first.getTermId(), second.getTermId()));
+        }
+        check(problems.isEmpty(), String.join("; ", problems));
+        return "a term and two terms read back";
+    }
+
+    private String updatePersonFields() {
+        need(itemId, "the list item");
+        need(userMail, "a directory user with a mail address");
+        ColumnSpec.Builder column = ColumnSpec.newBuilder().setType(ColumnType.COLUMN_TYPE_USER);
+        List<String> problems = new ArrayList<>();
+        Set<String> created = ensureMoreColumns(problems, List.of(
+                column.clone().setName("PsOwner").build(),
+                column.clone().setName("PsPerson").build(),
+                column.clone().setName("PsPeople").setMultiValued(true).build()));
+        if (created.contains("PsOwner")) {
+            writeAndRead(problems, FieldValue.newBuilder().setName("PsOwner").setPerson(
+                    PersonValue.newBuilder().setEmail(userMail)), "PsOwnerLookupId", null);
+        }
+        String id = fields(itemId).getOrDefault("PsOwnerLookupId", "");
+        if (id.isEmpty()) {
+            problems.add("no person id to write the other person columns with");
+        } else {
+            int person = Integer.parseInt(id);
+            if (created.contains("PsPerson")) {
+                writeAndRead(problems, FieldValue.newBuilder().setName("PsPerson").setPerson(
+                        PersonValue.newBuilder().setLookupId(person)),
+                        "PsPersonLookupId", List.of(id));
+            }
+            if (created.contains("PsPeople")) {
+                writeAndRead(problems, FieldValue.newBuilder().setName("PsPeople").setMultiPerson(
+                        MultiPersonValue.newBuilder().addPeople(
+                                PersonValue.newBuilder().setLookupId(person))),
+                        "PsPeople.LookupId", List.of(id));
+            }
+        }
+        check(problems.isEmpty(), String.join("; ", problems));
+        return "person by email, person by id and a people column read back";
+    }
+
+    /** Creates columns on the test list one by one; notes a problem for each that is not created. */
+    private Set<String> ensureMoreColumns(List<String> problems, List<ColumnSpec> columns) {
+        need(listId, "the test list");
+        Set<String> created = new HashSet<>();
+        for (ColumnSpec column : columns) {
+            try {
+                ColumnOutcome outcome = stub().ensureColumns(EnsureColumnsRequest.newBuilder()
+                        .setScope(ColumnScope.newBuilder()
+                                .setList(ListRef.newBuilder().setSiteId(siteId).setListId(listId)))
+                        .addColumns(column).build()).getColumns(0);
+                if (outcome.getState() == EnsureState.ENSURE_STATE_CREATED) {
+                    created.add(column.getName());
+                } else {
+                    problems.add(column.getName() + " column answered " + outcome.getState() + " "
+                            + outcome.getError().getMessage());
+                }
+            } catch (StatusRuntimeException e) {
+                problems.add(column.getName() + " column refused: " + e.getStatus().getCode() + " "
+                        + e.getStatus().getDescription());
+            }
+        }
+        return created;
+    }
+
+    /** Writes one column and notes a problem when the write fails or reads back differently. */
+    private void writeAndRead(List<String> problems, FieldValue.Builder value, String readName,
+            List<String> expected) {
+        String label = value.getName() + " (" + value.getValueCase() + ")";
+        try {
+            stub().updateListItemFields(UpdateListItemFieldsRequest.newBuilder()
+                    .setExpectedEtag(listItem(itemId).getEtag())
+                    .setPatch(ListItemPatch.newBuilder().setTarget(listItemTarget(itemId))
+                            .addFields(value))
+                    .build());
+        } catch (StatusRuntimeException e) {
+            problems.add(label + " refused: " + e.getStatus().getCode() + " "
+                    + e.getStatus().getDescription());
+            return;
+        }
+        List<String> read = List.of();
+        for (ListColumn column : listItem(itemId).getFieldsList()) {
+            if (column.getName().equals(readName)) {
+                read = column.getStringValuesCount() > 0 ? column.getStringValuesList()
+                        : List.of(fields(itemId).get(readName));
+            }
+        }
+        if (expected == null ? read.isEmpty() : !read.equals(expected)) {
+            problems.add(label + " read back as " + readName + "=" + read);
+        }
+    }
+
     private String updateDriveItemFields() {
         need(small, "the small upload");
         stub().updateListItemFields(UpdateListItemFieldsRequest.newBuilder()
@@ -772,6 +1040,98 @@ final class WriteScenarios {
         check(gone(() -> listItem(doomed)), "the batch-deleted list item is still readable");
         check(gone(() -> getItem(copy.getId())), "the batch-deleted copy is still readable");
         return ops.size() + " ops, two depends_on pairs, every result read back";
+    }
+
+    private String linksThroughCreateAndMutate() throws Exception {
+        need(itemId, "the list item");
+        if (!linkColumn) {
+            throw new Skip("needs the link column, which an earlier step did not produce");
+        }
+        ListRef list = ListRef.newBuilder().setSiteId(siteId).setListId(listId).build();
+        ListItem created = stub().createListItem(CreateListItemRequest.newBuilder().setList(list)
+                .addFields(FieldValue.newBuilder().setName("Title").setText("with link"))
+                .addFields(link("https://example.com/created")).build()).getItem();
+        check(created.getFieldsList().stream().anyMatch(column -> column.getName()
+                .equals("PsLink.Url") && column.getStringValue().equals("https://example.com/created")),
+                "CreateListItem answered without the link");
+        check("https://example.com/created".equals(fields(created.getId()).get("PsLink.Url")),
+                "the created item's link reads back differently");
+        List<MutateRequest> ops = List.of(
+                MutateRequest.newBuilder().setOpId("new-with-link").setCreateListItem(
+                        CreateListItemRequest.newBuilder().setList(list)
+                                .addFields(FieldValue.newBuilder().setName("Title").setText("batch link"))
+                                .addFields(link("https://example.com/batch-created"))).build(),
+                MutateRequest.newBuilder().setOpId("relink").setUpdateListItemFields(
+                        UpdateListItemFieldsRequest.newBuilder().setPatch(ListItemPatch.newBuilder()
+                                .setTarget(listItemTarget(itemId))
+                                .addFields(link("https://example.com/batch-updated")))).build());
+        Collector<MutateResponse> responses = new Collector<>();
+        StreamObserver<MutateRequest> requests = async.mutate(responses);
+        ops.forEach(requests::onNext);
+        requests.onCompleted();
+        Map<String, MutateResponse> byId = new HashMap<>();
+        responses.await().forEach(response -> byId.put(response.getOpId(), response));
+        check(byId.size() == ops.size(), "answered " + byId.size() + " of " + ops.size() + " ops");
+        for (MutateResponse response : byId.values()) {
+            check(!response.hasError(), "op " + response.getOpId() + " "
+                    + response.getError().getCode() + " " + response.getError().getMessage());
+        }
+        check("https://example.com/batch-created".equals(fields(byId.get("new-with-link")
+                .getCreateListItem().getItem().getId()).get("PsLink.Url")),
+                "the batch-created item's link reads back differently");
+        check("https://example.com/batch-updated".equals(fields(itemId).get("PsLink.Url")),
+                "the batch-updated link reads back differently");
+        return "a link written by CreateListItem and by two Mutate ops, each read back";
+    }
+
+    private String uploadWithFields() throws Exception {
+        String libraryName = listName + "-lib";
+        libraryTried = true;
+        EnsureListResponse library = stub().ensureList(EnsureListRequest.newBuilder()
+                .setSiteId(siteId).setDisplayName(libraryName)
+                .setDescription("Created by the live write test; safe to delete.")
+                .setTemplate(ListTemplate.LIST_TEMPLATE_DOCUMENT_LIBRARY).build());
+        check(library.getState() == EnsureState.ENSURE_STATE_CREATED,
+                "the library answered " + library.getState());
+        libraryId = library.getList().getId();
+        ColumnSpec.Builder column = ColumnSpec.newBuilder();
+        for (ColumnOutcome outcome : stub().ensureColumns(EnsureColumnsRequest.newBuilder()
+                .setScope(ColumnScope.newBuilder()
+                        .setList(ListRef.newBuilder().setSiteId(siteId).setListId(libraryId)))
+                .addColumns(column.clone().setName("PsText").setType(ColumnType.COLUMN_TYPE_TEXT))
+                .addColumns(column.clone().setName("PsLink").setType(ColumnType.COLUMN_TYPE_URL))
+                .build()).getColumnsList()) {
+            check(outcome.getState() == EnsureState.ENSURE_STATE_CREATED, outcome.getName()
+                    + " answered " + outcome.getState() + " " + outcome.getError().getMessage());
+        }
+        String libraryDrive = client.get(GraphPaths.list(siteId, libraryId) + "/drive?$select=id")
+                .path("id").asText("");
+        check(!libraryDrive.isEmpty(), "the library has no drive");
+        byte[] content = remember(("with fields " + folderName + "\n")
+                .getBytes(StandardCharsets.UTF_8));
+        Collector<UploadItemResponse> responses = new Collector<>();
+        StreamObserver<UploadItemRequest> requests = async.uploadItem(responses);
+        requests.onNext(frame(UploadItemHeader.newBuilder().setDriveId(libraryDrive)
+                .setName("with-fields.txt").setSize(content.length)
+                .addFields(FieldValue.newBuilder().setName("PsText").setText("from the upload"))
+                .addFields(link("https://example.com/uploaded"))));
+        sendChunks(requests, content, 0, content.length);
+        requests.onNext(end(sha256(content)));
+        requests.onCompleted();
+        List<UploadItemResponse> all = responses.await();
+        Map<String, String> columns = new HashMap<>();
+        all.get(all.size() - 1).getItem().getListColumnsList()
+                .forEach(c -> columns.put(c.getName(), c.getStringValue()));
+        check("from the upload".equals(columns.get("PsText")),
+                "PsText answered as " + columns.get("PsText"));
+        check("https://example.com/uploaded".equals(columns.get("PsLink.Url")),
+                "PsLink answered as " + columns.get("PsLink.Url"));
+        return "a file uploaded into a new library with a text and a link column, both answered";
+    }
+
+    private static FieldValue.Builder link(String url) {
+        return FieldValue.newBuilder().setName("PsLink")
+                .setHyperlink(HyperlinkValue.newBuilder().setUrl(url).setDescription("A page"));
     }
 
     // ------------------------------------------------------------ helpers
@@ -925,6 +1285,8 @@ final class WriteScenarios {
         check(users.stream().anyMatch(user -> !user.getUserPrincipalName().isEmpty()),
                 "no user has a sign-in name");
         userId = users.get(0).getId();
+        userMail = users.stream().map(GraphUser::getMail).filter(mail -> !mail.isEmpty())
+                .findFirst().orElse(null);
         return users.size() + " user(s)";
     }
 
@@ -983,6 +1345,15 @@ final class WriteScenarios {
                 .setGroupId(groupId).build())
                 .forEachRemaining(response -> members.add(response.getMember()));
         return members.size() + " member(s), kinds " + memberKinds(members);
+    }
+
+    private String ownersOfAGroup() {
+        need(groupId, "a group");
+        List<DirectoryMember> owners = new ArrayList<>();
+        stub().listGroupOwners(ai.pipestream.microsoft.v1.ListGroupOwnersRequest.newBuilder()
+                .setGroupId(groupId).build())
+                .forEachRemaining(response -> owners.add(response.getOwner()));
+        return owners.size() + " owner(s), kinds " + memberKinds(owners);
     }
 
     private String groupsOfAUser() {
@@ -1085,6 +1456,156 @@ final class WriteScenarios {
     private String roleAssignmentsOfTheListItem() {
         need(itemId, "the list item");
         return roleAssignments(SiteSecurable.newBuilder().setListItem(listItemRef(itemId)).build());
+    }
+
+    /** The test folder as a list item of its library. */
+    private SiteSecurable folderSecurable() {
+        if (folderSecurable == null) {
+            String library = stub().getDrive(ai.pipestream.microsoft.v1.GetDriveRequest.newBuilder()
+                    .setDriveId(driveId).build()).getDrive().getListId();
+            String number = stub().getItem(GetItemRequest.newBuilder().setDriveId(driveId)
+                    .setItemId(need(folderId, "the test folder")).build()).getItem()
+                    .getSharepointIds().getListItemId();
+            check(!library.isEmpty() && !number.isEmpty(), "the folder's list or list item id is unknown");
+            folderSecurable = SiteSecurable.newBuilder().setListItem(ListItemRef.newBuilder()
+                    .setSiteId(siteId).setListId(library).setItemId(number)).build();
+        }
+        return folderSecurable;
+    }
+
+    private String breakInheritance() {
+        need(itemId, "the list item");
+        SiteSecurable item = SiteSecurable.newBuilder().setListItem(listItemRef(itemId)).build();
+        for (SiteSecurable securable : List.of(item, folderSecurable())) {
+            boolean unique = stub().setSiteRoleInheritance(
+                    ai.pipestream.microsoft.v1.SetSiteRoleInheritanceRequest.newBuilder()
+                            .setSecurable(securable).setCopyRoleAssignments(true).build())
+                    .getHasUniqueRoleAssignments();
+            check(unique, "still inheriting after the break");
+            check(stub().getSiteRoleInheritance(GetSiteRoleInheritanceRequest.newBuilder()
+                    .setSecurable(securable).build()).getHasUniqueRoleAssignments(),
+                    "GetSiteRoleInheritance still reports inheritance");
+        }
+        inheritanceBroken = true;
+        return "the list item and the test folder have their own role assignments, copied from the parent";
+    }
+
+    private String syncSecurity() {
+        if (!inheritanceBroken) {
+            throw new Skip("needs the list item and folder with their own role assignments");
+        }
+        need(small, "the small file");
+        Map<String, ai.pipestream.microsoft.v1.MicrosoftEntity> entities = new java.util.LinkedHashMap<>();
+        try {
+            blocking.withDeadlineAfter(5, TimeUnit.MINUTES).sync(
+                    ai.pipestream.microsoft.v1.SyncRequest.newBuilder().addSiteIds(siteId)
+                            .setIncludeLists(true)
+                            .setInclude(ai.pipestream.microsoft.v1.DriveItemInclude.getDefaultInstance())
+                            .setIncludeSecurity(true).build())
+                    .forEachRemaining(response -> {
+                        if (response.hasChange()) {
+                            ai.pipestream.microsoft.v1.MicrosoftEntity entity = response.getChange().getEntity();
+                            entities.put(entity.getEntityCase() + " " + entity.getEntityId(), entity);
+                        }
+                    });
+        } catch (StatusRuntimeException e) {
+            throw notGranted(e);
+        }
+        String siteAcl = MicrosoftEntityIds.siteAcl(SiteSecurable.newBuilder().setSiteId(siteId).build());
+        String itemAcl = MicrosoftEntityIds.siteAcl(
+                SiteSecurable.newBuilder().setListItem(listItemRef(itemId)).build());
+        String folderAcl = MicrosoftEntityIds.siteAcl(folderSecurable());
+        int groups = 0;
+        int acls = 0;
+        int owned = 0;
+        int users = 0;
+        int joinable = 0;
+        int admins = 0;
+        for (ai.pipestream.microsoft.v1.MicrosoftEntity entity : entities.values()) {
+            String owner = switch (entity.getEntityCase()) {
+                case DRIVE -> entity.getDrive().getListId().isEmpty() ? null : entity.getDrive().getAclOwnerId();
+                case DRIVE_ITEM -> entity.getDriveItem().getAclOwnerId();
+                case LIST -> entity.getList().getAclOwnerId();
+                case LIST_ITEM -> entity.getListItem().getAclOwnerId();
+                default -> null;
+            };
+            if (owner != null) {
+                check(entities.containsKey("SITE_ACL " + owner),
+                        "an entity names role assignments that were not emitted");
+                owned++;
+            }
+            if (entity.hasSiteGroup()) {
+                groups++;
+                check(entity.getSiteGroup().getCompleteness()
+                        == ai.pipestream.sync.v1.AclCompleteness.ACL_COMPLETENESS_COMPLETE,
+                        "a group's members are not complete");
+                entity.getSiteGroup().getMembersList().forEach(WriteScenarios::checkPrincipal);
+            }
+            if (entity.hasSiteAdmins()) {
+                admins += entity.getSiteAdmins().getAdminsCount();
+                check(entity.getSiteAdmins().getCompleteness()
+                        == ai.pipestream.sync.v1.AclCompleteness.ACL_COMPLETENESS_COMPLETE,
+                        "the site's administrators are not complete");
+                for (ai.pipestream.microsoft.v1.SitePrincipal admin : entity.getSiteAdmins().getAdminsList()) {
+                    checkPrincipal(admin);
+                    check(admin.getSiteAdmin(), "a listed administrator is not marked as one");
+                }
+            }
+            if (entity.hasSiteAcl()) {
+                acls++;
+                check(entity.getSiteAcl().getCompleteness()
+                        == ai.pipestream.sync.v1.AclCompleteness.ACL_COMPLETENESS_COMPLETE,
+                        "role assignments are not complete");
+                check(entity.getSiteAcl().getAssignmentsCount() > 0, "role assignments are empty");
+                for (SiteRoleAssignment assignment : entity.getSiteAcl().getAssignmentsList()) {
+                    checkPrincipal(assignment.getMember());
+                    if (assignment.getMember().getPrincipalType()
+                            == SitePrincipalType.SITE_PRINCIPAL_TYPE_USER) {
+                        users++;
+                        joinable += assignment.getMember().getUserPrincipalName().isEmpty() ? 0 : 1;
+                    }
+                }
+            }
+        }
+        check(groups > 0, "no site group was emitted");
+        check(entities.containsKey("SITE_ADMINS " + MicrosoftEntityIds.siteAdmins(siteId)),
+                "the site's administrators were not emitted");
+        check(admins > 0, "the site has no administrator");
+        for (String acl : List.of(siteAcl, itemAcl, folderAcl)) {
+            check(entities.containsKey("SITE_ACL " + acl), "expected role assignments were not emitted");
+        }
+        ai.pipestream.microsoft.v1.MicrosoftEntity list = entities.get("LIST " + listId);
+        check(list != null && list.getList().getAclOwnerId().equals(siteAcl),
+                "the test list does not point at the site's role assignments");
+        ai.pipestream.microsoft.v1.MicrosoftEntity item = entities.get("LIST_ITEM " + listId + "/" + itemId);
+        check(item != null && item.getListItem().getAclOwnerId().equals(itemAcl),
+                "the list item does not point at its own role assignments");
+        ai.pipestream.microsoft.v1.MicrosoftEntity folder = entities.get("DRIVE_ITEM " + folderId);
+        check(folder != null && folder.getDriveItem().getAclOwnerId().equals(folderAcl),
+                "the test folder does not point at its own role assignments");
+        ai.pipestream.microsoft.v1.MicrosoftEntity file = entities.get("DRIVE_ITEM " + small.getId());
+        check(file != null && file.getDriveItem().getAclOwnerId().equals(folderAcl),
+                "a file in the test folder does not point at the folder's role assignments");
+        return groups + " group(s), " + admins + " site administrator(s), " + acls
+                + " role assignment set(s), " + owned
+                + " drives, lists and items with an owner, " + joinable + " of " + users
+                + " user grantee(s) with a user principal name";
+    }
+
+    private String restoreInheritance() {
+        if (!inheritanceBroken) {
+            throw new Skip("nothing stopped inheriting");
+        }
+        SiteSecurable item = SiteSecurable.newBuilder().setListItem(listItemRef(itemId)).build();
+        for (SiteSecurable securable : List.of(item, folderSecurable())) {
+            boolean unique = stub().setSiteRoleInheritance(
+                    ai.pipestream.microsoft.v1.SetSiteRoleInheritanceRequest.newBuilder()
+                            .setSecurable(securable).setInherit(true).build())
+                    .getHasUniqueRoleAssignments();
+            check(!unique, "still has its own role assignments after the reset");
+        }
+        inheritanceBroken = false;
+        return "the list item and the test folder inherit again";
     }
 
     private SiteSecurable listSecurable() {
@@ -1248,6 +1769,31 @@ final class WriteScenarios {
             clean = false;
             lines.add("list " + listName + " NOT CLEANED UP, " + e.getMessage());
         }
+        String libraryName = listName + "-lib";
+        try {
+            if (!libraryTried) {
+                return finish(clean, lines);
+            }
+            String id = libraryId;
+            if (id == null) {
+                id = client.get(lists + GraphPaths.segment(libraryName, "list") + "?$select=id")
+                        .path("id").asText("");
+            }
+            client.delete(lists + GraphPaths.segment(id, "list_id"));
+            lines.add("library " + libraryName + " deleted");
+        } catch (GraphClient.GraphApiException e) {
+            if (e.status() != 404 || libraryId != null) {
+                clean = false;
+                lines.add("library " + libraryName + " NOT CLEANED UP, " + e.getMessage());
+            }
+        } catch (IOException | RuntimeException e) {
+            clean = false;
+            lines.add("library " + libraryName + " NOT CLEANED UP, " + e.getMessage());
+        }
+        return finish(clean, lines);
+    }
+
+    private static String finish(boolean clean, List<String> lines) {
         check(clean, String.join("; ", lines));
         return String.join("; ", lines);
     }

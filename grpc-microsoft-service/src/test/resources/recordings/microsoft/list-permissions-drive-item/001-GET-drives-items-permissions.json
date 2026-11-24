@@ -88,7 +88,7 @@
               "@odata.type" : "#microsoft.graph.sharePointIdentity",
               "displayName" : "Identity 6",
               "email" : "email-1@example.invalid",
-              "id" : "00000000-0000-4000-8000-000000000013"
+              "id" : "00000000-0000-4000-8000-000000000016"
             },
             "siteUser" : {
               "displayName" : "Identity 6",
@@ -101,7 +101,7 @@
             "user" : {
               "displayName" : "Identity 6",
               "email" : "email-1@example.invalid",
-              "id" : "00000000-0000-4000-8000-000000000013"
+              "id" : "00000000-0000-4000-8000-000000000016"
             }
           },
           "inheritedFrom" : { }

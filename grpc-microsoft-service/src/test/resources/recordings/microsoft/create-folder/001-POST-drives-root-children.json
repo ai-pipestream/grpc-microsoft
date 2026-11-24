@@ -8,7 +8,7 @@
     },
     "body" : {
       "json" : {
-        "name" : "pipestream-live-write-20261122-165044-79eec5c4",
+        "name" : "pipestream-live-write-20261123-022631-a8adaf87",
         "folder" : { },
         "@microsoft.graph.conflictBehavior" : "fail"
       }
@@ -17,19 +17,19 @@
   "response" : {
     "status" : 201,
     "headers" : {
-      "etag" : "\"{00000000-0000-4000-8000-000000000003},1\"",
+      "etag" : "\"{00000000-0000-4000-8000-000000000006},1\"",
       "location" : "https://redacted.example/url/1",
       "content-type" : "application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8"
     },
     "body" : {
       "json" : {
         "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#drives('b%21drive-0001')/root/children/$entity",
-        "@odata.etag" : "\"{00000000-0000-4000-8000-000000000003},1\"",
-        "eTag" : "\"{00000000-0000-4000-8000-000000000003},1\"",
-        "lastModifiedDateTime" : "2026-11-22T16:50:45Z",
-        "createdDateTime" : "2026-11-22T16:50:45Z",
+        "@odata.etag" : "\"{00000000-0000-4000-8000-000000000006},1\"",
+        "eTag" : "\"{00000000-0000-4000-8000-000000000006},1\"",
+        "lastModifiedDateTime" : "2026-11-23T02:26:32Z",
+        "createdDateTime" : "2026-11-23T02:26:32Z",
         "id" : "item-0001",
-        "name" : "pipestream-live-write-20261122-165044-79eec5c4",
+        "name" : "pipestream-live-write-20261123-022631-a8adaf87",
         "size" : 0,
         "webUrl" : "https://redacted.example/url/2",
         "commentSettings" : {
@@ -40,7 +40,7 @@
         "createdBy" : {
           "application" : {
             "displayName" : "Identity 1",
-            "id" : "00000000-0000-4000-8000-000000000004"
+            "id" : "00000000-0000-4000-8000-000000000007"
           },
           "user" : {
             "displayName" : "Identity 2"
@@ -49,7 +49,7 @@
         "lastModifiedBy" : {
           "application" : {
             "displayName" : "Identity 1",
-            "id" : "00000000-0000-4000-8000-000000000004"
+            "id" : "00000000-0000-4000-8000-000000000007"
           },
           "user" : {
             "displayName" : "Identity 2"
@@ -61,17 +61,17 @@
           "id" : "item-0002",
           "path" : "/drives/b!drive-0001/root:",
           "sharepointIds" : {
-            "listId" : "00000000-0000-4000-8000-000000000005",
-            "listItemUniqueId" : "00000000-0000-4000-8000-000000000006",
+            "listId" : "00000000-0000-4000-8000-000000000008",
+            "listItemUniqueId" : "00000000-0000-4000-8000-000000000009",
             "siteId" : "00000000-0000-4000-8000-000000000001",
             "siteUrl" : "https://redacted.example/url/3",
-            "tenantId" : "00000000-0000-4000-8000-000000000007",
+            "tenantId" : "00000000-0000-4000-8000-000000000010",
             "webId" : "00000000-0000-4000-8000-000000000002"
           }
         },
         "fileSystemInfo" : {
-          "createdDateTime" : "2026-11-22T16:50:45Z",
-          "lastModifiedDateTime" : "2026-11-22T16:50:45Z"
+          "createdDateTime" : "2026-11-23T02:26:32Z",
+          "lastModifiedDateTime" : "2026-11-23T02:26:32Z"
         },
         "folder" : {
           "childCount" : 0

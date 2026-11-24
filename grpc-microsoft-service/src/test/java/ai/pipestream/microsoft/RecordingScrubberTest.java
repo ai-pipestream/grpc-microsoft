@@ -186,4 +186,61 @@ class RecordingScrubberTest {
                 .containsExactly("encoded grantee of a site permission");
         assertThat(RecordingScrubber.violations(listed.toString())).isEmpty();
     }
+
+    @Test
+    void theShownValueOfALookupOrPersonColumnIsReplaced() throws Exception {
+        RecordingScrubber scrubber = new RecordingScrubber("https://graph.microsoft.com/v1.0");
+        JsonNode fields = scrubber.json(Recordings.JSON.readTree("""
+                {"Title":"kept","PsPerson":"Ada Lovelace","PsPersonLookupId":"6",
+                 "PsPeople":[{"LookupId":6,"LookupValue":"Ada Lovelace","Email":"ada@contoso.com"}]}"""));
+
+        assertThat(fields.path("Title").asText()).isEqualTo("kept");
+        assertThat(fields.path("PsPersonLookupId").asText()).isEqualTo("6");
+        assertThat(fields.path("PsPerson").asText()).isEqualTo("Lookup value 1");
+        assertThat(fields.path("PsPeople").path(0).path("LookupValue").asText())
+                .isEqualTo("Lookup value 1");
+        assertThat(fields.toString()).doesNotContain("Ada").doesNotContain("contoso");
+    }
+
+    @Test
+    void anAddressInsideAUrlIsReplacedAndTheLeakCheckSeesOne() {
+        RecordingScrubber scrubber = new RecordingScrubber("https://graph.microsoft.com/v1.0");
+        String plain = scrubber.text("ada@contoso.com");
+        String url = "https://graph.microsoft.com/v1.0/sites/s/lists/l/items?$filter="
+                + "fields%2FEMail%20eq%20%27ada%40contoso.com%27";
+
+        String scrubbed = scrubber.text(url);
+
+        assertThat(plain).isEqualTo("email-1@example.invalid");
+        assertThat(scrubbed).endsWith("eq%20%27email-1%40example.invalid%27");
+        assertThat(RecordingScrubber.violations(url))
+                .containsExactly("percent-encoded email address");
+        assertThat(RecordingScrubber.violations(scrubbed)).isEmpty();
+    }
+
+    @Test
+    void aDocumentationUrlIsKept() {
+        RecordingScrubber scrubber = new RecordingScrubber("https://graph.microsoft.com/v1.0");
+
+        assertThat(scrubber.text("https://example.com/page, A page"))
+                .isEqualTo("https://example.com/page, A page");
+    }
+
+    @Test
+    void theJoinProofAddressKeepsOnePlaceholderInAnyCase() {
+        RecordingScrubber scrubber = new RecordingScrubber(GRAPH);
+        scrubber.joinProof("Proof.Person@Contoso.com");
+        assertThat(scrubber.text("smtp:proof.person@contoso.com"))
+                .isEqualTo("smtp:" + RecordingScrubber.JOIN_PROOF);
+        assertThat(scrubber.text("PROOF.PERSON@CONTOSO.COM")).isEqualTo(RecordingScrubber.JOIN_PROOF);
+        assertThat(scrubber.text("someone.else@contoso.com")).isEqualTo("email-1@example.invalid");
+        assertThat(RecordingScrubber.violations(RecordingScrubber.JOIN_PROOF)).isEmpty();
+    }
+
+    @Test
+    void xmlSchemaNamespacesStay() {
+        String xml = "<Value xmlns:q1=\"http://www.w3.org/2001/XMLSchema\" p4:type=\"q1:string\">";
+
+        assertThat(scrubber.text(xml)).isEqualTo(xml);
+    }
 }

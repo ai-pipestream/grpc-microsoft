@@ -4,7 +4,7 @@
     "url" : "https://graph.microsoft.com/v1.0/drives/b!drive-0001/items/item-0003",
     "authorized" : true,
     "headers" : {
-      "if-match" : "\"{00000000-0000-4000-8000-000000000008},1\"",
+      "if-match" : "\"{00000000-0000-4000-8000-000000000011},1\"",
       "content-type" : "application/json"
     },
     "body" : {
@@ -22,18 +22,18 @@
       "json" : {
         "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#drives('b%21drive-0001')/items/$entity",
         "@microsoft.graph.downloadUrl" : "https://redacted.example/url/19",
-        "createdDateTime" : "2026-11-22T16:50:46Z",
-        "eTag" : "\"{00000000-0000-4000-8000-000000000008},2\"",
+        "createdDateTime" : "2026-11-23T02:26:33Z",
+        "eTag" : "\"{00000000-0000-4000-8000-000000000011},2\"",
         "id" : "item-0003",
-        "lastModifiedDateTime" : "2026-11-22T16:50:57Z",
+        "lastModifiedDateTime" : "2026-11-23T02:26:41Z",
         "name" : "renamed.txt",
         "webUrl" : "https://redacted.example/url/20",
-        "cTag" : "\"c:{00000000-0000-4000-8000-000000000008},1\"",
+        "cTag" : "\"c:{00000000-0000-4000-8000-000000000011},1\"",
         "isAuthoritative" : false,
         "size" : 58,
         "createdBy" : {
           "application" : {
-            "id" : "00000000-0000-4000-8000-000000000004",
+            "id" : "00000000-0000-4000-8000-000000000007",
             "displayName" : "Identity 1"
           },
           "user" : {
@@ -42,7 +42,7 @@
         },
         "lastModifiedBy" : {
           "application" : {
-            "id" : "00000000-0000-4000-8000-000000000004",
+            "id" : "00000000-0000-4000-8000-000000000007",
             "displayName" : "Identity 1"
           },
           "user" : {
@@ -53,19 +53,19 @@
           "driveType" : "documentLibrary",
           "driveId" : "b!drive-0001",
           "id" : "item-0001",
-          "name" : "pipestream-live-write-20261122-165044-79eec5c4",
-          "path" : "/drives/b!drive-0001/root:/pipestream-live-write-20261122-165044-79eec5c4",
+          "name" : "pipestream-live-write-20261123-022631-a8adaf87",
+          "path" : "/drives/b!drive-0001/root:/pipestream-live-write-20261123-022631-a8adaf87",
           "siteId" : "00000000-0000-4000-8000-000000000001"
         },
         "file" : {
           "mimeType" : "text/plain",
           "hashes" : {
-            "quickXorHash" : "aZVOUSSPbF9rWfQdXQTy8f+dRH8="
+            "quickXorHash" : "GZVNTYSPbO8pWfwNXQW+kfTeRHc="
           }
         },
         "fileSystemInfo" : {
-          "createdDateTime" : "2026-11-22T16:50:46Z",
-          "lastModifiedDateTime" : "2026-11-22T16:50:57Z"
+          "createdDateTime" : "2026-11-23T02:26:33Z",
+          "lastModifiedDateTime" : "2026-11-23T02:26:41Z"
         },
         "shared" : {
           "scope" : "users"

@@ -14,7 +14,7 @@
       "json" : {
         "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#users(id,displayName,userPrincipalName,mail,givenName,surname,jobTitle,department,officeLocation,userType,accountEnabled,preferredLanguage,proxyAddresses,otherMails)",
         "value" : [ {
-          "id" : "00000000-0000-4000-8000-000000000013",
+          "id" : "00000000-0000-4000-8000-000000000016",
           "displayName" : "Directory value 1",
           "userPrincipalName" : "email-1@example.invalid",
           "mail" : "email-1@example.invalid",
@@ -27,7 +27,7 @@
           "accountEnabled" : true,
           "preferredLanguage" : "en",
           "proxyAddresses" : [ "smtp:email-2@example.invalid", "SMTP:email-1@example.invalid" ],
-          "otherMails" : [ "email-3@example.invalid" ]
+          "otherMails" : [ "join-proof@example.invalid", "email-3@example.invalid" ]
         } ]
       }
     }
