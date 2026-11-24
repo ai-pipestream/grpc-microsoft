@@ -1,0 +1,32 @@
+{
+  "request" : {
+    "method" : "POST",
+    "url" : "https://graph.microsoft.com/v1.0/drives/b!drive-0001/items/item-0001:/resumed.bin:/createUploadSession",
+    "authorized" : true,
+    "headers" : {
+      "content-type" : "application/json"
+    },
+    "body" : {
+      "json" : {
+        "item" : {
+          "name" : "resumed.bin"
+        }
+      }
+    }
+  },
+  "response" : {
+    "status" : 200,
+    "headers" : {
+      "location" : "https://graph.microsoft.com",
+      "content-type" : "application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8"
+    },
+    "body" : {
+      "json" : {
+        "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#microsoft.graph.uploadSession",
+        "expirationDateTime" : "2026-11-23T02:41:36.805Z",
+        "nextExpectedRanges" : [ "0-" ],
+        "uploadUrl" : "https://redacted.example/url/14"
+      }
+    }
+  }
+}

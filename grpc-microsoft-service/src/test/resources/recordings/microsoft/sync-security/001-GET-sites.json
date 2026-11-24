@@ -1,0 +1,36 @@
+{
+  "request" : {
+    "method" : "GET",
+    "url" : "https://graph.microsoft.com/v1.0/sites/tenant-1.example,00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000002?$select=id,name,displayName,description,webUrl,eTag,createdDateTime,lastModifiedDateTime,createdBy,lastModifiedBy,isPersonalSite,root,siteCollection,sharepointIds,parentReference",
+    "authorized" : true,
+    "headers" : { }
+  },
+  "response" : {
+    "status" : 200,
+    "headers" : {
+      "content-type" : "application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8"
+    },
+    "body" : {
+      "json" : {
+        "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#sites(id,name,displayName,description,webUrl,eTag,createdDateTime,lastModifiedDateTime,createdBy,lastModifiedBy,isPersonalSite,root,siteCollection,sharepointIds,parentReference)/$entity",
+        "createdDateTime" : "2026-11-08T22:18:00.68Z",
+        "description" : "Rules regarding the architecture and contrib guidelines for Pipestream software",
+        "id" : "tenant-1.example,00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000002",
+        "lastModifiedDateTime" : "2026-11-23T02:26:48Z",
+        "name" : "WelcomeToPipestream",
+        "webUrl" : "https://redacted.example/url/3",
+        "displayName" : "Welcome to PipeStream",
+        "root" : { },
+        "sharepointIds" : {
+          "siteId" : "00000000-0000-4000-8000-000000000001",
+          "siteUrl" : "https://redacted.example/url/3",
+          "tenantId" : "00000000-0000-4000-8000-000000000010",
+          "webId" : "00000000-0000-4000-8000-000000000002"
+        },
+        "siteCollection" : {
+          "hostname" : "tenant-1.example"
+        }
+      }
+    }
+  }
+}

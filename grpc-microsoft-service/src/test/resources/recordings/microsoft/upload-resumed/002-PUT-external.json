@@ -1,0 +1,28 @@
+{
+  "request" : {
+    "method" : "PUT",
+    "url" : "https://redacted.example/url/14",
+    "authorized" : false,
+    "headers" : {
+      "content-range" : "bytes 0-1638399/4588297",
+      "content-type" : "application/octet-stream"
+    },
+    "body" : {
+      "sha256" : "641f9e93fe65e44c8bc69886b07299d219ed6a5e0cac4e3b4dcdb5aee4499d89",
+      "length" : 1638400
+    }
+  },
+  "response" : {
+    "status" : 202,
+    "headers" : {
+      "content-type" : "application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8"
+    },
+    "body" : {
+      "json" : {
+        "@odata.context" : "https://redacted.example/url/8",
+        "expirationDateTime" : "2026-11-23T02:41:37.016Z",
+        "nextExpectedRanges" : [ "1638400-4588296" ]
+      }
+    }
+  }
+}

@@ -3,17 +3,21 @@ syntax = "proto3";
 package ai.pipestream.microsoft.v1;
 
 import "ai/pipestream/microsoft/v1/common.proto";
+import "ai/pipestream/microsoft/v1/directory.proto";
 import "ai/pipestream/microsoft/v1/drive.proto";
 import "ai/pipestream/microsoft/v1/events.proto";
 import "ai/pipestream/microsoft/v1/list.proto";
 import "ai/pipestream/microsoft/v1/permission.proto";
 import "ai/pipestream/microsoft/v1/site.proto";
+import "ai/pipestream/microsoft/v1/site_security.proto";
+import "ai/pipestream/microsoft/v1/term_store.proto";
+import "ai/pipestream/microsoft/v1/write.proto";
 
 option java_multiple_files = true;
 option java_package = "ai.pipestream.microsoft.v1";
 
 // ============================================================================
-// MICROSOFT SERVICE - the gRPC read proxy over Microsoft Graph v1.0.
+// MICROSOFT SERVICE - reads and writes Microsoft Graph v1.0 over gRPC.
 //
 // Every rpc maps to one Graph route (named in its comment). REST pagination
 // is transport and stays hidden: list rpcs stream one entity per message and
@@ -29,8 +33,9 @@ option java_package = "ai.pipestream.microsoft.v1";
 // /sites/getAllSites and /sites/delta on a delegated token).
 // ============================================================================
 
-// The Microsoft Graph read proxy. Server reflection and the gRPC health
-// service are always registered alongside it.
+// Reads and writes SharePoint Online and OneDrive through Microsoft Graph.
+// Server reflection and the gRPC health service are always registered
+// alongside it.
 service MicrosoftService {
   // --- Identity and connection ------------------------------------------
 
@@ -146,6 +151,79 @@ service MicrosoftService {
   // /sites/{site-id}/permissions. The ACL of one resource as a stream.
   rpc ListPermissions(ListPermissionsRequest) returns (stream ListPermissionsResponse);
 
+  // --- Directory ------------------------------------------------------------
+
+  // GET /users. Every user of the tenant as a stream. Application permission
+  // User.Read.All.
+  rpc ListUsers(ListUsersRequest) returns (stream ListUsersResponse);
+
+  // GET /groups. Every group of the tenant as a stream. Application
+  // permission GroupMember.Read.All.
+  rpc ListGroups(ListGroupsRequest) returns (stream ListGroupsResponse);
+
+  // GET /groups/{group-id}/transitiveMembers. The members of a group, the
+  // members of its nested groups included, as a stream.
+  rpc ListGroupTransitiveMembers(ListGroupTransitiveMembersRequest) returns (stream ListGroupTransitiveMembersResponse);
+
+  // GET /groups/{group-id}/owners. The owners of a group as a stream.
+  // Application permission GroupMember.Read.All.
+  rpc ListGroupOwners(ListGroupOwnersRequest) returns (stream ListGroupOwnersResponse);
+
+  // GET /users/{user-id}/transitiveMemberOf. The groups a user belongs to,
+  // directly or through nested groups, as a stream.
+  rpc ListUserTransitiveMemberOf(ListUserTransitiveMemberOfRequest) returns (stream ListUserTransitiveMemberOfResponse);
+
+  // GET /groups/delta. Groups that were created, changed or deleted, and
+  // optionally the members added to or removed from them, since a delta
+  // link. Application permission GroupMember.Read.All.
+  rpc DeltaGroups(DeltaGroupsRequest) returns (stream DeltaGroupsResponse);
+
+  // --- Term store ---
+  //
+  // Graph serves the term store to delegated tokens. An application token is
+  // answered NOT_FOUND for the store and an empty list of groups.
+
+  // The term store of a site. GET /sites/{site-id}/termStore.
+  rpc GetTermStore(GetTermStoreRequest) returns (GetTermStoreResponse);
+
+  // The term groups of a site's term store, as a stream.
+  // GET /sites/{site-id}/termStore/groups.
+  rpc ListTermGroups(ListTermGroupsRequest) returns (stream ListTermGroupsResponse);
+
+  // The term sets of one term group, as a stream.
+  // GET /sites/{site-id}/termStore/groups/{group-id}/sets.
+  rpc ListTermSets(ListTermSetsRequest) returns (stream ListTermSetsResponse);
+
+  // The terms directly under a term set or under one of its terms, as a
+  // stream. GET /sites/{site-id}/termStore/sets/{set-id}/children and
+  // GET /sites/{site-id}/termStore/sets/{set-id}/terms/{term-id}/children.
+  rpc ListTerms(ListTermsRequest) returns (stream ListTermsResponse);
+
+  // --- SharePoint site security ---
+
+  // The SharePoint groups of a site, as a stream. Needs a certificate
+  // credential. SharePoint REST: GET {web}/_api/web/sitegroups.
+  rpc ListSiteGroups(ListSiteGroupsRequest) returns (stream ListSiteGroupsResponse);
+
+  // The members of one SharePoint group, as a stream. Needs a certificate
+  // credential. SharePoint REST: GET {web}/_api/web/sitegroups/getbyid({id})/users.
+  rpc ListSiteGroupMembers(ListSiteGroupMembersRequest) returns (stream ListSiteGroupMembersResponse);
+
+  // The role assignments on a site, list or list item, each with its
+  // principal and permission levels, as a stream. Needs a certificate
+  // credential. SharePoint REST: GET {securable}/roleassignments.
+  rpc ListSiteRoleAssignments(ListSiteRoleAssignmentsRequest) returns (stream ListSiteRoleAssignmentsResponse);
+
+  // Whether a site, list or list item has its own role assignments or
+  // inherits its parent's. Needs a certificate credential.
+  // SharePoint REST: GET {securable}?$select=HasUniqueRoleAssignments.
+  rpc GetSiteRoleInheritance(GetSiteRoleInheritanceRequest) returns (GetSiteRoleInheritanceResponse);
+
+  // POST {web}/_api/.../breakroleinheritance or resetroleinheritance. Gives a
+  // list or list item its own role assignments, or makes it inherit its
+  // parent's again.
+  rpc SetSiteRoleInheritance(SetSiteRoleInheritanceRequest) returns (SetSiteRoleInheritanceResponse);
+
   // --- Sync ----------------------------------------------------------------
 
   // One bounded sync pass over the requested scope: a full enumeration via
@@ -155,6 +233,61 @@ service MicrosoftService {
   // cursor. Deliberately bounded; a continuously tailing rpc is a possible
   // additive later.
   rpc Sync(SyncRequest) returns (stream SyncResponse);
+
+  // --- Writes ------------------------------------------------------------
+  //
+  // Every update and delete sends `expected_etag` as If-Match; a mismatch
+  // (Graph 412) is ABORTED. Graph 429 and 503 are RESOURCE_EXHAUSTED and
+  // UNAVAILABLE, with RetryInfo when Graph sent Retry-After.
+
+  // PUT /drives/{drive-id}/items/{parent-id}:/{name}:/content, or
+  // POST .../createUploadSession and ranged PUTs for larger files. Stores a
+  // file from a header, content chunks and an end frame; answers progress,
+  // then the stored item.
+  rpc UploadItem(stream UploadItemRequest) returns (stream UploadItemResponse);
+
+  // POST /drives/{drive-id}/items/{parent-id}/children. Creates a folder.
+  rpc CreateFolder(CreateFolderRequest) returns (CreateFolderResponse);
+
+  // PATCH /drives/{drive-id}/items/{item-id}. Renames, moves or describes a
+  // drive item.
+  rpc UpdateDriveItem(UpdateDriveItemRequest) returns (UpdateDriveItemResponse);
+
+  // DELETE /drives/{drive-id}/items/{item-id}, or POST .../permanentDelete.
+  // Moves a drive item to the recycle bin, or deletes it for good.
+  rpc DeleteDriveItem(DeleteDriveItemRequest) returns (DeleteDriveItemResponse);
+
+  // POST /drives/{drive-id}/items/{item-id}/versions/{version-id}/restoreVersion.
+  // Makes an earlier version the current one.
+  rpc RestoreDriveItemVersion(RestoreDriveItemVersionRequest) returns (RestoreDriveItemVersionResponse);
+
+  // POST /drives/{drive-id}/items/{item-id}/copy. Copies a drive item;
+  // answers progress, then the new item.
+  rpc CopyDriveItem(CopyDriveItemRequest) returns (stream CopyDriveItemResponse);
+
+  // POST /sites/{site-id}/lists/{list-id}/items. Creates a list item.
+  rpc CreateListItem(CreateListItemRequest) returns (CreateListItemResponse);
+
+  // PATCH /sites/{site-id}/lists/{list-id}/items/{item-id}/fields or
+  // /drives/{drive-id}/items/{item-id}/listItem/fields. Sets column values
+  // on a list item.
+  rpc UpdateListItemFields(UpdateListItemFieldsRequest) returns (UpdateListItemFieldsResponse);
+
+  // DELETE /sites/{site-id}/lists/{list-id}/items/{item-id}. Deletes a list
+  // item.
+  rpc DeleteListItem(DeleteListItemRequest) returns (DeleteListItemResponse);
+
+  // POST /sites/{site-id}/columns or /sites/{site-id}/lists/{list-id}/columns.
+  // Creates the columns that are missing.
+  rpc EnsureColumns(EnsureColumnsRequest) returns (EnsureColumnsResponse);
+
+  // POST /sites/{site-id}/lists. Creates a list or document library when it
+  // is missing.
+  rpc EnsureList(EnsureListRequest) returns (EnsureListResponse);
+
+  // POST /$batch. Runs a stream of writes in batches and answers each op
+  // once, with its response or its error.
+  rpc Mutate(stream MutateRequest) returns (stream MutateResponse);
 }
 
 // ============================================================================
@@ -284,6 +417,10 @@ message ProbeConnectionRequest {
   string client_secret = 4;
   // Max site ids to return as evidence the token works; 0 = 5.
   int32 limit = 5;
+  // Inline certificate credential for an unsaved probe: the private key and
+  // the certificate in PEM. Signs in instead of client_secret when set.
+  // Never logged or echoed.
+  string client_certificate_pem = 6;
   // Extensible key-value metadata (extension-metadata map - see convention).
   map<string, string> metadata = 99;
 }
@@ -800,6 +937,100 @@ message ListPermissionsResponse {
 }
 
 // ============================================================================
+// Directory
+// ============================================================================
+
+// Request to list the users of the tenant.
+message ListUsersRequest {
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 1;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// One streamed user.
+message ListUsersResponse {
+  // The streamed user.
+  GraphUser user = 1;
+}
+
+// Request to list the groups of the tenant.
+message ListGroupsRequest {
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 1;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// One streamed group.
+message ListGroupsResponse {
+  // The streamed group.
+  GraphGroup group = 1;
+}
+
+// Request to list the members of a group, nested groups expanded.
+message ListGroupTransitiveMembersRequest {
+  // Graph object id of the group.
+  string group_id = 1;
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 2;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// One streamed member.
+message ListGroupTransitiveMembersResponse {
+  // The streamed member.
+  DirectoryMember member = 1;
+}
+
+// Request to list the groups a user belongs to, nested groups expanded.
+message ListUserTransitiveMemberOfRequest {
+  // Graph object id or user principal name of the user.
+  string user_id = 1;
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 2;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// One streamed membership.
+message ListUserTransitiveMemberOfResponse {
+  // The group or other directory object the user belongs to.
+  DirectoryMember member = 1;
+}
+
+// Request for DeltaGroups.
+message DeltaGroupsRequest {
+  // The `@odata.deltaLink` a previous DeltaGroups stream ended with. Empty =
+  // every group; `latest` = emit no groups, only the current delta link. The
+  // server validates the link as for DeltaDriveItems.
+  string delta_link = 1;
+  // Also report membership changes. On a full enumeration this lists every
+  // direct member of every group.
+  bool include_members = 2;
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 3;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// One streamed group delta event.
+message DeltaGroupsResponse {
+  // Exactly one of a resync notice, a group change, or the terminal delta
+  // link.
+  oneof event {
+    // Emitted first when the supplied delta link was rejected (410 Gone).
+    DeltaResync resync = 1;
+    // A created, changed or deleted group. Graph can report one group in
+    // several changes when it has many members.
+    GroupChange change = 2;
+    // Terminal message: the delta link to persist for the next call.
+    string delta_link = 3;
+  }
+}
+
+// ============================================================================
 // Sync
 // ============================================================================
 
@@ -843,6 +1074,13 @@ message SyncRequest {
   // When true, system drives and hidden / system lists are swept too;
   // default skips them.
   bool include_system = 12;
+  // When true, the SharePoint security of the synced sites is read too:
+  // each site's groups with their members and the role assignments of every
+  // site, list and item that has its own are emitted as `site_group` and
+  // `site_acl` changes, and every emitted drive, list and item names the
+  // `site_acl` that applies to it in `acl_owner_id`. Needs a certificate
+  // credential.
+  bool include_security = 13;
   // Extensible key-value metadata (extension-metadata map - see convention).
   map<string, string> metadata = 99;
 }
@@ -863,4 +1101,185 @@ message SyncResponse {
     // SyncRequest.since_cursor next time (an encoded SyncCursor).
     string resume_cursor = 3;
   }
+}
+
+// Request to break or restore the role inheritance of a list or list item.
+message SetSiteRoleInheritanceRequest {
+  // The list or list item; a site is refused.
+  SiteSecurable securable = 1;
+  // True = inherit the parent's role assignments again (its own are
+  // dropped); false = stop inheriting.
+  bool inherit = 2;
+  // When breaking inheritance: start with a copy of the parent's role
+  // assignments; false = start with the caller as the only grantee.
+  bool copy_role_assignments = 3;
+  // When breaking inheritance on a list or folder: also make everything
+  // under it that has its own role assignments inherit again.
+  bool clear_subscopes = 4;
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 5;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// The inheritance state after the change.
+message SetSiteRoleInheritanceResponse {
+  // True when the securable now has its own role assignments.
+  bool has_unique_role_assignments = 1;
+}
+
+// Request to list the SharePoint groups of a site.
+message ListSiteGroupsRequest {
+  // Site id.
+  string site_id = 1;
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 2;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// One SharePoint group of the site.
+message ListSiteGroupsResponse {
+  // The group.
+  SiteGroup group = 1;
+}
+
+// Request to list the members of one SharePoint group.
+message ListSiteGroupMembersRequest {
+  // Site id.
+  string site_id = 1;
+  // Id of the SharePoint group within the site collection.
+  int32 group_id = 2;
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 3;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// One member of the SharePoint group.
+message ListSiteGroupMembersResponse {
+  // The member: a user or a directory group.
+  SitePrincipal member = 1;
+}
+
+// Request to list the role assignments on a site, list or list item.
+message ListSiteRoleAssignmentsRequest {
+  // What to read the role assignments of.
+  SiteSecurable securable = 1;
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 2;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// One role assignment.
+message ListSiteRoleAssignmentsResponse {
+  // The assignment.
+  SiteRoleAssignment assignment = 1;
+}
+
+// Request to read whether a securable has its own role assignments.
+message GetSiteRoleInheritanceRequest {
+  // What to read.
+  SiteSecurable securable = 1;
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 2;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// Whether the securable has its own role assignments.
+message GetSiteRoleInheritanceResponse {
+  // True when the securable has its own role assignments; false when it
+  // inherits its parent's.
+  bool has_unique_role_assignments = 1;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// Request for the term store of a site.
+message GetTermStoreRequest {
+  // Site id.
+  string site_id = 1;
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 2;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// The term store of a site.
+message GetTermStoreResponse {
+  // The term store.
+  TermStore store = 1;
+}
+
+// Request to list the term groups of a site's term store.
+message ListTermGroupsRequest {
+  // Site id.
+  string site_id = 1;
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 2;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// One term group.
+message ListTermGroupsResponse {
+  // The group.
+  TermGroup group = 1;
+}
+
+// Request to list the term sets of one term group.
+message ListTermSetsRequest {
+  // Site id.
+  string site_id = 1;
+  // Id of the term group.
+  string group_id = 2;
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 3;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// One term set.
+message ListTermSetsResponse {
+  // The term set.
+  TermSet set = 1;
+}
+
+// Request to list the terms directly under a term set or a term.
+message ListTermsRequest {
+  // Site id.
+  string site_id = 1;
+  // Id of the term set.
+  string set_id = 2;
+  // Id of the term whose children to list. Empty = the terms at the root of
+  // the set.
+  string parent_term_id = 3;
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 4;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// One term.
+message ListTermsResponse {
+  // The term.
+  Term term = 1;
+}
+
+// Request to list the owners of a group.
+message ListGroupOwnersRequest {
+  // Graph object id of the group.
+  string group_id = 1;
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 2;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// One streamed owner.
+message ListGroupOwnersResponse {
+  // The streamed owner.
+  DirectoryMember owner = 1;
 }

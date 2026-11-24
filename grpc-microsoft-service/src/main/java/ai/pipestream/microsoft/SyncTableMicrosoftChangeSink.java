@@ -18,12 +18,18 @@ import ai.pipestream.sync.v1.SyncTableServiceGrpc;
 import ai.pipestream.sync.v1.UpsertAssetRequest;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
+import io.grpc.Status;
+import io.grpc.StatusRuntimeException;
 
 import java.util.Locale;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
-/** Writes Microsoft Graph changes into {@code SyncTableService}. */
+/**
+ * Writes Microsoft Graph changes into {@code SyncTableService}. A write the
+ * ledger refuses or cannot take is thrown as {@link WriteFailedException};
+ * nothing is logged and skipped.
+ */
 public final class SyncTableMicrosoftChangeSink implements MicrosoftChangeSink, AutoCloseable {
 
     /** Asset {@code source} written for every Microsoft Graph row. */
@@ -34,9 +40,6 @@ public final class SyncTableMicrosoftChangeSink implements MicrosoftChangeSink, 
     public static final String ENV_TARGET = "SYNC_TABLE_TARGET";
     /** Environment variable; {@code false} disables plaintext on the channel. */
     public static final String ENV_PLAINTEXT = "SYNC_TABLE_PLAINTEXT";
-
-    private static final System.Logger LOG =
-            System.getLogger(SyncTableMicrosoftChangeSink.class.getName());
 
     private final ManagedChannel channel;
     private final SyncTableServiceGrpc.SyncTableServiceBlockingStub stub;
@@ -117,36 +120,86 @@ public final class SyncTableMicrosoftChangeSink implements MicrosoftChangeSink, 
         return new SyncTableMicrosoftChangeSink(builder.build());
     }
 
-    @Override
-    public void emit(MicrosoftChange change) {
-        try {
-            if (change.getOperation() == ChangeOperation.CHANGE_OPERATION_DELETE) {
-                stub.deleteAsset(DeleteAssetRequest.newBuilder()
-                        .setAssetId(assetId(connectionId, change.getEntity()))
-                        .setRunId(change.getCursor())
-                        .setCursor(change.getCursor())
-                        .build());
-                return;
-            }
-            stub.upsertAsset(UpsertAssetRequest.newBuilder()
-                    .setAsset(toAsset(connectionId, change)).build());
-        } catch (RuntimeException e) {
-            LOG.log(System.Logger.Level.WARNING, "sync-table emit failed: {0}", e.toString());
+    /**
+     * A sync-table write failed. The ledger does not hold what the pass
+     * emitted, so the pass that made the call must fail: its resume cursor
+     * would move the delta link past a change the ledger never recorded, and
+     * a reconcile would mark the rows whose upserts were lost as deleted.
+     */
+    public static final class WriteFailedException extends RuntimeException {
+
+        private static final long serialVersionUID = 1L;
+
+        /** The ledger's own status code for the failed call. */
+        private final Status.Code ledgerCode;
+
+        private WriteFailedException(String rpc, String subject, StatusRuntimeException cause) {
+            super("sync-table " + rpc + " failed for " + subject + ": "
+                    + cause.getStatus().getCode()
+                    + (cause.getStatus().getDescription() == null ? ""
+                            : ": " + cause.getStatus().getDescription()), cause);
+            this.ledgerCode = cause.getStatus().getCode();
+        }
+
+        /**
+         * The status code the sync-table answered with.
+         *
+         * @return the ledger's status code, never {@code null}
+         */
+        public Status.Code ledgerStatus() {
+            return ledgerCode;
         }
     }
 
+    /**
+     * Writes the change to the ledger.
+     *
+     * @param change the change to record
+     * @throws WriteFailedException if the sync-table refuses or cannot be reached
+     */
+    @Override
+    public void emit(MicrosoftChange change) {
+        String assetId = assetId(connectionId, change.getEntity());
+        if (change.getOperation() == ChangeOperation.CHANGE_OPERATION_DELETE) {
+            try {
+                stub.deleteAsset(DeleteAssetRequest.newBuilder()
+                        .setAssetId(assetId)
+                        .setRunId(change.getCursor())
+                        .setCursor(change.getCursor())
+                        .build());
+            } catch (StatusRuntimeException e) {
+                throw new WriteFailedException("DeleteAsset", assetId, e);
+            }
+            return;
+        }
+        try {
+            stub.upsertAsset(UpsertAssetRequest.newBuilder()
+                    .setAsset(toAsset(connectionId, change)).build());
+        } catch (StatusRuntimeException e) {
+            throw new WriteFailedException("UpsertAsset", assetId, e);
+        }
+    }
+
+    /**
+     * Records the sweep's checkpoint.
+     *
+     * @param snapshot the marker of a completed drive or list sweep
+     * @throws WriteFailedException if the sync-table refuses or cannot be reached
+     */
     @Override
     public void snapshot(MicrosoftSnapshot snapshot) {
+        String scope = scope(snapshot);
         try {
             stub.putCheckpoint(PutCheckpointRequest.newBuilder()
                     .setCheckpoint(Checkpoint.newBuilder()
                             .setSource(SOURCE)
                             .setConnectionId(connectionId)
-                            .setScope(scope(snapshot))
+                            .setScope(scope)
                             .setCursor(snapshot.getCursor()))
                     .build());
-        } catch (RuntimeException e) {
-            LOG.log(System.Logger.Level.WARNING, "sync-table snapshot failed: {0}", e.toString());
+        } catch (StatusRuntimeException e) {
+            throw new WriteFailedException("PutCheckpoint",
+                    "scope " + scope + " of connection " + connectionId, e);
         }
     }
 
@@ -171,6 +224,7 @@ public final class SyncTableMicrosoftChangeSink implements MicrosoftChangeSink, 
      * pass never reconciles, because unchanged rows keep their older run id.
      *
      * @param runId identifier of the completed full-sweep run
+     * @throws WriteFailedException if the sync-table refuses or cannot be reached
      */
     @Override
     public void completeRun(String runId) {
@@ -183,8 +237,9 @@ public final class SyncTableMicrosoftChangeSink implements MicrosoftChangeSink, 
                     .setConnectionId(connectionId)
                     .setRunId(runId)
                     .build());
-        } catch (RuntimeException e) {
-            LOG.log(System.Logger.Level.WARNING, "sync-table reconcile failed: {0}", e.toString());
+        } catch (StatusRuntimeException e) {
+            throw new WriteFailedException("Reconcile",
+                    "run " + runId + " of connection " + connectionId, e);
         }
     }
 

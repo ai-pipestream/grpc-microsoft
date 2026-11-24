@@ -1,0 +1,15 @@
+{
+  "request" : {
+    "method" : "GET",
+    "url" : "https://graph.microsoft.com/v1.0/drives/b!drive-0001/items/item-0003/content",
+    "authorized" : true,
+    "headers" : { }
+  },
+  "response" : {
+    "status" : 302,
+    "headers" : {
+      "location" : "https://redacted.example/url/6",
+      "content-type" : "application/octet-stream"
+    }
+  }
+}

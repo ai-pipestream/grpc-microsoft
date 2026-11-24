@@ -1,0 +1,33 @@
+{
+  "request" : {
+    "method" : "GET",
+    "url" : "https://graph.microsoft.com/v1.0/groups/00000000-0000-4000-8000-000000000054/transitiveMembers",
+    "authorized" : true,
+    "headers" : { }
+  },
+  "response" : {
+    "status" : 200,
+    "headers" : {
+      "content-type" : "application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8"
+    },
+    "body" : {
+      "json" : {
+        "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#directoryObjects",
+        "value" : [ {
+          "@odata.type" : "#microsoft.graph.user",
+          "id" : "00000000-0000-4000-8000-000000000016",
+          "businessPhones" : [ "Directory value 21" ],
+          "displayName" : "Directory value 1",
+          "givenName" : "Directory value 2",
+          "jobTitle" : null,
+          "mail" : "email-1@example.invalid",
+          "mobilePhone" : null,
+          "officeLocation" : null,
+          "preferredLanguage" : "en",
+          "surname" : "Directory value 3",
+          "userPrincipalName" : "email-1@example.invalid"
+        } ]
+      }
+    }
+  }
+}

@@ -75,7 +75,7 @@ public final class MicrosoftCatalog {
             case LIST -> list(entity.getList(), at);
             case LIST_ITEM -> listItem(entity.getListItem(), at);
             case PERMISSION -> permission(entity.getEntityId(), entity.getPermission(), at);
-            case ENTITY_NOT_SET -> fallback(entity, at);
+            case SITE_GROUP, SITE_ACL, SITE_ADMINS, ENTITY_NOT_SET -> fallback(entity, at);
         };
     }
 

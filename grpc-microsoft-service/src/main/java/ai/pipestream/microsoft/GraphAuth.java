@@ -16,6 +16,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 /**
  * Microsoft Entra OAuth2 for Graph, with no SDK: the two token flows a headless toolkit
@@ -37,10 +38,12 @@ public final class GraphAuth {
      * @param tenantId Microsoft Entra tenant id
      * @param clientId application (client) id
      * @param clientSecret client secret; {@code null} for delegated (device-code)
-     *        flows
+     *        flows and when a certificate is used
+     * @param certificate certificate credential; {@code null} when a secret is
+     *        used. Wins over the secret when both are set.
      */
     public record Config(String authority, String tenantId, String clientId,
-                         String clientSecret) {
+                         String clientSecret, ClientCertificate certificate) {
 
         /**
          * Defaults a blank {@code authority} to the public-cloud login host and
@@ -51,6 +54,18 @@ public final class GraphAuth {
                     ? "https://login.microsoftonline.com" : GraphLinks.stripTrailingSlashes(authority);
             Objects.requireNonNull(tenantId, "tenantId");
             Objects.requireNonNull(clientId, "clientId");
+        }
+
+        /**
+         * A config with no certificate.
+         *
+         * @param authority Entra authority host; blank becomes the public cloud
+         * @param tenantId Microsoft Entra tenant id
+         * @param clientId application (client) id
+         * @param clientSecret client secret; {@code null} for delegated flows
+         */
+        public Config(String authority, String tenantId, String clientId, String clientSecret) {
+            this(authority, tenantId, clientId, clientSecret, null);
         }
 
         /**
@@ -110,6 +125,8 @@ public final class GraphAuth {
     }
 
     private static final ObjectMapper JSON = new ObjectMapper();
+    /** The scope of every Graph application permission the app holds. */
+    public static final String GRAPH_SCOPE = "https://graph.microsoft.com/.default";
 
     private final Config config;
     private final HttpClient http;
@@ -129,6 +146,34 @@ public final class GraphAuth {
     }
 
     /**
+     * A lazily refreshed client-credentials token for one resource. A token
+     * failure surfaces as an {@link IllegalStateException} whose message never
+     * carries the secret.
+     *
+     * @param scope the resource's {@code .default} scope
+     * @return supplies a current access token
+     */
+    public Supplier<String> tokens(String scope) {
+        Object lock = new Object();
+        Token[] holder = new Token[1];
+        return () -> {
+            synchronized (lock) {
+                if (holder[0] == null || holder[0].expired()) {
+                    try {
+                        holder[0] = clientCredentials(scope);
+                    } catch (IOException e) {
+                        throw new IllegalStateException("token request failed: " + e.getMessage(), e);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        throw new IllegalStateException("token request interrupted", e);
+                    }
+                }
+                return holder[0].accessToken();
+            }
+        };
+    }
+
+    /**
      * Application permissions against {@code https://graph.microsoft.com/.default}.
      *
      * @return an access token with no refresh token
@@ -136,15 +181,35 @@ public final class GraphAuth {
      * @throws InterruptedException if the HTTP call is interrupted
      */
     public Token clientCredentials() throws IOException, InterruptedException {
-        if (config.clientSecret() == null) {
-            throw new IllegalStateException("The client-credentials flow needs a clientSecret");
+        return clientCredentials(GRAPH_SCOPE);
+    }
+
+    /**
+     * Application permissions against another resource, such as
+     * {@code https://contoso.sharepoint.com/.default}. Signs with the
+     * certificate when one is configured, else sends the secret.
+     *
+     * @param scope the resource's {@code .default} scope
+     * @return an access token with no refresh token
+     * @throws IOException if the token endpoint fails
+     * @throws InterruptedException if the HTTP call is interrupted
+     */
+    public Token clientCredentials(String scope) throws IOException, InterruptedException {
+        Map<String, String> form = new LinkedHashMap<>();
+        form.put("grant_type", "client_credentials");
+        form.put("client_id", config.clientId());
+        if (config.certificate() != null) {
+            form.put("client_assertion_type", "urn:ietf:params:oauth:client-assertion-type:jwt-bearer");
+            form.put("client_assertion",
+                    config.certificate().assertion(config.clientId(), tokenEndpoint(), Instant.now()));
+        } else if (config.clientSecret() != null) {
+            form.put("client_secret", config.clientSecret());
+        } else {
+            throw new IllegalStateException(
+                    "The client-credentials flow needs a clientSecret or a certificate");
         }
-        JsonNode response = postForm(tokenEndpoint(), Map.of(
-                "grant_type", "client_credentials",
-                "client_id", config.clientId(),
-                "client_secret", config.clientSecret(),
-                "scope", "https://graph.microsoft.com/.default"));
-        return token(response);
+        form.put("scope", scope);
+        return token(postForm(tokenEndpoint(), form));
     }
 
     /**

@@ -31,12 +31,21 @@ final class FakeGraphServer implements AutoCloseable {
     }
 
     record RecordedRequest(String method, String path, String query, String authorization,
-            String contentRange, int bodyLength, String prefer, String range) {
+            String contentRange, int bodyLength, String prefer, String range, String ifMatch,
+            String body) {
+    }
+
+    /** Answers a request from its recorded form. */
+    interface Responder {
+        Stub respond(RecordedRequest request);
     }
 
     private final HttpServer server;
     private final Map<String, Stub> stubs = new ConcurrentHashMap<>();
     private final Map<String, Queue<Stub>> onceStubs = new ConcurrentHashMap<>();
+    private final Map<String, Responder> responders = new ConcurrentHashMap<>();
+    private final Map<String, java.util.concurrent.atomic.AtomicReference<byte[]>> lastBodies =
+            new ConcurrentHashMap<>();
     private final List<RecordedRequest> requests = new CopyOnWriteArrayList<>();
 
     private FakeGraphServer(HttpServer server) {
@@ -73,6 +82,107 @@ final class FakeGraphServer implements AutoCloseable {
         onceStubs.computeIfAbsent(path, k -> new ConcurrentLinkedQueue<>()).add(stub);
     }
 
+    /** A stub for one HTTP method only; wins over a method-agnostic stub. */
+    void stub(String method, String path, Stub stub) {
+        stubs.put(method + " " + path, stub);
+    }
+
+    /** Answers every request to {@code path} with {@code responder}. */
+    void respond(String path, Responder responder) {
+        responders.put(path, responder);
+    }
+
+    /** A JSON stub with a status and headers. */
+    static Stub json(int status, String body, Map<String, String> headers) {
+        java.util.Map<String, String> all = new java.util.HashMap<>(headers);
+        all.put("content-type", "application/json");
+        return new Stub(status, body.getBytes(StandardCharsets.UTF_8), all);
+    }
+
+    /** A bodiless stub. */
+    static Stub empty(int status, Map<String, String> headers) {
+        return new Stub(status, new byte[0], headers);
+    }
+
+    /**
+     * An upload session at {@code path}: ranged PUTs must arrive in order, a GET
+     * reports the next expected offset, and the PUT that completes the file
+     * answers {@code itemJson}. Returns the bytes received so far.
+     */
+    java.io.ByteArrayOutputStream uploadSession(String path, String itemJson) {
+        java.io.ByteArrayOutputStream stored = new java.io.ByteArrayOutputStream();
+        java.util.concurrent.atomic.AtomicReference<byte[]> last =
+                new java.util.concurrent.atomic.AtomicReference<>();
+        lastBodies.put(path, last);
+        respond(path, request -> {
+            synchronized (stored) {
+                String next = "{\"nextExpectedRanges\":[\"" + stored.size() + "-\"]}";
+                if ("DELETE".equals(request.method())) {
+                    return empty(204, Map.of());
+                }
+                if (!"PUT".equals(request.method())) {
+                    return Stub.json(next);
+                }
+                String range = request.contentRange();
+                long start = Long.parseLong(range.substring("bytes ".length(), range.indexOf('-')));
+                long end = Long.parseLong(range.substring(range.indexOf('-') + 1, range.indexOf('/')));
+                long total = Long.parseLong(range.substring(range.indexOf('/') + 1));
+                if (start != stored.size() || end - start + 1 != request.bodyLength()) {
+                    return json(416, next, Map.of());
+                }
+                stored.writeBytes(last.get());
+                if (stored.size() == total) {
+                    return json(201, itemJson, Map.of());
+                }
+                return json(202, "{\"nextExpectedRanges\":[\"" + stored.size() + "-\"]}",
+                        Map.of());
+            }
+        });
+        return stored;
+    }
+
+    /**
+     * Serves {@code POST /$batch} by answering each sub-request from the stubs,
+     * as if it had been sent on its own. Sub-requests are recorded too.
+     */
+    void enableBatch() {
+        respond("/$batch", request -> {
+            try {
+                com.fasterxml.jackson.databind.ObjectMapper json =
+                        new com.fasterxml.jackson.databind.ObjectMapper();
+                com.fasterxml.jackson.databind.node.ObjectNode answer = json.createObjectNode();
+                com.fasterxml.jackson.databind.node.ArrayNode responses =
+                        answer.putArray("responses");
+                for (com.fasterxml.jackson.databind.JsonNode sub
+                        : json.readTree(request.body()).path("requests")) {
+                    String url = sub.path("url").asText();
+                    int mark = url.indexOf('?');
+                    String path = java.net.URLDecoder.decode(mark < 0 ? url : url.substring(0, mark),
+                            StandardCharsets.UTF_8);
+                    String query = mark < 0 ? "" : url.substring(mark + 1);
+                    String body = sub.has("body") ? sub.path("body").toString() : "";
+                    RecordedRequest recorded = new RecordedRequest(sub.path("method").asText(),
+                            path, query, request.authorization(), null, body.length(), null, null,
+                            sub.path("headers").path("If-Match").asText(null), body);
+                    requests.add(recorded);
+                    Stub stub = resolve(recorded);
+                    com.fasterxml.jackson.databind.node.ObjectNode response = responses.addObject()
+                            .put("id", sub.path("id").asText())
+                            .put("status", stub.status());
+                    com.fasterxml.jackson.databind.node.ObjectNode headers =
+                            response.putObject("headers");
+                    stub.headers().forEach(headers::put);
+                    if (stub.body().length > 0) {
+                        response.set("body", json.readTree(stub.body()));
+                    }
+                }
+                return Stub.json(answer.toString());
+            } catch (IOException e) {
+                throw new java.io.UncheckedIOException(e);
+            }
+        });
+    }
+
     List<RecordedRequest> requests() {
         return List.copyOf(requests);
     }
@@ -104,26 +214,54 @@ final class FakeGraphServer implements AutoCloseable {
         String path = exchange.getRequestURI().getPath();
         String query = exchange.getRequestURI().getRawQuery();
         byte[] body = exchange.getRequestBody().readAllBytes();
-        requests.add(new RecordedRequest(exchange.getRequestMethod(), path,
+        String contentType = exchange.getRequestHeaders().getFirst("content-type");
+        boolean text = contentType != null && contentType.startsWith("application/json");
+        RecordedRequest recorded = new RecordedRequest(exchange.getRequestMethod(), path,
                 query == null ? "" : query,
                 exchange.getRequestHeaders().getFirst("authorization"),
                 exchange.getRequestHeaders().getFirst("content-range"),
                 body.length,
                 exchange.getRequestHeaders().getFirst("prefer"),
-                exchange.getRequestHeaders().getFirst("range")));
+                exchange.getRequestHeaders().getFirst("range"),
+                exchange.getRequestHeaders().getFirst("if-match"),
+                text ? new String(body, StandardCharsets.UTF_8) : "");
+        requests.add(recorded);
+        java.util.concurrent.atomic.AtomicReference<byte[]> last = lastBodies.get(path);
+        if (last != null) {
+            last.set(body);
+        }
 
+        Stub stub = resolve(recorded);
+        stub.headers().forEach((name, value) -> exchange.getResponseHeaders().add(name, value));
+        exchange.sendResponseHeaders(stub.status(), stub.body().length == 0 ? -1 : stub.body().length);
+        if (stub.body().length > 0) {
+            try (OutputStream out = exchange.getResponseBody()) {
+                out.write(stub.body());
+            }
+        }
+    }
+
+    private Stub resolve(RecordedRequest request) {
+        String path = request.path();
         Stub stub = null;
         Queue<Stub> once = onceStubs.get(path);
         if (once != null) {
             stub = once.poll();
         }
-        if (stub == null && query != null) {
-            stub = stubs.get(path + "?" + query);
+        Responder responder = responders.get(path);
+        if (stub == null && responder != null) {
+            stub = responder.respond(request);
+        }
+        if (stub == null) {
+            stub = stubs.get(request.method() + " " + path);
+        }
+        if (stub == null && !request.query().isEmpty()) {
+            stub = stubs.get(path + "?" + request.query());
         }
         if (stub == null) {
             stub = stubs.get(path);
         }
-        if (stub == null && "PUT".equals(exchange.getRequestMethod())) {
+        if (stub == null && "PUT".equals(request.method())) {
             stub = Stub.json("{\"id\":\"uploaded\",\"name\":\"file\"}");
         }
         if (stub == null) {
@@ -131,12 +269,7 @@ final class FakeGraphServer implements AutoCloseable {
                     + path + "\"}}");
             stub = new Stub(404, stub.body(), stub.headers());
         }
-
-        stub.headers().forEach((name, value) -> exchange.getResponseHeaders().add(name, value));
-        exchange.sendResponseHeaders(stub.status(), stub.body().length);
-        try (OutputStream out = exchange.getResponseBody()) {
-            out.write(stub.body());
-        }
+        return stub;
     }
 
     @Override

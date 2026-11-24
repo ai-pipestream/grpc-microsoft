@@ -1,0 +1,66 @@
+{
+  "request" : {
+    "method" : "PATCH",
+    "url" : "https://graph.microsoft.com/v1.0/sites/tenant-1.example,00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000002/lists/00000000-0000-4000-8000-000000000022/items/1/fields",
+    "authorized" : true,
+    "headers" : {
+      "if-match" : "\"00000000-0000-4000-8000-000000000052,9\"",
+      "content-type" : "application/json"
+    },
+    "body" : {
+      "json" : {
+        "PsOwnerLookupId" : 6
+      }
+    }
+  },
+  "response" : {
+    "status" : 200,
+    "headers" : {
+      "etag" : "\"00000000-0000-4000-8000-000000000052,10\"",
+      "content-type" : "application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8"
+    },
+    "body" : {
+      "json" : {
+        "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#sites('tenant-1.example%2C00000000-0000-4000-8000-000000000001%2C00000000-0000-4000-8000-000000000002')/lists('00000000-0000-4000-8000-000000000022')/items('1')/fields/$entity",
+        "@odata.etag" : "\"00000000-0000-4000-8000-000000000052,10\"",
+        "Title" : "live write",
+        "PsText" : "hello",
+        "PsNumber" : 4.5,
+        "PsFlag" : true,
+        "PsChoice" : "B",
+        "PsWhen" : "2024-01-15T12:00:00Z",
+        "PsMulti" : [ "A", "C" ],
+        "PsMoney" : 12.5,
+        "PsLink" : {
+          "Description" : "A page",
+          "Url" : "https://example.com/page"
+        },
+        "PsLookupLookupId" : "1",
+        "PsLookups" : [ {
+          "LookupId" : 1,
+          "LookupValue" : "Lookup value 1"
+        } ],
+        "PsOwnerLookupId" : "6",
+        "id" : "1",
+        "ContentType" : "Item",
+        "Modified" : "2026-11-23T02:27:02Z",
+        "Created" : "2026-11-23T02:26:48Z",
+        "AuthorLookupId" : "1073741822",
+        "EditorLookupId" : "1073741822",
+        "_UIVersionString" : "10.0",
+        "Attachments" : false,
+        "Edit" : "",
+        "LinkTitleNoMenu" : "live write",
+        "LinkTitle" : "live write",
+        "ItemChildCount" : "0",
+        "FolderChildCount" : "0",
+        "_ComplianceFlags" : "",
+        "_ComplianceTag" : "",
+        "_ComplianceTagWrittenTime" : "",
+        "_ComplianceTagUserId" : "",
+        "AppAuthorLookupId" : "4",
+        "AppEditorLookupId" : "4"
+      }
+    }
+  }
+}

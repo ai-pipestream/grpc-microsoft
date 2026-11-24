@@ -1,0 +1,163 @@
+syntax = "proto3";
+
+package ai.pipestream.microsoft.v1;
+
+import "ai/pipestream/microsoft/v1/common.proto";
+import "ai/pipestream/sync/v1/acl.proto";
+
+option java_multiple_files = true;
+option java_package = "ai.pipestream.microsoft.v1";
+option java_outer_classname = "SiteSecurityProto";
+
+// ============================================================================
+// SITE SECURITY - SharePoint's own groups, role definitions and role
+// assignments, as the SharePoint REST API reports them. Graph does not expose
+// who is in a SharePoint group; these messages do.
+// ============================================================================
+
+// What kind of principal a SharePoint site principal is.
+enum SitePrincipalType {
+  // Unknown or not reported.
+  SITE_PRINCIPAL_TYPE_UNSPECIFIED = 0;
+  // A user.
+  SITE_PRINCIPAL_TYPE_USER = 1;
+  // A distribution list.
+  SITE_PRINCIPAL_TYPE_DISTRIBUTION_LIST = 2;
+  // A directory security group (an Entra group or a claim such as "Everyone").
+  SITE_PRINCIPAL_TYPE_SECURITY_GROUP = 3;
+  // A SharePoint group of the site.
+  SITE_PRINCIPAL_TYPE_SHAREPOINT_GROUP = 4;
+}
+
+// A user, directory group or SharePoint group as a site knows it.
+message SitePrincipal {
+  // Id of the principal within the site collection.
+  int32 id = 1;
+  // Kind of principal.
+  SitePrincipalType principal_type = 2;
+  // Login name, the claims-encoded identity (verbatim).
+  string login_name = 3;
+  // Display name.
+  string title = 4;
+  // Email address; users only, empty when omitted.
+  string email = 5;
+  // User principal name; users only, empty when omitted.
+  string user_principal_name = 6;
+  // Entra object id of the group, when the login name carries one. Empty for
+  // users, SharePoint groups and claims without an object id.
+  string directory_object_id = 7;
+  // True for a site collection administrator; users only.
+  bool site_admin = 8;
+  // True when SharePoint hides the principal in its own pages.
+  bool hidden = 9;
+  // True when the claim stands for the owners of the Entra group named by
+  // `directory_object_id`, not for its members.
+  bool directory_group_owners = 10;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// A SharePoint group of a site.
+message SiteGroup {
+  // Id of the group within the site collection.
+  int32 id = 1;
+  // Name of the group.
+  string title = 2;
+  // Login name of the group (verbatim).
+  string login_name = 3;
+  // Description, empty when omitted.
+  string description = 4;
+  // Display name of the group's owner.
+  string owner_title = 5;
+  // True when SharePoint hides the group in its own pages.
+  bool hidden = 6;
+  // True when only members may see who is in the group.
+  bool only_members_view_membership = 7;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// A permission level of a site, such as "Read" or "Full Control".
+message SiteRoleDefinition {
+  // Id of the role definition within the site collection.
+  int64 id = 1;
+  // Name of the permission level.
+  string name = 2;
+  // Description, empty when omitted.
+  string description = 3;
+  // SharePoint's role type number (1 guest / limited access, 2 reader,
+  // 3 contributor, 4 web designer, 5 administrator, 6 editor, 0 custom).
+  int32 role_type_kind = 4;
+  // True when SharePoint hides the level in its own pages.
+  bool hidden = 5;
+  // High 32 bits of the permission mask.
+  uint32 base_permissions_high = 6;
+  // Low 32 bits of the permission mask.
+  uint32 base_permissions_low = 7;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// The permission levels one principal holds on a site, list or list item.
+message SiteRoleAssignment {
+  // Id of the principal within the site collection.
+  int32 principal_id = 1;
+  // The principal.
+  SitePrincipal member = 2;
+  // The permission levels granted.
+  repeated SiteRoleDefinition roles = 3;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// The site, list or list item a role assignment is on.
+message SiteSecurable {
+  // Exactly one arm names the securable.
+  oneof securable {
+    // The site itself (its root web).
+    string site_id = 1;
+    // A list or document library.
+    ListRef list = 2;
+    // A list item (a file's or folder's list item included).
+    ListItemRef list_item = 3;
+  }
+}
+
+// A SharePoint group of a site with its members, as a security sync read it.
+message SiteGroupMembers {
+  // Site id.
+  string site_id = 1;
+  // The group.
+  SiteGroup group = 2;
+  // The group's members.
+  repeated SitePrincipal members = 3;
+  // Whether `members` is the whole membership.
+  ai.pipestream.sync.v1.AclCompleteness completeness = 4;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// The site collection administrators of a site.
+message SiteAdmins {
+  // Site id.
+  string site_id = 1;
+  // The administrators.
+  repeated SitePrincipal admins = 2;
+  // Whether `admins` is all of them.
+  ai.pipestream.sync.v1.AclCompleteness completeness = 3;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// The role assignments of one site, list or list item that has its own
+// (not inherited) role assignments.
+message SiteAcl {
+  // The securable the assignments are on.
+  SiteSecurable securable = 1;
+  // The role assignments.
+  repeated SiteRoleAssignment assignments = 2;
+  // Whether `assignments` is the whole of them.
+  ai.pipestream.sync.v1.AclCompleteness completeness = 3;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}

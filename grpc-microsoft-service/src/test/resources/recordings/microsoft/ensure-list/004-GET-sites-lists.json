@@ -1,0 +1,49 @@
+{
+  "request" : {
+    "method" : "GET",
+    "url" : "https://graph.microsoft.com/v1.0/sites/tenant-1.example,00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000002/lists/00000000-0000-4000-8000-000000000022?$select=id,name,displayName,description,webUrl,eTag,createdDateTime,lastModifiedDateTime,createdBy,lastModifiedBy,list,sharepointIds,system,parentReference",
+    "authorized" : true,
+    "headers" : { }
+  },
+  "response" : {
+    "status" : 200,
+    "headers" : {
+      "etag" : "\"00000000-0000-4000-8000-000000000022,0\"",
+      "content-type" : "application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8"
+    },
+    "body" : {
+      "json" : {
+        "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#sites('tenant-1.example%2C00000000-0000-4000-8000-000000000001%2C00000000-0000-4000-8000-000000000002')/lists(id,name,displayName,description,webUrl,eTag,createdDateTime,lastModifiedDateTime,createdBy,lastModifiedBy,list,sharepointIds,system,parentReference)/$entity",
+        "@odata.etag" : "\"00000000-0000-4000-8000-000000000022,0\"",
+        "createdDateTime" : "2026-11-23T02:26:46Z",
+        "description" : "Created by the live write test; safe to delete.",
+        "eTag" : "\"00000000-0000-4000-8000-000000000022,0\"",
+        "id" : "00000000-0000-4000-8000-000000000022",
+        "lastModifiedDateTime" : "2026-11-23T02:26:46Z",
+        "name" : "pipestreamlivewrite20261123022631a8adaf87",
+        "webUrl" : "https://redacted.example/url/34",
+        "displayName" : "pipestream-live-write-20261123-022631-a8adaf87",
+        "createdBy" : {
+          "user" : {
+            "displayName" : "Identity 2"
+          }
+        },
+        "parentReference" : {
+          "siteId" : "tenant-1.example,00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000002"
+        },
+        "list" : {
+          "contentTypesEnabled" : false,
+          "hidden" : false,
+          "template" : "genericList"
+        },
+        "sharepointIds" : {
+          "listId" : "00000000-0000-4000-8000-000000000022",
+          "siteId" : "00000000-0000-4000-8000-000000000001",
+          "siteUrl" : "https://redacted.example/url/3",
+          "tenantId" : "00000000-0000-4000-8000-000000000010",
+          "webId" : "00000000-0000-4000-8000-000000000002"
+        }
+      }
+    }
+  }
+}
