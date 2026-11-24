@@ -675,6 +675,17 @@ behaviour.
   `include_lists` on a site does not reconcile `site_acl` rows, since it
   did not read the ACLs of the site's lists: stale ACL rows of deleted
   library items remain until a complete run with both flags.
+- A resumed `Sync` with `include_security` reads the change log of each
+  site (`getchanges` on the web) from `SyncCursor.security_change_tokens`.
+  A list item with a `SCOPE_ADD` or `SCOPE_DELETE` entry is emitted again
+  with everything below it, whether or not delta reports it; more than 200
+  such items in one list, or the list itself gaining or losing its own role
+  assignments, reads the list again in full. The `site_acl` of a list or
+  item that inherits again is emitted as a delete. A token SharePoint
+  refuses reads every list of the site in full. A log the grant cannot
+  read leaves the pass as before. Not covered: a cursor older than the
+  log's retention, which SharePoint may accept without the dropped
+  entries; a complete run heals it.
 - `include_system` narrows within a kind. A complete run without it still
   reconciles drives, lists and their items, so the rows an earlier run with
   `include_system` wrote for system drives and hidden lists are marked

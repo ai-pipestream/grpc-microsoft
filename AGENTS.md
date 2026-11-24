@@ -89,9 +89,11 @@ Reviewers do not dispatch them.
 - Updates and deletes send `expected_etag` as If-Match; 412 maps to
   `ABORTED`. 429 and 503 map to `RESOURCE_EXHAUSTED` / `UNAVAILABLE` with
   `RetryInfo`.
-- `Sync` with `include_security` re-reads security in full each pass but
-  re-emits only changed items on incremental passes, so an inheritance
-  change with no delta event can leave a stale `acl_owner_id`.
+- `Sync` with `include_security` re-reads security in full each pass. A
+  resumed pass reads the site's change log from
+  `SyncCursor.security_change_tokens` and emits again the items below a
+  `SCOPE_ADD` or `SCOPE_DELETE` (`MicrosoftCrawler.rescopedOf`); a cursor
+  older than the log's retention can miss one, and a full pass heals it.
 
 ## Review hot spots
 

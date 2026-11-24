@@ -264,6 +264,8 @@ final class WriteScenarios {
     private String folderId;
     private SiteSecurable folderSecurable;
     private boolean inheritanceBroken;
+    /** The resume cursor of the security sync that ran while inheritance was broken. */
+    private String securityCursor;
     /** The end of each change log before the list item and folder stopped inheriting. */
     private final Map<SiteChangeScope, String> changeTokens = new EnumMap<>(SiteChangeScope.class);
     private String listId;
@@ -417,12 +419,18 @@ final class WriteScenarios {
                 new Scenario("set-site-role-inheritance-reset", "SetSiteRoleInheritance",
                         "SetSiteRoleInheritance [list item and folder inherit again]",
                         this::restoreInheritance),
+                new Scenario("sync-security-resumed", "Sync",
+                        "Sync [resumed after the reset: what inherits again arrives with its new owner]",
+                        this::syncSecurityResumed),
                 new Scenario("list-site-changes", "ListSiteChanges",
                         "ListSiteChanges [what the break and the reset left in each log]",
                         this::siteChanges),
                 new Scenario("list-site-changes-old-token", "ListSiteChanges",
                         "ListSiteChanges [a token older than the change log]",
                         this::siteChangesFromAnOldToken),
+                new Scenario("list-site-changes-bad-token", "ListSiteChanges",
+                        "ListSiteChanges [a token that is not one]",
+                        this::siteChangesFromABadToken),
                 new Scenario("update-list-item-fields", "UpdateListItemFields",
                         "UpdateListItemFields [every column type]", this::updateListItemFields),
                 new Scenario("update-list-item-rich-fields", "UpdateListItemFields",
@@ -1579,11 +1587,14 @@ final class WriteScenarios {
                         if (response.hasChange()) {
                             ai.pipestream.microsoft.v1.MicrosoftEntity entity = response.getChange().getEntity();
                             entities.put(entity.getEntityCase() + " " + entity.getEntityId(), entity);
+                        } else if (!response.getResumeCursor().isEmpty()) {
+                            securityCursor = response.getResumeCursor();
                         }
                     });
         } catch (StatusRuntimeException e) {
             throw notGranted(e);
         }
+        check(securityCursor != null, "the pass ended without a resume cursor");
         String siteAcl = MicrosoftEntityIds.siteAcl(SiteSecurable.newBuilder().setSiteId(siteId).build());
         String itemAcl = MicrosoftEntityIds.siteAcl(
                 SiteSecurable.newBuilder().setListItem(listItemRef(itemId)).build());
@@ -1814,6 +1825,55 @@ final class WriteScenarios {
         return "the list item and the test folder inherit again";
     }
 
+    private String syncSecurityResumed() {
+        if (securityCursor == null || inheritanceBroken) {
+            throw new Skip("needs a security sync from before the reset");
+        }
+        Map<String, ai.pipestream.microsoft.v1.MicrosoftChange> changes = new java.util.LinkedHashMap<>();
+        blocking.withDeadlineAfter(5, TimeUnit.MINUTES).sync(
+                ai.pipestream.microsoft.v1.SyncRequest.newBuilder().addSiteIds(siteId)
+                        .setIncludeLists(true)
+                        .setInclude(ai.pipestream.microsoft.v1.DriveItemInclude.getDefaultInstance())
+                        .setIncludeSecurity(true).setSinceCursor(securityCursor).build())
+                .forEachRemaining(response -> {
+                    if (response.hasChange()) {
+                        ai.pipestream.microsoft.v1.MicrosoftEntity entity = response.getChange().getEntity();
+                        changes.put(entity.getEntityCase() + " " + entity.getEntityId(), response.getChange());
+                    }
+                });
+        String itemAcl = MicrosoftEntityIds.siteAcl(
+                SiteSecurable.newBuilder().setListItem(listItemRef(itemId)).build());
+        String folderAcl = MicrosoftEntityIds.siteAcl(folderSecurable());
+        ai.pipestream.microsoft.v1.MicrosoftChange list = changes.get("LIST " + listId);
+        ai.pipestream.microsoft.v1.MicrosoftChange drive = changes.get("DRIVE " + driveId);
+        check(list != null && drive != null, "the pass did not emit the test list and its library");
+        String listOwner = list.getEntity().getList().getAclOwnerId();
+        String driveOwner = drive.getEntity().getDrive().getAclOwnerId();
+        check(!driveOwner.isEmpty() && !listOwner.isEmpty(), "the list or the library has no owner");
+        ai.pipestream.microsoft.v1.MicrosoftChange item = changes.get("LIST_ITEM " + listId + "/" + itemId);
+        check(item != null, "the list item that inherits again was not emitted");
+        check(item.getEntity().getListItem().getAclOwnerId().equals(listOwner),
+                "the list item still points at " + item.getEntity().getListItem().getAclOwnerId());
+        ai.pipestream.microsoft.v1.MicrosoftChange folder = changes.get("DRIVE_ITEM " + folderId);
+        check(folder != null, "the folder that inherits again was not emitted");
+        check(folder.getEntity().getDriveItem().getAclOwnerId().equals(driveOwner),
+                "the folder still points at " + folder.getEntity().getDriveItem().getAclOwnerId());
+        ai.pipestream.microsoft.v1.MicrosoftChange file = changes.get("DRIVE_ITEM " + small.getId());
+        check(file != null, "the file in the folder was not emitted");
+        check(file.getEntity().getDriveItem().getAclOwnerId().equals(driveOwner),
+                "the file in the folder still points at " + file.getEntity().getDriveItem().getAclOwnerId());
+        for (String acl : List.of(itemAcl, folderAcl)) {
+            ai.pipestream.microsoft.v1.MicrosoftChange gone = changes.get("SITE_ACL " + acl);
+            check(gone != null && gone.getOperation()
+                    == ai.pipestream.microsoft.v1.ChangeOperation.CHANGE_OPERATION_DELETE,
+                    "role assignments that no longer exist were not deleted");
+        }
+        long items = changes.values().stream().filter(change -> change.getEntity().hasDriveItem()
+                || change.getEntity().hasListItem()).count();
+        return "the list item, the folder and the file in it point at their parent's role assignments again; "
+                + items + " item(s) in the pass, the two role assignment sets that are gone arrive as deletes";
+    }
+
     private static final List<SiteChangeScope> CHANGE_SCOPES = List.of(
             SiteChangeScope.SITE_CHANGE_SCOPE_WEB, SiteChangeScope.SITE_CHANGE_SCOPE_SITE_COLLECTION,
             SiteChangeScope.SITE_CHANGE_SCOPE_LIST);
@@ -1930,6 +1990,17 @@ final class WriteScenarios {
                 .setChangeToken(old).build());
         check(stream.size() > 1, "a token older than the list answered no change");
         return "SharePoint accepted the token: " + (stream.size() - 1) + " change(s)";
+    }
+
+    private String siteChangesFromABadToken() {
+        try {
+            List<ListSiteChangesResponse> stream = new ArrayList<>();
+            stub().listSiteChanges(changesOf(SiteChangeScope.SITE_CHANGE_SCOPE_WEB)
+                    .setChangeToken("not-a-change-token").build()).forEachRemaining(stream::add);
+            return "SharePoint accepted it: " + (stream.size() - 1) + " change(s)";
+        } catch (StatusRuntimeException e) {
+            return "refused with " + e.getStatus().getCode() + ": " + e.getStatus().getDescription();
+        }
     }
 
     private static String name(com.google.protobuf.ProtocolMessageEnum value) {

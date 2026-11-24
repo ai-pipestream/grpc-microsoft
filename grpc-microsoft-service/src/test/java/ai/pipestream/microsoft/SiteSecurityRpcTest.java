@@ -2,8 +2,11 @@ package ai.pipestream.microsoft;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
 
+import ai.pipestream.microsoft.v1.ChangeOperation;
 import ai.pipestream.microsoft.v1.DriveItemInclude;
+import ai.pipestream.microsoft.v1.MicrosoftChange;
 import ai.pipestream.microsoft.v1.GetSiteRoleInheritanceRequest;
 import ai.pipestream.microsoft.v1.MicrosoftEntity;
 import ai.pipestream.microsoft.v1.SetSiteRoleInheritanceRequest;
@@ -68,6 +71,7 @@ class SiteSecurityRpcTest {
         channel = InProcessChannelBuilder.forName(name).build();
         stub = MicrosoftServiceGrpc.newBlockingStub(channel);
         fake.stub("/sites/s1", "{\"id\":\"s1\",\"webUrl\":\"" + fake.baseUrl() + "/sites/Team\"}");
+        fake.stub(WEB + "/web", "{\"CurrentChangeToken\":{\"StringValue\":\"t1\"}}");
     }
 
     @AfterEach
@@ -335,6 +339,182 @@ class SiteSecurityRpcTest {
         assertThat(acl.getSiteAcl().getCompleteness()).isEqualTo(AclCompleteness.ACL_COMPLETENESS_UNAVAILABLE);
         assertThat(acl.getSiteAcl().getAssignmentsList()).isEmpty();
         assertThat(entities.getLast().getDriveItem().getAclOwnerId()).isEqualTo(listAcl);
+    }
+
+    @Test
+    void aResumedSecuritySyncEmitsAgainTheItemsWhoseRoleAssignmentsMoved() {
+        String list = WEB + "/web/lists(guid'" + LIST_ID + "')";
+        String folderAcl = "site_acl/list_item/s1/" + LIST_ID + "/1";
+        securedLibrary(true);
+        fake.stub("/drives/drive-1/root/delta", MicrosoftFixtures.deltaJson(
+                fake.baseUrl() + "/drives/drive-1/root/delta?token=d1",
+                MicrosoftFixtures.rootJson("drive-1"), driveItem("folder-1", "1", true),
+                driveItem("file-1", "2", false), driveItem("file-2", "3", false)));
+        SyncRequest request = SyncRequest.newBuilder().addSiteIds("s1")
+                .setInclude(DriveItemInclude.getDefaultInstance()).setIncludeSecurity(true).build();
+        String cursor = drain(stub.sync(request)).getLast().getResumeCursor();
+        assertThat(fake.requests()).noneMatch(r -> r.path().endsWith("/getchanges"));
+
+        // The folder inherits again; delta reports nothing.
+        securedLibrary(false);
+        fake.respond(WEB + "/web/getchanges", r -> FakeGraphServer.Stub.json(r.body().contains("\"t2\"")
+                ? "{\"value\":[]}"
+                : "{\"value\":[" + scopeChange("SP.ChangeItem", 18, "t2", ",\"ItemId\":1") + "]}"));
+        fake.stub("/drives/drive-1/root/delta", MicrosoftFixtures.deltaJson(
+                fake.baseUrl() + "/drives/drive-1/root/delta?token=d2"));
+        String items = "/sites/s1/lists/" + LIST_ID + "/items/";
+        fake.stub(items + "1/driveItem", driveItem("folder-1", "1", true));
+        fake.stub(items + "2/driveItem", driveItem("file-1", "2", false));
+
+        List<SyncResponse> resumed = drain(stub.sync(request.toBuilder().setSinceCursor(cursor).build()));
+
+        List<MicrosoftChange> changes = resumed.stream().filter(SyncResponse::hasChange)
+                .map(SyncResponse::getChange).toList();
+        assertThat(changes).filteredOn(c -> c.getEntity().hasDriveItem())
+                .extracting(c -> c.getEntity().getEntityId(), c -> c.getEntity().getDriveItem().getAclOwnerId())
+                .containsExactly(tuple("folder-1", "site_acl/site/s1"), tuple("file-1", "site_acl/site/s1"));
+        assertThat(changes).filteredOn(c -> c.getOperation() == ChangeOperation.CHANGE_OPERATION_DELETE)
+                .extracting(c -> c.getEntity().getEntityId()).containsExactly(folderAcl);
+        assertThat(fake.requestsTo(WEB + "/web/getchanges").getFirst().body()).contains("\"t1\"");
+        assertThat(fake.requestsTo(items + "3/driveItem")).isEmpty();
+        assertThat(fake.requestsTo(list + "/items(1)/roleassignments")).hasSize(1);
+
+        // The next pass starts from the end of the log and finds nothing to read again.
+        String next = resumed.getLast().getResumeCursor();
+        fake.stub(items + "1/driveItem", FakeGraphServer.error(500, "generalException", Map.of()));
+        assertThat(drain(stub.sync(request.toBuilder().setSinceCursor(next).build())))
+                .filteredOn(SyncResponse::hasChange).noneMatch(r -> r.getChange().getEntity().hasDriveItem());
+    }
+
+    @Test
+    void aListThatGetsItsOwnRoleAssignmentsIsSweptInFullAgain() {
+        securedLibrary(false);
+        String page = MicrosoftFixtures.deltaJson(fake.baseUrl() + "/drives/drive-1/root/delta?token=d1",
+                MicrosoftFixtures.rootJson("drive-1"), driveItem("file-2", "3", false));
+        fake.stub("/drives/drive-1/root/delta", page);
+        SyncRequest request = SyncRequest.newBuilder().addSiteIds("s1")
+                .setInclude(DriveItemInclude.getDefaultInstance()).setIncludeSecurity(true).build();
+        String cursor = drain(stub.sync(request)).getLast().getResumeCursor();
+
+        String list = WEB + "/web/lists(guid'" + LIST_ID + "')";
+        fake.stub(list, "{\"HasUniqueRoleAssignments\":true}");
+        fake.stub(list + "/roleassignments", "{\"value\":[]}");
+        fake.respond(WEB + "/web/getchanges", r -> FakeGraphServer.Stub.json(r.body().contains("\"t2\"")
+                ? "{\"value\":[]}" : "{\"value\":[" + scopeChange("SP.ChangeList", 17, "t2", "") + "]}"));
+
+        List<SyncResponse> resumed = drain(stub.sync(request.toBuilder().setSinceCursor(cursor).build()));
+
+        String listAcl = "site_acl/list/s1/" + LIST_ID;
+        assertThat(resumed).filteredOn(SyncResponse::hasChange).map(r -> r.getChange().getEntity())
+                .filteredOn(MicrosoftEntity::hasDriveItem)
+                .extracting(MicrosoftEntity::getEntityId, e -> e.getDriveItem().getAclOwnerId())
+                .containsExactly(tuple("root", listAcl), tuple("file-2", listAcl));
+        assertThat(fake.requestsTo("/drives/drive-1/root/delta").getLast().query()).doesNotContain("token=d1");
+    }
+
+    @Test
+    void aFolderWithMoreItemsBelowItThanAreReadOneByOneSweepsItsListInFullAgain() {
+        securedLibrary(false);
+        fake.stub("/drives/drive-1/root/delta", MicrosoftFixtures.deltaJson(
+                fake.baseUrl() + "/drives/drive-1/root/delta?token=d1", driveItem("folder-1", "1", true)));
+        SyncRequest request = SyncRequest.newBuilder().addSiteIds("s1")
+                .setInclude(DriveItemInclude.getDefaultInstance()).setIncludeSecurity(true).build();
+        String cursor = drain(stub.sync(request)).getLast().getResumeCursor();
+
+        StringBuilder items = new StringBuilder("""
+                {"Id":1,"HasUniqueRoleAssignments":true,"FileRef":"/sites/Team/Docs/Secret",
+                 "FileDirRef":"/sites/Team/Docs"}""");
+        for (int id = 2; id <= MicrosoftCrawler.MOVED_READ_LIMIT + 1; id++) {
+            items.append("""
+                    ,{"Id":%d,"HasUniqueRoleAssignments":false,"FileRef":"/sites/Team/Docs/Secret/%d.txt",
+                     "FileDirRef":"/sites/Team/Docs/Secret"}""".formatted(id, id));
+        }
+        fake.stub(WEB + "/web/lists(guid'" + LIST_ID + "')/items", "{\"value\":[" + items + "]}");
+        fake.respond(WEB + "/web/getchanges", r -> FakeGraphServer.Stub.json(r.body().contains("\"t2\"")
+                ? "{\"value\":[]}"
+                : "{\"value\":[" + scopeChange("SP.ChangeItem", 17, "t2", ",\"ItemId\":1") + "]}"));
+
+        List<SyncResponse> resumed = drain(stub.sync(request.toBuilder().setSinceCursor(cursor).build()));
+
+        assertThat(resumed).filteredOn(SyncResponse::hasChange).map(r -> r.getChange().getEntity())
+                .filteredOn(MicrosoftEntity::hasDriveItem)
+                .extracting(MicrosoftEntity::getEntityId, e -> e.getDriveItem().getAclOwnerId())
+                .containsExactly(tuple("folder-1", "site_acl/list_item/s1/" + LIST_ID + "/1"));
+        assertThat(fake.requestsTo("/drives/drive-1/root/delta").getLast().query()).doesNotContain("token=d1");
+        assertThat(fake.requests()).noneMatch(r -> r.path().endsWith("/driveItem"));
+    }
+
+    @Test
+    void aChangeTokenSharePointRefusesSweepsTheSiteInFullAndStartsAtTheEndOfTheLog() {
+        securedLibrary(false);
+        fake.stub("/drives/drive-1/root/delta", MicrosoftFixtures.deltaJson(
+                fake.baseUrl() + "/drives/drive-1/root/delta?token=d1", driveItem("file-2", "3", false)));
+        SyncRequest request = SyncRequest.newBuilder().addSiteIds("s1")
+                .setInclude(DriveItemInclude.getDefaultInstance()).setIncludeSecurity(true).build();
+        String cursor = drain(stub.sync(request)).getLast().getResumeCursor();
+
+        fake.stub(WEB + "/web", "{\"CurrentChangeToken\":{\"StringValue\":\"t9\"}}");
+        fake.stub("POST", WEB + "/web/getchanges", FakeGraphServer.json(400, """
+                {"odata.error":{"code":"-2146232832, Microsoft.SharePoint.SPException",
+                  "message":{"lang":"en-US","value":"The changeToken refers to a time before the start of the current change log."}}}""",
+                Map.of()));
+
+        List<SyncResponse> resumed = drain(stub.sync(request.toBuilder().setSinceCursor(cursor).build()));
+
+        assertThat(resumed).filteredOn(SyncResponse::hasChange).map(r -> r.getChange().getEntity())
+                .filteredOn(MicrosoftEntity::hasDriveItem).extracting(MicrosoftEntity::getEntityId)
+                .containsExactly("file-2");
+        assertThat(fake.requestsTo("/drives/drive-1/root/delta").getLast().query()).doesNotContain("token=d1");
+        assertThat(SyncCursors.decode(resumed.getLast().getResumeCursor(), fake.baseUrl())
+                .getSecurityChangeTokensMap()).containsExactly(Map.entry("s1", "t9"));
+    }
+
+    @Test
+    void aChangeLogTheGrantCannotReadLeavesThePassAsItWas() {
+        securedLibrary(false);
+        fake.stub(WEB + "/web", FakeGraphServer.json(403, """
+                {"odata.error":{"code":"-2147024891, System.UnauthorizedAccessException",
+                  "message":{"lang":"en-US","value":"Access denied."}}}""", Map.of()));
+        fake.stub("/drives/drive-1/root/delta", MicrosoftFixtures.deltaJson(
+                fake.baseUrl() + "/drives/drive-1/root/delta?token=d1", driveItem("file-2", "3", false)));
+
+        List<SyncResponse> pass = drain(stub.sync(SyncRequest.newBuilder().addSiteIds("s1")
+                .setInclude(DriveItemInclude.getDefaultInstance()).setIncludeSecurity(true).build()));
+
+        assertThat(pass).filteredOn(SyncResponse::hasChange).map(r -> r.getChange().getEntity())
+                .filteredOn(MicrosoftEntity::hasDriveItem).extracting(MicrosoftEntity::getEntityId)
+                .containsExactly("file-2");
+        assertThat(SyncCursors.decode(pass.getLast().getResumeCursor(), fake.baseUrl())
+                .getSecurityChangeTokensMap()).isEmpty();
+    }
+
+    /** A site with one library of a folder (item 1), a file in it (2) and a file beside it (3). */
+    private void securedLibrary(boolean folderHasItsOwn) {
+        String list = WEB + "/web/lists(guid'" + LIST_ID + "')";
+        fake.stub(WEB + "/web/sitegroups", "{\"value\":[]}");
+        fake.stub(WEB + "/web/roleassignments", "{\"value\":[]}");
+        fake.stub(WEB + "/web/siteusers", "{\"value\":[]}");
+        fake.stub("/sites/s1/drives", """
+                {"value":[{"id":"drive-1","name":"Docs","driveType":"documentLibrary",
+                  "sharePointIds":{"listId":"%s"}}]}""".formatted(LIST_ID));
+        fake.stub(list, "{\"HasUniqueRoleAssignments\":false}");
+        fake.stub(list + "/items", """
+                {"value":[
+                 {"Id":1,"HasUniqueRoleAssignments":%s,"FileRef":"/sites/Team/Docs/Secret",
+                  "FileDirRef":"/sites/Team/Docs"},
+                 {"Id":2,"HasUniqueRoleAssignments":false,"FileRef":"/sites/Team/Docs/Secret/in/a.txt",
+                  "FileDirRef":"/sites/Team/Docs/Secret/in"},
+                 {"Id":3,"HasUniqueRoleAssignments":false,"FileRef":"/sites/Team/Docs/Secrets.txt",
+                  "FileDirRef":"/sites/Team/Docs"}]}""".formatted(folderHasItsOwn));
+        fake.stub(list + "/items(1)/roleassignments", "{\"value\":[]}");
+    }
+
+    private static String scopeChange(String type, int changeType, String token, String more) {
+        return "{\"odata.type\":\"" + type + "\",\"ChangeToken\":{\"StringValue\":\"" + token
+                + "\"},\"ChangeType\":" + changeType
+                + ",\"SiteId\":\"7c9e6679-7425-40de-944b-e07fc1f90ae7\""
+                + ",\"WebId\":\"3f2504e0-4f89-11d3-9a0c-0305e82c3301\",\"ListId\":\""
+                + LIST_ID.toUpperCase(java.util.Locale.ROOT) + "\"" + more + "}";
     }
 
     private static String driveItem(String id, String listItemId, boolean folder) {

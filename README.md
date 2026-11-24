@@ -93,7 +93,10 @@ into Graph `$batch` requests). Updates and deletes take `expected_etag`
 site's groups with their members (`site_group`), the role assignments of the
 site and of every list and item that has its own (`site_acl`), and on every
 drive, list and item the id of the `site_acl` that applies to it
-(`acl_owner_id`). `SetSiteRoleInheritance` makes a list or list item stop
+(`acl_owner_id`). A pass resumed from a cursor also reads the site's change
+log: a list item that stopped inheriting, or inherits again, is emitted
+again with everything below it even when no delta reports it, and role
+assignments that are gone are emitted as deletes. `SetSiteRoleInheritance` makes a list or list item stop
 inheriting, or inherit again. `CreateSiteGroup` and `DeleteSiteGroup`,
 `AddSiteGroupMember` and `RemoveSiteGroupMember` change SharePoint groups;
 `AddSiteRoleAssignment` and `RemoveSiteRoleAssignment` grant or take one
