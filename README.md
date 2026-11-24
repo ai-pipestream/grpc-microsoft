@@ -245,8 +245,10 @@ sites to every pass: one `site_change` per entry, then one
 security webhooks only hints at: the list item, list or site whose role
 assignments or inheritance changed, and the group whose members changed. The
 first pass of a site takes only the end of its log; the resume cursor carries
-the change token of each site. `ListSiteChanges` reads the same log on its
-own. Both need the certificate credential.
+the change token of each site. Changes to SharePoint groups and their members
+are only in the site collection's log (`scope`), and name the group, not the
+member. `ListSiteChanges` reads the same log on its own. Both need the
+certificate credential.
 
 ## Permissions
 
@@ -261,6 +263,7 @@ All are application permissions with admin consent.
 | `ListSiteGroups`, `GetSiteRoleInheritance` | SharePoint `Sites.Selected` plus a grant on the site, certificate credential | site grant `manage` |
 | `ListSiteGroupMembers`, `ListSiteRoleAssignments` | SharePoint `Sites.Selected` plus site grant `fullcontrol`, certificate credential (refused with `manage`) | site grant `fullcontrol`; also SharePoint `Sites.FullControl.All` |
 | `ListSiteChanges`, `WatchChanges` with `site_changes` | SharePoint `Sites.Selected` plus a grant on the site, certificate credential | site grant `fullcontrol` (not tried with `manage`) |
+| `CreateSiteGroup`, `DeleteSiteGroup`, `AddSiteGroupMember`, `RemoveSiteGroupMember`, `ListSiteRoleDefinitions`, `AddSiteRoleAssignment`, `RemoveSiteRoleAssignment`, `SetSiteRoleInheritance` | SharePoint `Sites.Selected` plus a grant on the site, certificate credential | site grant `fullcontrol` (not tried with `manage`) |
 | `ListPermissions` on a site | Graph `Sites.FullControl.All` | that |
 | `MicrosoftAdminService` | Graph `Sites.FullControl.All` | that (grant created, changed and revoked) |
 

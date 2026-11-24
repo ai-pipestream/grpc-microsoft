@@ -119,8 +119,9 @@ message DirectoryWatch {
 message SiteChangeWatch {
   // The sites whose log is read.
   repeated string site_ids = 1;
-  // Which log of each site: its own or its site collection's. The list
-  // scope is not allowed. Keep the value for the life of a resume cursor.
+  // Which log of each site: its own or its site collection's. Only the
+  // site collection's log reports SharePoint groups and their members. The
+  // list scope is not allowed. Keep the value for the life of a resume cursor.
   SiteChangeScope scope = 2;
   // Only entries about these objects. Empty = every object.
   repeated SiteChangeObject objects = 3;

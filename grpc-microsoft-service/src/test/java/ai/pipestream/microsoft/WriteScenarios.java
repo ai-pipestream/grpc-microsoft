@@ -281,6 +281,8 @@ final class WriteScenarios {
     /** The SharePoint group this run created and has not deleted yet. */
     private Integer ownGroupId;
     private Integer ownGroupMemberId;
+    /** The group this run created, kept after its deletion. */
+    private Integer createdGroupId;
     private Long readRoleId;
     private boolean linkColumn;
     private String libraryId;
@@ -1675,6 +1677,7 @@ final class WriteScenarios {
         }
         check(group.getId() > 0, "the new group has no id");
         ownGroupId = group.getId();
+        createdGroupId = group.getId();
         check(group.getTitle().equals(title), "the new group is called " + group.getTitle());
         check(siteGroupIds().contains(group.getId()), "ListSiteGroups does not show the new group");
         return "group " + title + " created; ListSiteGroups shows it";
@@ -1865,6 +1868,7 @@ final class WriteScenarios {
             check(!end.equals(changeTokens.get(scope)), "the log did not move");
             Map<String, Integer> kinds = new TreeMap<>();
             Set<SiteChangeType> onTheItem = new TreeSet<>();
+            Set<SiteChangeType> onTheGroup = new TreeSet<>();
             for (ListSiteChangesResponse response : stream.subList(0, stream.size() - 1)) {
                 SiteChange change = response.getChange();
                 check(change.hasTime() && !change.getChangeToken().isEmpty(),
@@ -1880,6 +1884,20 @@ final class WriteScenarios {
                             "the change on the list item does not name it as a securable");
                     onTheItem.add(change.getType());
                 }
+                if (change.getObject() == SiteChangeObject.SITE_CHANGE_OBJECT_GROUP
+                        && createdGroupId != null && change.getGroupId() == createdGroupId) {
+                    onTheGroup.add(change.getType());
+                }
+            }
+            // Groups belong to the site collection; only its log reports them.
+            if (scope == SiteChangeScope.SITE_CHANGE_SCOPE_SITE_COLLECTION && createdGroupId != null
+                    && ownGroupId == null) {
+                check(onTheGroup.containsAll(List.of(SiteChangeType.SITE_CHANGE_TYPE_ADD,
+                        SiteChangeType.SITE_CHANGE_TYPE_GROUP_MEMBER_ADD,
+                        SiteChangeType.SITE_CHANGE_TYPE_GROUP_MEMBER_DELETE,
+                        SiteChangeType.SITE_CHANGE_TYPE_DELETE)),
+                        "the site collection log does not show the run's group created, given and "
+                        + "losing a member, and deleted: " + onTheGroup + " of " + kinds);
             }
             check(onTheItem.contains(SiteChangeType.SITE_CHANGE_TYPE_SCOPE_ADD)
                     && onTheItem.contains(SiteChangeType.SITE_CHANGE_TYPE_SCOPE_DELETE),

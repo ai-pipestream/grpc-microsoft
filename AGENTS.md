@@ -82,7 +82,10 @@ Reviewers do not dispatch them.
   and role assignments need the site grant `fullcontrol`, not `manage`;
   upload sessions are called without `Authorization`; the SharePoint
   change log shows an inheritance break as `SCOPE_ADD` and a reset as
-  `SCOPE_DELETE` on the item, and accepts a token older than the log.
+  `SCOPE_DELETE` on the item, and accepts a token older than the log;
+  group and group member changes are only in the site collection log and
+  name the group, not the member; Graph asks for a reauthorization of a
+  50 minute drive subscription about 16 minutes before it expires.
 - Updates and deletes send `expected_etag` as If-Match; 412 maps to
   `ABORTED`. 429 and 503 map to `RESOURCE_EXHAUSTED` / `UNAVAILABLE` with
   `RetryInfo`.

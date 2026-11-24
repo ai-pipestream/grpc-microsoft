@@ -149,7 +149,7 @@ class MicrosoftLiveChangeIT {
         ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
         String name = InProcessServerBuilder.generateName();
         Server server = InProcessServerBuilder.forName(name).executor(executor).addService(changes)
-                .build().start();
+                .addService(microsoft).build().start();
         ManagedChannel channel = InProcessChannelBuilder.forName(name).build();
         Instant started = Instant.now();
         try (NotificationReceiver receiver = NotificationReceiver.start(port, backend.clientState(),
@@ -186,7 +186,8 @@ class MicrosoftLiveChangeIT {
             };
             ChangeScenarios scenarios = new ChangeScenarios(
                     MicrosoftChangeServiceGrpc.newBlockingStub(channel),
-                    MicrosoftChangeServiceGrpc.newStub(channel), client, backend, receiverBus,
+                    MicrosoftChangeServiceGrpc.newStub(channel),
+                    ai.pipestream.microsoft.v1.MicrosoftServiceGrpc.newBlockingStub(channel), client, backend, receiverBus,
                     serviceBus, live, renewer, () -> ChangeScenarios.renewer(
                             changes::subscriptions, new NotificationBus(), backend));
             String wait = System.getenv(ENV_LIFECYCLE_WAIT_MINUTES);

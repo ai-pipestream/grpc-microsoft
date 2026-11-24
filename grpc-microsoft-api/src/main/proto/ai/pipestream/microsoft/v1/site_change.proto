@@ -76,9 +76,11 @@ enum SiteChangeType {
   SITE_CHANGE_TYPE_ROLE_ASSIGNMENT_ADD = 11;
   // A principal lost a permission level on the object.
   SITE_CHANGE_TYPE_ROLE_ASSIGNMENT_DELETE = 12;
-  // A member was added to the group.
+  // A member was added to the group. The entry names the group, not the
+  // member.
   SITE_CHANGE_TYPE_GROUP_MEMBER_ADD = 13;
-  // A member was removed from the group.
+  // A member was removed from the group. The entry names the group, not
+  // the member.
   SITE_CHANGE_TYPE_GROUP_MEMBER_DELETE = 14;
   // The object was changed without its modified time or editor changing.
   SITE_CHANGE_TYPE_SYSTEM_UPDATE = 15;
@@ -104,7 +106,8 @@ enum SiteChangeScope {
   SITE_CHANGE_SCOPE_UNSPECIFIED = 0;
   // The site itself (its web).
   SITE_CHANGE_SCOPE_WEB = 1;
-  // The whole site collection the site is in.
+  // The whole site collection the site is in. The only log that reports
+  // changes to SharePoint groups and their members.
   SITE_CHANGE_SCOPE_SITE_COLLECTION = 2;
   // One list of the site.
   SITE_CHANGE_SCOPE_LIST = 3;
