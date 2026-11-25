@@ -159,6 +159,12 @@ class MicrosoftLiveCoverageIT {
             Map.entry("DeltaUsers", "GET /users/delta"),
             Map.entry("ListGroupTransitiveMembers", "GET /groups/{group-id}/transitiveMembers"),
             Map.entry("ListGroupOwners", "GET /groups/{group-id}/owners"),
+            Map.entry("GetGroup", "GET /groups/{group-id}"),
+            Map.entry("CreateGroup", "POST /groups"),
+            Map.entry("UpdateGroup", "PATCH /groups/{group-id}"),
+            Map.entry("DeleteGroup", "DELETE /groups/{group-id}"),
+            Map.entry("AddGroupMember", "POST /groups/{group-id}/members/$ref"),
+            Map.entry("RemoveGroupMember", "DELETE /groups/{group-id}/members/{member-id}/$ref"),
             Map.entry("ListUserTransitiveMemberOf", "GET /users/{user-id}/transitiveMemberOf"),
             Map.entry("Sync", "delta crawl of one drive"));
 
@@ -549,8 +555,12 @@ class MicrosoftLiveCoverageIT {
         if (groups == null || groups.isEmpty()) {
             skip("ListGroupTransitiveMembers", "no group was listed");
             skip("ListGroupOwners", "no group was listed");
+            skip("GetGroup", "no group was listed");
         } else {
             String groupId = groups.get(0).getGroup().getId();
+            unary("GetGroup", "GetGroup", s -> s.getGroup(ai.pipestream.microsoft.v1.GetGroupRequest
+                    .newBuilder().setGroupId(groupId).build()),
+                    r -> r.getGroup().getId().equals(groupId) ? "the listed group" : "another group");
             stream("ListGroupOwners", "ListGroupOwners", LIST_CAP,
                     s -> s.listGroupOwners(ai.pipestream.microsoft.v1.ListGroupOwnersRequest.newBuilder()
                             .setGroupId(groupId).build()),
@@ -1385,7 +1395,8 @@ class MicrosoftLiveCoverageIT {
             "RestoreDriveItemVersion", "CopyDriveItem", "CreateListItem",
             "UpdateListItemFields", "DeleteListItem", "EnsureColumns", "EnsureList", "Mutate",
             "SetSiteRoleInheritance", "CreateSiteGroup", "DeleteSiteGroup", "AddSiteGroupMember",
-            "RemoveSiteGroupMember", "AddSiteRoleAssignment", "RemoveSiteRoleAssignment");
+            "RemoveSiteGroupMember", "AddSiteRoleAssignment", "RemoveSiteRoleAssignment",
+            "CreateGroup", "UpdateGroup", "DeleteGroup", "AddGroupMember", "RemoveGroupMember");
 
     private void skip(String rpc, String reason) {
         skip(rpc, rpc, reason);

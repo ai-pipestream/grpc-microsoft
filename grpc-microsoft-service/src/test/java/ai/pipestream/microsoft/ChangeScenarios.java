@@ -8,6 +8,7 @@ import ai.pipestream.microsoft.v1.DirectoryKind;
 import ai.pipestream.microsoft.v1.DirectorySnapshot;
 import ai.pipestream.microsoft.v1.DirectoryWatch;
 import ai.pipestream.microsoft.v1.GetSubscriptionRequest;
+import ai.pipestream.microsoft.v1.GroupChange;
 import ai.pipestream.microsoft.v1.LifecycleEvent;
 import ai.pipestream.microsoft.v1.ListSubscriptionRenewalsRequest;
 import ai.pipestream.microsoft.v1.ListSubscriptionsRequest;
@@ -74,6 +75,12 @@ final class ChangeScenarios {
     static final Duration RENEW_BEFORE = Duration.ofDays(60);
     /** Step that waits for a lifecycle notification. */
     static final String LIFECYCLE_STEP = "12-lifecycle-renewal";
+    /** Step that waits for the notification of a change to an Entra group. */
+    static final String DIRECTORY_STEP = "24-directory-notification";
+    /** How long a live step waits for Graph to post a notification about the directory. */
+    static final Duration DIRECTORY_NOTIFICATION_WAIT = Duration.ofMinutes(15);
+    /** Tries a step gives the directory to show what the run just wrote. */
+    static final int DIRECTORY_TRIES = 30;
 
     /** Where the notifications of a step come from. */
     interface Notifications {
@@ -85,6 +92,9 @@ final class ChangeScenarios {
 
         /** Live: waits until no notification has arrived for {@code quiet}; replay: nothing. */
         void settle(Duration quiet) throws Exception;
+
+        /** Live: waits {@code time} for Microsoft to catch up with a write; replay: nothing. */
+        void pause(Duration time) throws Exception;
     }
 
     /**
@@ -108,6 +118,11 @@ final class ChangeScenarios {
         /** Name of the file the run writes. */
         String fileName() {
             return "pipestream-live-change-" + suffix + ".txt";
+        }
+
+        /** Name of the Entra group the run makes. */
+        String groupName() {
+            return "pipestream-live-change-" + suffix + "-entra";
         }
     }
 
@@ -135,6 +150,8 @@ final class ChangeScenarios {
     private String directoryCursor;
     private String userPrincipalName;
     private String fileId;
+    private String entraGroupId;
+    private String directorySubscriptionId;
     private Context.CancellableContext watch;
     private final BlockingQueue<WatchChangesResponse> watched = new LinkedBlockingQueue<>();
 
@@ -230,7 +247,10 @@ final class ChangeScenarios {
                         this::subscribeToGroupMembers),
                 new Scenario("23-watch-site-log", "WatchChanges",
                         "WatchChanges (the site collection's change log: a sharing link, a group member)",
-                        this::watchSiteLog));
+                        this::watchSiteLog),
+                new Scenario(DIRECTORY_STEP, "",
+                        "notification after an Entra group gets a member, and the pass that reads it",
+                        this::directoryNotification));
     }
 
     /** Runs one step. */
@@ -727,6 +747,133 @@ final class ChangeScenarios {
                 + snapshot.getChangeCount() + ", the pass held " + changes);
     }
 
+    private String directoryNotification() throws Exception {
+        String cursor = need(directoryCursor, "the cursor of the directory pass");
+        String userId = graph.get("/users?$top=1&$select=id").path("value").path(0).path("id").asText("");
+        check(!userId.isBlank(), "the tenant lists no user");
+        String name = backend.groupName();
+        try {
+            entraGroupId = microsoft.createGroup(ai.pipestream.microsoft.v1.CreateGroupRequest.newBuilder()
+                    .setGroup(ai.pipestream.microsoft.v1.GraphGroup.newBuilder().setDisplayName(name)
+                            .setMailNickname(name)
+                            .setDescription(name + " created by a live test run; safe to delete"))
+                    .build()).getGroup().getId();
+        } catch (StatusRuntimeException e) {
+            if (e.getStatus().getCode() == Status.Code.PERMISSION_DENIED) {
+                throw new Skip("the app may not write to the directory (Group.ReadWrite.All): "
+                        + e.getStatus().getDescription());
+            }
+            throw e;
+        }
+        check(!entraGroupId.isBlank(), "Graph answered no group id");
+        try {
+            int subscribed = subscribeToTheNewGroup();
+            notifications.settle(Duration.ofSeconds(30));
+            received.clear();
+            addMember(userId);
+            long asked = System.nanoTime();
+            notifications.arrive(DIRECTORY_STEP);
+            ChangeNotification notification = awaitNotification(DIRECTORY_NOTIFICATION_WAIT,
+                    directorySubscriptionId);
+            long waited = Duration.ofNanos(System.nanoTime() - asked).toSeconds();
+            check(notification.getChangeType() == SubscriptionChangeType.SUBSCRIPTION_CHANGE_TYPE_UPDATED,
+                    "the notification says " + notification.getChangeType());
+            check(notification.getResource().toLowerCase(java.util.Locale.ROOT)
+                            .contains(entraGroupId.toLowerCase(java.util.Locale.ROOT)),
+                    "the notification names another resource");
+            int passes = 0;
+            GroupChange seen = null;
+            while (seen == null && passes < DIRECTORY_TRIES) {
+                passes++;
+                seen = directoryPass(cursor).stream().filter(WatchChangesResponse::hasGroupChange)
+                        .map(WatchChangesResponse::getGroupChange)
+                        .filter(change -> change.getGroup().getId().equals(entraGroupId)
+                                && change.getMemberChangesList().stream().anyMatch(
+                                        member -> member.getId().equals(userId) && !member.getRemoved()))
+                        .findFirst().orElse(null);
+                if (seen == null) {
+                    notifications.pause(Duration.ofSeconds(10));
+                }
+            }
+            check(seen != null, "no directory pass showed the group with its new member");
+            return "subscribed on try " + subscribed + "; notification " + notification.getChangeType()
+                    + " for the group arrived (live: after " + waited + " s); directory pass " + passes
+                    + " since the cursor shows the group with the new member";
+        } finally {
+            dropDirectoryFixtures();
+        }
+    }
+
+    /** Subscribes to the run's group, which Graph may not know yet; answers the try that worked. */
+    private int subscribeToTheNewGroup() throws Exception {
+        CreateSubscriptionRequest request = CreateSubscriptionRequest.newBuilder()
+                .setResource(SubscriptionResource.newBuilder().setGroup(entraGroupId))
+                .addChangeTypes(SubscriptionChangeType.SUBSCRIPTION_CHANGE_TYPE_UPDATED)
+                .addChangeTypes(SubscriptionChangeType.SUBSCRIPTION_CHANGE_TYPE_DELETED)
+                .setNotificationUrl(backend.notificationUrl())
+                .setLifecycleNotificationUrl(backend.lifecycleUrl())
+                .setExpirationDateTime(timestamp(backend.startedAt().plus(Duration.ofDays(1))))
+                .build();
+        StatusRuntimeException last = null;
+        for (int attempt = 1; attempt <= DIRECTORY_TRIES; attempt++) {
+            try {
+                directorySubscriptionId = blocking.createSubscription(request).getSubscription().getId();
+                check(!directorySubscriptionId.isBlank(), "Graph answered no subscription id");
+                return attempt;
+            } catch (StatusRuntimeException e) {
+                if (e.getStatus().getCode() != Status.Code.NOT_FOUND
+                        && e.getStatus().getCode() != Status.Code.INVALID_ARGUMENT) {
+                    throw e;
+                }
+                last = e;
+                notifications.pause(Duration.ofSeconds(5));
+            }
+        }
+        throw last;
+    }
+
+    /** Adds the user to the run's group, which Graph may not know yet. */
+    private void addMember(String userId) throws Exception {
+        StatusRuntimeException last = null;
+        for (int attempt = 1; attempt <= DIRECTORY_TRIES; attempt++) {
+            try {
+                microsoft.addGroupMember(ai.pipestream.microsoft.v1.AddGroupMemberRequest.newBuilder()
+                        .setGroupId(entraGroupId).setMemberId(userId).build());
+                return;
+            } catch (StatusRuntimeException e) {
+                if (e.getStatus().getCode() != Status.Code.NOT_FOUND) {
+                    throw e;
+                }
+                last = e;
+                notifications.pause(Duration.ofSeconds(5));
+            }
+        }
+        throw last;
+    }
+
+    /** Deletes the subscription and the group of the directory step. */
+    private void dropDirectoryFixtures() {
+        if (directorySubscriptionId != null) {
+            try {
+                blocking.deleteSubscription(DeleteSubscriptionRequest.newBuilder()
+                        .setSubscriptionId(directorySubscriptionId).build());
+                directorySubscriptionId = null;
+            } catch (RuntimeException e) {
+                System.out.println("[ChangeScenarios] directory subscription clean-up failed: "
+                        + e.getMessage());
+            }
+        }
+        if (entraGroupId != null) {
+            try {
+                microsoft.deleteGroup(ai.pipestream.microsoft.v1.DeleteGroupRequest.newBuilder()
+                        .setGroupId(entraGroupId).build());
+                entraGroupId = null;
+            } catch (RuntimeException e) {
+                System.out.println("[ChangeScenarios] Entra group clean-up failed: " + e.getMessage());
+            }
+        }
+    }
+
     private String subscribeToAUser() throws Exception {
         String id = graph.get("/users?$top=1&$select=id").path("value").path(0).path("id").asText("");
         check(!id.isBlank(), "the tenant lists no user");
@@ -795,6 +942,7 @@ final class ChangeScenarios {
     /** Removes what a failed run left behind. */
     void cleanUp() {
         close();
+        dropDirectoryFixtures();
         try {
             if (fileId != null) {
                 graph.delete("/drives/" + backend.driveId() + "/items/" + fileId);
@@ -835,10 +983,15 @@ final class ChangeScenarios {
     }
 
     private ChangeNotification awaitNotification(Duration wait) throws InterruptedException {
+        return awaitNotification(wait, subscriptionId);
+    }
+
+    private ChangeNotification awaitNotification(Duration wait, String ofSubscription)
+            throws InterruptedException {
         long deadline = System.nanoTime() + wait.toNanos();
         while (System.nanoTime() < deadline) {
             ChangeNotification next = received.poll(500, TimeUnit.MILLISECONDS);
-            if (next != null && next.getSubscriptionId().equals(subscriptionId)) {
+            if (next != null && next.getSubscriptionId().equals(ofSubscription)) {
                 return next;
             }
         }

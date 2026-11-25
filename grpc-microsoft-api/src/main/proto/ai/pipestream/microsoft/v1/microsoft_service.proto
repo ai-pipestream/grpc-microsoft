@@ -183,6 +183,30 @@ service MicrosoftService {
   // delta link. Application permission User.Read.All.
   rpc DeltaUsers(DeltaUsersRequest) returns (stream DeltaUsersResponse);
 
+  // GET /groups/{group-id}. One group. Application permission
+  // GroupMember.Read.All.
+  rpc GetGroup(GetGroupRequest) returns (GetGroupResponse);
+
+  // POST /groups. Creates a group. Application permission
+  // Group.ReadWrite.All.
+  rpc CreateGroup(CreateGroupRequest) returns (CreateGroupResponse);
+
+  // PATCH /groups/{group-id}. Changes the name, description, mail alias or
+  // visibility of a group. Application permission Group.ReadWrite.All.
+  rpc UpdateGroup(UpdateGroupRequest) returns (UpdateGroupResponse);
+
+  // DELETE /groups/{group-id}. Deletes a group. Application permission
+  // Group.ReadWrite.All.
+  rpc DeleteGroup(DeleteGroupRequest) returns (DeleteGroupResponse);
+
+  // POST /groups/{group-id}/members/$ref. Adds a user, group or other
+  // directory object to a group. Application permission Group.ReadWrite.All.
+  rpc AddGroupMember(AddGroupMemberRequest) returns (AddGroupMemberResponse);
+
+  // DELETE /groups/{group-id}/members/{member-id}/$ref. Takes a direct
+  // member out of a group. Application permission Group.ReadWrite.All.
+  rpc RemoveGroupMember(RemoveGroupMemberRequest) returns (RemoveGroupMemberResponse);
+
   // --- Term store ---
   //
   // Graph serves the term store to delegated tokens. An application token is
@@ -1135,6 +1159,108 @@ message DeltaUsersResponse {
     string delta_link = 3;
   }
 }
+
+// Request to read one group.
+message GetGroupRequest {
+  // Graph object id of the group.
+  string group_id = 1;
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 2;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// The group.
+message GetGroupResponse {
+  // The group as Graph reports it.
+  GraphGroup group = 1;
+}
+
+// Request to create a group.
+message CreateGroupRequest {
+  // The group to create. display_name and mail_nickname are required.
+  // description, group_types and visibility are sent when set. Without
+  // mail_enabled and security_enabled the group is a security group that is
+  // not mail-enabled. id, mail and security_identifier are Graph's to set
+  // and must be empty.
+  GraphGroup group = 1;
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 2;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// The new group.
+message CreateGroupResponse {
+  // The group as Graph created it.
+  GraphGroup group = 1;
+}
+
+// Request to change a group. Unset fields stay as they are; at least one
+// must be set.
+message UpdateGroupRequest {
+  // Graph object id of the group.
+  string group_id = 1;
+  // New display name.
+  optional string display_name = 2;
+  // New description; empty clears it.
+  optional string description = 3;
+  // New mail alias.
+  optional string mail_nickname = 4;
+  // New visibility: `Public` or `Private`. Microsoft 365 groups only.
+  optional string visibility = 5;
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 6;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// Graph answers a group change with no content. A read right after it can
+// still show the old values.
+message UpdateGroupResponse {}
+
+// Request to delete a group.
+message DeleteGroupRequest {
+  // Graph object id of the group.
+  string group_id = 1;
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 2;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// Graph answers a group deletion with no content.
+message DeleteGroupResponse {}
+
+// Request to add a member to a group.
+message AddGroupMemberRequest {
+  // Graph object id of the group.
+  string group_id = 1;
+  // Graph object id of the user, group or other directory object to add.
+  string member_id = 2;
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 3;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// Graph answers a new membership with no content.
+message AddGroupMemberResponse {}
+
+// Request to take a direct member out of a group.
+message RemoveGroupMemberRequest {
+  // Graph object id of the group.
+  string group_id = 1;
+  // Graph object id of the member.
+  string member_id = 2;
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 3;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// Graph answers a removed membership with no content.
+message RemoveGroupMemberResponse {}
 
 // ============================================================================
 // Sync

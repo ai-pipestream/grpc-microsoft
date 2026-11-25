@@ -69,7 +69,8 @@ class MicrosoftLiveWriteIT {
             "CreateListItem", "UpdateListItemFields", "DeleteListItem", "EnsureColumns",
             "EnsureList", "Mutate", "SetSiteRoleInheritance", "CreateSiteGroup", "DeleteSiteGroup",
             "AddSiteGroupMember", "RemoveSiteGroupMember", "AddSiteRoleAssignment",
-            "RemoveSiteRoleAssignment");
+            "RemoveSiteRoleAssignment", "CreateGroup", "UpdateGroup", "DeleteGroup", "AddGroupMember",
+            "RemoveGroupMember");
 
     private record Row(String rpc, String label, String outcome, String detail) {
     }

@@ -104,6 +104,10 @@ permission level (`ListSiteRoleDefinitions` lists them) on a site, list or
 list item that has its own role assignments. All need the certificate
 credential and the site grant `fullcontrol`.
 
+`GetGroup` reads one Entra group. `CreateGroup`, `UpdateGroup` and
+`DeleteGroup` make, change and delete a group in the directory;
+`AddGroupMember` and `RemoveGroupMember` change its direct members.
+
 Point the proxy at a running sync-table (from grpc-integration) to record
 crawl / update / delete rows:
 
@@ -262,7 +266,8 @@ All are application permissions with admin consent.
 |---|---|---|
 | Everything scoped to a site: `GetSite`, drives, items, downloads, lists, list items, columns, item / list / list-item `ListPermissions`, the delta rpcs, `Sync`, and every write rpc | Graph `Sites.Selected` plus a grant on the site | site grant `manage` |
 | `ListSites`, `ListAllSites`, `DeltaSites` | Graph `Sites.Read.All` (tenant-wide) | refused with `Sites.Selected` alone |
-| `ListUsers`, `ListGroups`, `DeltaUsers`, `DeltaGroups`, `ListGroupTransitiveMembers`, `ListUserTransitiveMemberOf`, `WatchChanges` with `directory` | Graph `User.Read.All` and `GroupMember.Read.All` | those two |
+| `ListUsers`, `ListGroups`, `GetGroup`, `DeltaUsers`, `DeltaGroups`, `ListGroupTransitiveMembers`, `ListUserTransitiveMemberOf`, `WatchChanges` with `directory` | Graph `User.Read.All` and `GroupMember.Read.All` | those two |
+| `CreateGroup`, `UpdateGroup`, `DeleteGroup`, `AddGroupMember`, `RemoveGroupMember` | Graph `Group.ReadWrite.All` (tenant-wide) | not proven yet |
 | `ListSiteGroups`, `GetSiteRoleInheritance` | SharePoint `Sites.Selected` plus a grant on the site, certificate credential | site grant `manage` |
 | `ListSiteGroupMembers`, `ListSiteRoleAssignments` | SharePoint `Sites.Selected` plus site grant `fullcontrol`, certificate credential (refused with `manage`) | site grant `fullcontrol`; also SharePoint `Sites.FullControl.All` |
 | `ListSiteChanges`, `WatchChanges` with `site_changes` | SharePoint `Sites.Selected` plus a grant on the site, certificate credential | site grant `fullcontrol` (not tried with `manage`) |
