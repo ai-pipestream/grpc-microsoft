@@ -22,6 +22,14 @@ on:
         description: Call every read rpc against the test site and print each call's outcome (read-only)
         type: boolean
         default: false
+      run_live_fixture:
+        description: On its own, with the site grant at full control. Make sure the test site holds one sample file and one list item for the read-only coverage run (writes only what is missing)
+        type: boolean
+        default: false
+      run_live_grant_probe:
+        description: Try list item, file and sharing writes next to the fixture on the test site and print whether each was allowed (removes what it wrote). With run_live_admin and live_admin_set_role it shows what a lower site grant permits
+        type: boolean
+        default: false
       live_coverage_admin:
         description: Run the read-only coverage with the admin app's certificate instead of the test app
         type: boolean
@@ -36,6 +44,10 @@ on:
         default: false
       live_admin_set_role:
         description: With run_live_admin, set the test app's role on the test site (read, write, manage or full_control)
+        type: string
+        default: ""
+      live_admin_restore_role:
+        description: After this run's coverage and write jobs, set the test app's role on the test site to this role (read, write, manage or full_control)
         type: string
         default: ""
       import_recordings_run_id:
@@ -98,6 +110,7 @@ jobs:
         with:
           distribution: temurin
           java-version: "25"
+          cache: gradle
       - run: ./gradlew --no-daemon build -PintegrationDir=../grpc-integration
         working-directory: grpc-microsoft
 
@@ -202,6 +215,7 @@ jobs:
         with:
           distribution: temurin
           java-version: "25"
+          cache: gradle
       - name: Live Microsoft Graph smoke
         working-directory: grpc-microsoft
         env:
@@ -233,7 +247,8 @@ jobs:
   # Manual only, read-only: every read rpc against the test site. The log of a
   # public repository gets each call's label and outcome, never its detail.
   live-microsoft-coverage:
-    if: github.event_name == 'workflow_dispatch' && inputs.run_live_coverage
+    needs: live-microsoft-admin
+    if: ${{ !cancelled() && github.event_name == 'workflow_dispatch' && inputs.run_live_coverage && (needs.live-microsoft-admin.result == 'success' || needs.live-microsoft-admin.result == 'skipped') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -258,6 +273,7 @@ jobs:
         with:
           distribution: temurin
           java-version: "25"
+          cache: gradle
       - name: Live Microsoft Graph coverage run
         working-directory: grpc-microsoft
         env:
@@ -278,6 +294,110 @@ jobs:
           else
             echo "::error::no coverage report was written"
             grep -E '^(BUILD|FAILURE|> Task|e: |.*error:)' "$RUNNER_TEMP/coverage.log" | tail -n 30 || true
+          fi
+          exit "$status"
+
+  # Manual only: leaves one sample file and one list item on the test site, so
+  # that the read-only coverage run has an item to read. Writes only what is missing.
+  live-microsoft-fixture:
+    if: github.event_name == 'workflow_dispatch' && inputs.run_live_fixture
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          path: grpc-microsoft
+      - id: core
+        name: Pick the grpc-integration ref (same branch if it exists, else main)
+        env:
+          BRANCH: ${{ github.head_ref || github.ref_name }}
+        run: |
+          if git ls-remote --exit-code --heads https://github.com/ai-pipestream/grpc-integration "$BRANCH" >/dev/null; then
+            echo "ref=$BRANCH" >> "$GITHUB_OUTPUT"
+          else
+            echo "ref=$INTEGRATION_REF" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v5
+        with:
+          repository: ai-pipestream/grpc-integration
+          ref: ${{ steps.core.outputs.ref }}
+          path: grpc-integration
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: gradle
+      - name: Live Microsoft Graph fixture
+        working-directory: grpc-microsoft
+        env:
+          MICROSOFT_TENANT_ID: ${{ secrets.MICROSOFT_TENANT_ID }}
+          MICROSOFT_CLIENT_ID: ${{ secrets.MICROSOFT_CLIENT_ID }}
+          MICROSOFT_CLIENT_SECRET: ${{ secrets.MICROSOFT_CLIENT_SECRET }}
+          MICROSOFT_CLIENT_CERT_PEM: ${{ secrets.MICROSOFT_CLIENT_CERT_PEM }}
+          MICROSOFT_SITE_ID: ${{ inputs.live_write_site_id || env.LIVE_SITE_ID }}
+          MICROSOFT_DRIVE_IDS: ${{ secrets.MICROSOFT_DRIVE_IDS }}
+          MICROSOFT_LIVE_FIXTURE: "1"
+        run: |
+          status=0
+          ./gradlew --no-daemon -PintegrationDir=../grpc-integration :grpc-microsoft-service:liveFixtureTest --rerun-tasks > "$RUNNER_TEMP/fixture.log" 2>&1 || status=$?
+          grep -F '[MicrosoftLiveFixtureIT]' "$RUNNER_TEMP/fixture.log" || true
+          if ! grep -qF '[MicrosoftLiveFixtureIT] list item:' "$RUNNER_TEMP/fixture.log"; then
+            echo "::error::the fixture was not written"
+            grep -E '^(BUILD|FAILURE|> Task|e: |.*error:|.*Exception)' "$RUNNER_TEMP/fixture.log" | tail -n 30 || true
+            [ "$status" -ne 0 ] || status=1
+          fi
+          exit "$status"
+
+  # Manual only: tries the writes that need no new list on the fixture's list
+  # and library and prints each outcome. A refused call is an answer, so the
+  # job is green at any site grant; it fails on any other error or on leftovers.
+  live-microsoft-grant-probe:
+    needs: live-microsoft-admin
+    if: ${{ !cancelled() && github.event_name == 'workflow_dispatch' && inputs.run_live_grant_probe && (needs.live-microsoft-admin.result == 'success' || needs.live-microsoft-admin.result == 'skipped') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          path: grpc-microsoft
+      - id: core
+        name: Pick the grpc-integration ref (same branch if it exists, else main)
+        env:
+          BRANCH: ${{ github.head_ref || github.ref_name }}
+        run: |
+          if git ls-remote --exit-code --heads https://github.com/ai-pipestream/grpc-integration "$BRANCH" >/dev/null; then
+            echo "ref=$BRANCH" >> "$GITHUB_OUTPUT"
+          else
+            echo "ref=$INTEGRATION_REF" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v5
+        with:
+          repository: ai-pipestream/grpc-integration
+          ref: ${{ steps.core.outputs.ref }}
+          path: grpc-integration
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: gradle
+      - name: Live Microsoft Graph grant probe
+        working-directory: grpc-microsoft
+        env:
+          MICROSOFT_TENANT_ID: ${{ secrets.MICROSOFT_TENANT_ID }}
+          MICROSOFT_CLIENT_ID: ${{ secrets.MICROSOFT_CLIENT_ID }}
+          MICROSOFT_CLIENT_SECRET: ${{ secrets.MICROSOFT_CLIENT_SECRET }}
+          MICROSOFT_CLIENT_CERT_PEM: ${{ secrets.MICROSOFT_CLIENT_CERT_PEM }}
+          MICROSOFT_SITE_ID: ${{ inputs.live_write_site_id || env.LIVE_SITE_ID }}
+          MICROSOFT_DRIVE_IDS: ${{ secrets.MICROSOFT_DRIVE_IDS }}
+          MICROSOFT_LIVE_GRANT_PROBE: "1"
+        run: |
+          status=0
+          ./gradlew --no-daemon -PintegrationDir=../grpc-integration :grpc-microsoft-service:liveGrantProbeTest --rerun-tasks > "$RUNNER_TEMP/probe.log" 2>&1 || status=$?
+          grep -F '[MicrosoftLiveGrantProbeIT]' "$RUNNER_TEMP/probe.log" || true
+          if ! grep -qF '[MicrosoftLiveGrantProbeIT] cleanup:' "$RUNNER_TEMP/probe.log"; then
+            echo "::error::the grant probe did not run to its end"
+            [ "$status" -ne 0 ] || status=1
+          fi
+          if [ "$status" -ne 0 ]; then
+            grep -E '^(BUILD|FAILURE|> Task|e: |.*error:|.*Exception|.*AssertionError|.*Expecting)' "$RUNNER_TEMP/probe.log" | tail -n 40 || true
           fi
           exit "$status"
 
@@ -309,6 +429,7 @@ jobs:
         with:
           distribution: temurin
           java-version: "25"
+          cache: gradle
       - name: Live admin service read and dry run
         working-directory: grpc-microsoft
         env:
@@ -337,9 +458,11 @@ jobs:
           path: grpc-microsoft/grpc-microsoft-admin/src/test/resources/recordings/admin/
           if-no-files-found: ignore
 
-  # Manual only: writes to the test site, then deletes what it created.
-  live-microsoft-write:
-    if: github.event_name == 'workflow_dispatch' && inputs.run_live_write
+  # Manual only: puts the test app's role on the test site back after the
+  # coverage and write jobs of a run that lowered it, whatever their outcome.
+  live-microsoft-admin-restore:
+    needs: [live-microsoft-admin, live-microsoft-coverage, live-microsoft-write, live-microsoft-grant-probe]
+    if: ${{ always() && github.event_name == 'workflow_dispatch' && inputs.live_admin_restore_role != '' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -364,6 +487,56 @@ jobs:
         with:
           distribution: temurin
           java-version: "25"
+          cache: gradle
+      - name: Set the test app's role back
+        working-directory: grpc-microsoft
+        env:
+          MICROSOFT_TENANT_ID: ${{ secrets.MICROSOFT_TENANT_ID }}
+          MICROSOFT_ADMIN_CLIENT_ID: ${{ secrets.MICROSOFT_ADMIN_CLIENT_ID }}
+          MICROSOFT_ADMIN_CLIENT_CERT_PEM: ${{ secrets.MICROSOFT_ADMIN_CLIENT_CERT_PEM }}
+          MICROSOFT_CLIENT_ID: ${{ secrets.MICROSOFT_CLIENT_ID }}
+          MICROSOFT_SITE_ID: ${{ env.LIVE_SITE_ID }}
+          MICROSOFT_ADMIN_LIVE_SET_ROLE: ${{ inputs.live_admin_restore_role }}
+        run: |
+          status=0
+          ./gradlew --no-daemon -PintegrationDir=../grpc-integration :grpc-microsoft-admin:liveAdminTest --rerun-tasks > "$RUNNER_TEMP/admin.log" 2>&1 || status=$?
+          grep -F '[MicrosoftAdminLiveIT]' "$RUNNER_TEMP/admin.log" || true
+          grep -E '^(BUILD|FAILURE)' "$RUNNER_TEMP/admin.log" || true
+          if ! grep -qF 'EnsureSiteAppGrant [test app,' "$RUNNER_TEMP/admin.log"; then
+            echo "::error::the role was not set back; set it by hand with run_live_admin and live_admin_set_role"
+            exit 1
+          fi
+          exit "$status"
+
+  # Manual only: writes to the test site, then deletes what it created.
+  live-microsoft-write:
+    needs: live-microsoft-admin
+    if: ${{ !cancelled() && github.event_name == 'workflow_dispatch' && inputs.run_live_write && (needs.live-microsoft-admin.result == 'success' || needs.live-microsoft-admin.result == 'skipped') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          path: grpc-microsoft
+      - id: core
+        name: Pick the grpc-integration ref (same branch if it exists, else main)
+        env:
+          BRANCH: ${{ github.head_ref || github.ref_name }}
+        run: |
+          if git ls-remote --exit-code --heads https://github.com/ai-pipestream/grpc-integration "$BRANCH" >/dev/null; then
+            echo "ref=$BRANCH" >> "$GITHUB_OUTPUT"
+          else
+            echo "ref=$INTEGRATION_REF" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v5
+        with:
+          repository: ai-pipestream/grpc-integration
+          ref: ${{ steps.core.outputs.ref }}
+          path: grpc-integration
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: gradle
       - name: Live Microsoft Graph write test
         working-directory: grpc-microsoft
         env:
@@ -424,6 +597,7 @@ jobs:
         with:
           distribution: temurin
           java-version: "25"
+          cache: gradle
       - name: Start a temporary tunnel to the receiver port
         id: tunnel
         run: |
@@ -552,6 +726,7 @@ jobs:
         with:
           distribution: temurin
           java-version: "25"
+          cache: gradle
       - name: Hygiene test on the imported recordings
         working-directory: grpc-microsoft
         run: |
@@ -634,6 +809,7 @@ jobs:
         with:
           distribution: temurin
           java-version: "25"
+          cache: gradle
       - name: Replay and hygiene tests on the imported recordings
         working-directory: grpc-microsoft
         run: |

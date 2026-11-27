@@ -132,7 +132,7 @@ class MicrosoftLiveCoverageIT {
             Map.entry("ListListItems", "GET /sites/{site-id}/lists/{list-id}/items"),
             Map.entry("GetListItem", "GET /sites/{site-id}/lists/{list-id}/items/{item-id}"),
             Map.entry("DeltaListItems", "GET /sites/{site-id}/lists/{list-id}/items/delta"),
-            Map.entry("ListColumns", "GET /sites/{site-id}[/lists/{id}|/contentTypes/{id}]/columns"),
+            Map.entry("ListColumns", "GET /sites/{site-id}[/lists/{id}][/contentTypes/{id}]/columns"),
             Map.entry("ListPermissions", "GET .../permissions"),
             Map.entry("GetPermission", "GET .../permissions/{permission-id}"),
             Map.entry("CreateSharingLink", "POST .../createLink"),
@@ -1068,9 +1068,9 @@ class MicrosoftLiveCoverageIT {
                 discovered.put("content type", "none on the list item");
             } else {
                 discovered.put("content type", contentType + " \"" + item.getContentType().getName() + "\"");
-                stream("ListColumns", "ListColumns [content type]", LIST_CAP,
+                stream("ListColumns", "ListColumns [list content type]", LIST_CAP,
                         s -> s.listColumns(ListColumnsRequest.newBuilder().setSiteId(siteId)
-                                .setContentTypeId(contentType).build()),
+                                .setListId(listId).setContentTypeId(contentType).build()),
                         l -> join(l, r -> r.getColumn().getName()));
             }
         }

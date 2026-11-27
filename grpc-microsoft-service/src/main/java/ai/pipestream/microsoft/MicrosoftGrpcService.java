@@ -962,7 +962,12 @@ public final class MicrosoftGrpcService
             String route;
             String listId = "";
             String contentTypeId = "";
-            if (!request.getListId().isBlank()) {
+            if (!request.getListId().isBlank() && !request.getContentTypeId().isBlank()) {
+                route = GraphPaths.list(request.getSiteId(), request.getListId()) + "/contentTypes/"
+                        + GraphPaths.segment(request.getContentTypeId(), "content_type_id") + "/columns";
+                listId = request.getListId();
+                contentTypeId = request.getContentTypeId();
+            } else if (!request.getListId().isBlank()) {
                 route = GraphPaths.list(request.getSiteId(), request.getListId()) + "/columns";
                 listId = request.getListId();
             } else if (!request.getContentTypeId().isBlank()) {

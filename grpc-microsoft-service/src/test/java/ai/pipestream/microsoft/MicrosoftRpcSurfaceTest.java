@@ -913,6 +913,21 @@ class MicrosoftRpcSurfaceTest {
         assertThat(columns.get(3).getType()).isEqualTo(ColumnType.COLUMN_TYPE_UNKNOWN_FUTURE_VALUE);
     }
 
+    @Test
+    void listColumnsOfAListContentTypeUseTheListRoute() {
+        String route = "/sites/" + SITE + "/lists/L1/contentTypes/0x0100AB/columns";
+        fake.stub(route, """
+                {"value":[{"id":"c1","name":"Title","text":{}}]}
+                """);
+        List<ColumnDefinition> columns = drain(stub.listColumns(ListColumnsRequest.newBuilder()
+                .setSiteId(SITE).setListId("L1").setContentTypeId("0x0100AB").build())).stream()
+                .map(r -> r.getColumn()).toList();
+        assertThat(fake.only(route).query()).isEmpty();
+        assertThat(columns).hasSize(1);
+        assertThat(columns.get(0).getListId()).isEqualTo("L1");
+        assertThat(columns.get(0).getContentTypeId()).isEqualTo("0x0100AB");
+    }
+
     // ------------------------------------------------------------ permissions
 
     @Test
