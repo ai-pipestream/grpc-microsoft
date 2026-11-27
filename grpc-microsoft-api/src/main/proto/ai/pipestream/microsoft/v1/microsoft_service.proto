@@ -160,7 +160,8 @@ service MicrosoftService {
   // POST /drives/{drive-id}/items/{item-id}/createLink or
   // /sites/{site-id}/lists/{list-id}/items/{item-id}/createLink. Creates a
   // sharing link, or answers the one of that type and scope the application
-  // already made. The item gets its own permissions.
+  // already made. The item gets its own permissions. PERMISSION_DENIED when
+  // the site does not allow links of that scope.
   rpc CreateSharingLink(CreateSharingLinkRequest) returns (CreateSharingLinkResponse);
 
   // POST /drives/{drive-id}/items/{item-id}/invite. Grants people or groups

@@ -38,7 +38,7 @@ message SiteSharingLinkGroup {
   // Kind of link as SharePoint names it (verbatim), such as
   // `OrganizationView`, `AnonymousEdit` or `Flexible`.
   string kind = 2;
-  // Id of the share.
+  // Id of the share: the id of the link's permission in Graph.
   string share_id = 3;
   // Who the link is for, in Graph's words: `organization`, `anonymous` or
   // `users`. Empty for a kind the server does not know.

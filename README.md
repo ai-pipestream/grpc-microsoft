@@ -113,7 +113,8 @@ its roles or expiry and `DeletePermission` removes it. SharePoint keeps one
 hidden group for each link; `SiteGroup.sharing_link` and
 `SitePrincipal.sharing_link` say which item, kind of link and scope such a
 group stands for, so a reader of role assignments can tell a link for the
-organization or for anyone from one for named people.
+organization or for anyone from one for named people. A site that does
+not allow links for anyone answers `PERMISSION_DENIED` to a request for one.
 
 `GetGroup` reads one Entra group. `CreateGroup`, `UpdateGroup` and
 `DeleteGroup` make, change and delete a group in the directory;
@@ -279,7 +280,7 @@ All are application permissions with admin consent.
 | `ListSites`, `ListAllSites`, `DeltaSites` | Graph `Sites.Read.All` (tenant-wide) | refused with `Sites.Selected` alone |
 | `ListUsers`, `ListGroups`, `GetGroup`, `DeltaUsers`, `DeltaGroups`, `ListGroupTransitiveMembers`, `ListUserTransitiveMemberOf`, `WatchChanges` with `directory` | Graph `User.Read.All` and `GroupMember.Read.All` | those two |
 | `CreateGroup`, `UpdateGroup`, `DeleteGroup`, `AddGroupMember`, `RemoveGroupMember` | Graph `Group.ReadWrite.All` (tenant-wide) | that |
-| `GetPermission`, `CreateSharingLink`, `InviteRecipients`, `UpdatePermission`, `DeletePermission`, `GrantLinkAccess`, `RevokeLinkAccess` | Graph `Sites.Selected` plus a grant on the site | not run live yet |
+| `GetPermission`, `CreateSharingLink`, `InviteRecipients`, `UpdatePermission`, `DeletePermission`, `GrantLinkAccess`, `RevokeLinkAccess` | Graph `Sites.Selected` plus a grant on the site | site grant `fullcontrol` (not tried with `manage`) |
 | `ListSiteGroups`, `GetSiteRoleInheritance` | SharePoint `Sites.Selected` plus a grant on the site, certificate credential | site grant `manage` |
 | `ListSiteGroupMembers`, `ListSiteRoleAssignments` | SharePoint `Sites.Selected` plus site grant `fullcontrol`, certificate credential (refused with `manage`) | site grant `fullcontrol`; also SharePoint `Sites.FullControl.All` |
 | `ListSiteChanges`, `WatchChanges` with `site_changes` | SharePoint `Sites.Selected` plus a grant on the site, certificate credential | site grant `fullcontrol` (not tried with `manage`) |
