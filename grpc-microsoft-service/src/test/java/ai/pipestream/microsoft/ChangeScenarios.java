@@ -863,13 +863,24 @@ final class ChangeScenarios {
                         + e.getMessage());
             }
         }
-        if (entraGroupId != null) {
+        for (int attempt = 1; entraGroupId != null && attempt <= DIRECTORY_TRIES; attempt++) {
             try {
                 microsoft.deleteGroup(ai.pipestream.microsoft.v1.DeleteGroupRequest.newBuilder()
                         .setGroupId(entraGroupId).build());
                 entraGroupId = null;
-            } catch (RuntimeException e) {
-                System.out.println("[ChangeScenarios] Entra group clean-up failed: " + e.getMessage());
+            } catch (StatusRuntimeException e) {
+                if (e.getStatus().getCode() != Status.Code.NOT_FOUND || attempt == DIRECTORY_TRIES) {
+                    System.out.println("[ChangeScenarios] Entra group clean-up failed: " + e.getMessage());
+                    return;
+                }
+                try {
+                    notifications.pause(Duration.ofSeconds(5));
+                } catch (InterruptedException interrupted) {
+                    Thread.currentThread().interrupt();
+                    return;
+                } catch (Exception failed) {
+                    return;
+                }
             }
         }
     }

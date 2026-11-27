@@ -1506,6 +1506,24 @@ final class WriteScenarios {
         throw new AssertionError("not visible after " + DIRECTORY_READS + " reads");
     }
 
+    /**
+     * Sends a write to the run's group again while Entra answers that the group, or
+     * its member, is not there; answers the try that worked.
+     */
+    private int onceKnown(Runnable write) throws InterruptedException {
+        for (int attempt = 1;; attempt++) {
+            try {
+                write.run();
+                return attempt;
+            } catch (StatusRuntimeException e) {
+                if (e.getStatus().getCode() != io.grpc.Status.Code.NOT_FOUND || attempt == DIRECTORY_READS) {
+                    throw e;
+                }
+                pause();
+            }
+        }
+    }
+
     private String getGroup() throws InterruptedException {
         need(entraGroupId, "the Entra group this run created");
         int[] reads = new int[1];
@@ -1520,14 +1538,14 @@ final class WriteScenarios {
         need(entraGroupId, "the Entra group this run created");
         String renamed = entraGroupName() + "-renamed";
         String description = entraGroupName() + " renamed by a live test run";
-        stub().updateGroup(ai.pipestream.microsoft.v1.UpdateGroupRequest.newBuilder()
-                .setGroupId(entraGroupId).setDisplayName(renamed).setDescription(description).build());
+        int tries = onceKnown(() -> stub().updateGroup(ai.pipestream.microsoft.v1.UpdateGroupRequest.newBuilder()
+                .setGroupId(entraGroupId).setDisplayName(renamed).setDescription(description).build()));
         int[] reads = new int[1];
         GraphGroup group = awaitGroup(g -> g != null && g.getDisplayName().equals(renamed), reads);
         check(group.getDescription().equals(description), "the description is " + group.getDescription());
         check(group.getMailNickname().equals(entraGroupName()), "the alias changed to "
                 + group.getMailNickname());
-        return "renamed and described; GetGroup showed it on read " + reads[0];
+        return "renamed and described on try " + tries + "; GetGroup showed it on read " + reads[0];
     }
 
     /** Reads the run's group's members until the user is, or is no longer, one of them. */
@@ -1554,27 +1572,31 @@ final class WriteScenarios {
     private String addGroupMember() throws InterruptedException {
         need(entraGroupId, "the Entra group this run created");
         need(userId, "a directory user");
-        stub().addGroupMember(ai.pipestream.microsoft.v1.AddGroupMemberRequest.newBuilder()
-                .setGroupId(entraGroupId).setMemberId(userId).build());
-        return "user added; ListGroupTransitiveMembers showed it on read " + awaitMembership(true);
+        int tries = onceKnown(() -> stub().addGroupMember(
+                ai.pipestream.microsoft.v1.AddGroupMemberRequest.newBuilder()
+                        .setGroupId(entraGroupId).setMemberId(userId).build()));
+        return "user added on try " + tries + "; ListGroupTransitiveMembers showed it on read "
+                + awaitMembership(true);
     }
 
     private String removeGroupMember() throws InterruptedException {
         need(entraGroupId, "the Entra group this run created");
         need(userId, "a directory user");
-        stub().removeGroupMember(ai.pipestream.microsoft.v1.RemoveGroupMemberRequest.newBuilder()
-                .setGroupId(entraGroupId).setMemberId(userId).build());
-        return "user removed; ListGroupTransitiveMembers showed it on read " + awaitMembership(false);
+        int tries = onceKnown(() -> stub().removeGroupMember(
+                ai.pipestream.microsoft.v1.RemoveGroupMemberRequest.newBuilder()
+                        .setGroupId(entraGroupId).setMemberId(userId).build()));
+        return "user removed on try " + tries + "; ListGroupTransitiveMembers showed it on read "
+                + awaitMembership(false);
     }
 
     private String deleteGroup() throws InterruptedException {
         need(entraGroupId, "the Entra group this run created");
-        stub().deleteGroup(ai.pipestream.microsoft.v1.DeleteGroupRequest.newBuilder()
-                .setGroupId(entraGroupId).build());
+        int tries = onceKnown(() -> stub().deleteGroup(ai.pipestream.microsoft.v1.DeleteGroupRequest.newBuilder()
+                .setGroupId(entraGroupId).build()));
         int[] reads = new int[1];
         awaitGroup(java.util.Objects::isNull, reads);
         entraGroupId = null;
-        return "deleted; GetGroup answered NOT_FOUND on read " + reads[0];
+        return "deleted on try " + tries + "; GetGroup answered NOT_FOUND on read " + reads[0];
     }
 
     private String ownersOfAGroup() {
@@ -2277,8 +2299,8 @@ final class WriteScenarios {
         boolean clean = true;
         if (entraGroupId != null) {
             try {
-                stub().deleteGroup(ai.pipestream.microsoft.v1.DeleteGroupRequest.newBuilder()
-                        .setGroupId(entraGroupId).build());
+                onceKnown(() -> stub().deleteGroup(ai.pipestream.microsoft.v1.DeleteGroupRequest.newBuilder()
+                        .setGroupId(entraGroupId).build()));
                 lines.add("Entra group " + entraGroupName() + " deleted");
             } catch (StatusRuntimeException e) {
                 clean = false;

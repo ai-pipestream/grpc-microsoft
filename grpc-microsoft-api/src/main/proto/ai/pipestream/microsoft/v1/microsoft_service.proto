@@ -188,7 +188,8 @@ service MicrosoftService {
   rpc GetGroup(GetGroupRequest) returns (GetGroupResponse);
 
   // POST /groups. Creates a group. Application permission
-  // Group.ReadWrite.All.
+  // Group.ReadWrite.All. For a short time after, Entra can answer NOT_FOUND
+  // to a read or a write of the new group; send it again.
   rpc CreateGroup(CreateGroupRequest) returns (CreateGroupResponse);
 
   // PATCH /groups/{group-id}. Changes the name, description, mail alias or
