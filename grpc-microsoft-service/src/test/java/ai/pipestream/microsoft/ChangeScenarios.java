@@ -73,6 +73,8 @@ final class ChangeScenarios {
     static final Duration LONGEST_LIFECYCLE_WAIT = SHORT_LIFETIME.minusMinutes(4);
     /** Renewal margin of the run's renewer: longer than any lifetime, so every check renews. */
     static final Duration RENEW_BEFORE = Duration.ofDays(60);
+    /** How often a step reads the site's groups for the group of a removed sharing link to be gone. */
+    static final int LINK_GROUP_READS = 12;
     /** Step that waits for a lifecycle notification. */
     static final String LIFECYCLE_STEP = "12-lifecycle-renewal";
     /** Step that waits for the notification of a change to an Entra group. */
@@ -150,6 +152,7 @@ final class ChangeScenarios {
     private String directoryCursor;
     private String userPrincipalName;
     private String fileId;
+    private String linkId;
     private String entraGroupId;
     private String directorySubscriptionId;
     private Context.CancellableContext watch;
@@ -429,16 +432,26 @@ final class ChangeScenarios {
         received.clear();
         ObjectNode body = Recordings.JSON.createObjectNode().put("type", "view")
                 .put("scope", "organization");
-        graph.post("/drives/" + backend.driveId() + "/items/" + id + "/createLink", body);
+        linkId = graph.post("/drives/" + backend.driveId() + "/items/" + id + "/createLink", body)
+                .path("id").asText("");
+        check(!linkId.isBlank(), "the sharing link has no permission id");
         notifications.arrive("10-permission-notification");
         ChangeNotification next = awaitNotification(NOTIFICATION_WAIT);
         return "notification " + next.getChangeType() + " after the sharing link was added";
     }
 
     private String deleteFile() throws Exception {
-        graph.delete("/drives/" + backend.driveId() + "/items/" + need(fileId, "the written file"));
+        String id = need(fileId, "the written file");
+        String link = "";
+        if (linkId != null) {
+            // A link left on a deleted file keeps its group on the site.
+            graph.delete("/drives/" + backend.driveId() + "/items/" + id + "/permissions/" + linkId);
+            link = "; its sharing link was removed first, and its group was gone on read " + linkGroupGone(linkId);
+            linkId = null;
+        }
+        graph.delete("/drives/" + backend.driveId() + "/items/" + id);
         fileId = null;
-        return "deleted";
+        return "deleted" + link;
     }
 
     private String lifecycleRenewal() throws Exception {
@@ -626,8 +639,12 @@ final class ChangeScenarios {
         String id = item.path("id").asText("");
         check(!id.isBlank(), "the upload answered no item id");
         try {
-            graph.post("/drives/" + backend.driveId() + "/items/" + id + "/createLink",
-                    Recordings.JSON.createObjectNode().put("type", "view").put("scope", "organization"));
+            String link = graph.post("/drives/" + backend.driveId() + "/items/" + id + "/createLink",
+                    Recordings.JSON.createObjectNode().put("type", "view").put("scope", "organization"))
+                    .path("id").asText("");
+            check(!link.isBlank(), "the sharing link has no permission id");
+            graph.delete("/drives/" + backend.driveId() + "/items/" + id + "/permissions/" + link);
+            linkGroupGone(link);
         } finally {
             graph.delete("/drives/" + backend.driveId() + "/items/" + id);
         }
@@ -669,6 +686,22 @@ final class ChangeScenarios {
         }
         return "first pass took the end of the log; after a file was shared and a group got and lost "
                 + "a member: " + kinds;
+    }
+
+    /** Reads the site's groups until none stands for the removed link; answers the number of reads. */
+    private int linkGroupGone(String shareId) throws Exception {
+        for (int read = 1;; read++) {
+            boolean[] listed = {false};
+            microsoft.listSiteGroups(ai.pipestream.microsoft.v1.ListSiteGroupsRequest.newBuilder()
+                    .setSiteId(backend.siteId()).build())
+                    .forEachRemaining(response -> listed[0] |= response.getGroup().getSharingLink()
+                            .getShareId().equals(shareId));
+            if (!listed[0]) {
+                return read;
+            }
+            check(read < LINK_GROUP_READS, "after " + read + " reads the site still lists the group of a removed link");
+            notifications.pause(Duration.ofSeconds(5));
+        }
     }
 
     private static SiteChangeSnapshot siteSnapshot(List<WatchChangesResponse> pass) {

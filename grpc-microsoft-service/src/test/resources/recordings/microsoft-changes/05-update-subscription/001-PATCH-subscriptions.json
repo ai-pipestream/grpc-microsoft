@@ -8,7 +8,7 @@
     },
     "body" : {
       "json" : {
-        "expirationDateTime" : "2026-11-29T17:42:29Z"
+        "expirationDateTime" : "2026-11-29T19:40:12Z"
       }
     }
   },
@@ -24,11 +24,11 @@
         "resource" : "/drives/b%21drive-0001/root",
         "applicationId" : "00000000-0000-4000-8000-000000000004",
         "changeType" : "updated",
-        "clientState" : "pipestream-live-change-20261127-174229-070d6c9c",
+        "clientState" : "pipestream-live-change-20261127-194012-2550a466",
         "notificationUrl" : "https://redacted.example/url/1",
         "notificationQueryOptions" : null,
         "lifecycleNotificationUrl" : "https://redacted.example/url/2",
-        "expirationDateTime" : "2026-11-29T17:42:29Z",
+        "expirationDateTime" : "2026-11-29T19:40:12Z",
         "creatorId" : "00000000-0000-4000-8000-000000000005",
         "includeResourceData" : null,
         "latestSupportedTlsVersion" : null,

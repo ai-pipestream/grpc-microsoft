@@ -1952,6 +1952,15 @@ final class WriteScenarios {
         return "group " + title + " created; ListSiteGroups shows it";
     }
 
+    /** How many site groups stand for one of these sharing links. */
+    private int linkGroups(Set<String> shareIds) {
+        int[] found = {0};
+        stub().listSiteGroups(ListSiteGroupsRequest.newBuilder().setSiteId(siteId).build())
+                .forEachRemaining(response -> found[0] += response.getGroup().hasSharingLink()
+                        && shareIds.contains(response.getGroup().getSharingLink().getShareId()) ? 1 : 0);
+        return found[0];
+    }
+
     private Set<Integer> siteGroupIds() {
         Set<Integer> ids = new TreeSet<>();
         stub().listSiteGroups(ListSiteGroupsRequest.newBuilder().setSiteId(siteId).build())
@@ -2628,8 +2637,14 @@ final class WriteScenarios {
                 + " grantee(s); the link read back no longer names the user on read " + reads;
     }
 
-    private String deletePermissions() {
+    private String deletePermissions() throws InterruptedException {
         need(organizationLinkId, "the organization link");
+        Set<String> linkIds = new TreeSet<>();
+        for (String id : Arrays.asList(usersLinkId, anyoneLinkId, organizationLinkId)) {
+            if (id != null) {
+                linkIds.add(id);
+            }
+        }
         List<String> ids = new ArrayList<>();
         for (String id : Arrays.asList(invitedPermissionId, usersLinkId, anyoneLinkId, organizationLinkId)) {
             if (id != null) {
@@ -2663,7 +2678,16 @@ final class WriteScenarios {
             user = "; the group is back to " + roles + ", as before the invitation";
         }
         check(left.isEmpty(), left.size() + " removed permission(s) are still in the ACL");
-        return ids.size() + " permission(s) removed; the ACL lists no link" + user;
+        int reads = 1;
+        while (linkGroups(linkIds) > 0) {
+            check(reads < DIRECTORY_READS, "after " + reads + " reads ListSiteGroups still shows "
+                    + linkGroups(linkIds) + " group(s) of the removed links");
+            reads++;
+            pause();
+        }
+        return ids.size() + " permission(s) removed; the ACL lists no link" + user
+                + "; ListSiteGroups shows no group of the " + linkIds.size() + " removed link(s) on read "
+                + reads;
     }
 
     private String permissionsOfTheFile() {

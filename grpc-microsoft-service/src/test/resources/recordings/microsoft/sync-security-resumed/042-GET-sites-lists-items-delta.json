@@ -1,7 +1,7 @@
 {
   "request" : {
     "method" : "GET",
-    "url" : "https://graph.microsoft.com/v1.0/sites/tenant-1.example,00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000002/lists/00000000-0000-4000-8000-000000000117/items/delta?$select=id%2cname%2cwebUrl%2cdescription%2ceTag%2ccreatedDateTime%2clastModifiedDateTime%2ccreatedBy%2clastModifiedBy%2ccontentType%2csharepointIds%2cparentReference%2cdeleted&$expand=fields&token=NDslMjM0OyUyMzE7Mzs3Y2QxOWNkNS1lN2ViLTRjYTItYTEzZS0wMjU5OGE1Njg3NTA7NjM5MzE0MDMzNDUzMzMwMDAwOzE2NzYzMTIwMTM7JTIzOyUyMzslMjMyOyUyMw",
+    "url" : "https://graph.microsoft.com/v1.0/sites/tenant-1.example,00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000002/lists/00000000-0000-4000-8000-000000000121/items/delta?$select=id%2cname%2cwebUrl%2cdescription%2ceTag%2ccreatedDateTime%2clastModifiedDateTime%2ccreatedBy%2clastModifiedBy%2ccontentType%2csharepointIds%2cparentReference%2cdeleted&$expand=fields&token=NDslMjM0OyUyMzE7Mzs3Y2QxOWNkNS1lN2ViLTRjYTItYTEzZS0wMjU5OGE1Njg3NTA7NjM5MzE0MDQ5NTI3ODMwMDAwOzE2NzYzMTQ4NjM7JTIzOyUyMzslMjMyOyUyMw",
     "authorized" : true,
     "headers" : { }
   },
@@ -13,7 +13,7 @@
     "body" : {
       "json" : {
         "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#Collection(microsoft.graph.listItem)",
-        "@odata.deltaLink" : "https://graph.microsoft.com/v1.0/sites/tenant-1.example,00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000002/lists/00000000-0000-4000-8000-000000000117/items/delta?$select=id%2cname%2cwebUrl%2cdescription%2ceTag%2ccreatedDateTime%2clastModifiedDateTime%2ccreatedBy%2clastModifiedBy%2ccontentType%2csharepointIds%2cparentReference%2cdeleted&$expand=fields&token=NDslMjM0OyUyMzE7Mzs3Y2QxOWNkNS1lN2ViLTRjYTItYTEzZS0wMjU5OGE1Njg3NTA7NjM5MzE0MDMzNTMyMjcwMDAwOzE2NzYzMTIwNDI7JTIzOyUyMzslMjMyOyUyMw",
+        "@odata.deltaLink" : "https://graph.microsoft.com/v1.0/sites/tenant-1.example,00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000002/lists/00000000-0000-4000-8000-000000000121/items/delta?$select=id%2cname%2cwebUrl%2cdescription%2ceTag%2ccreatedDateTime%2clastModifiedDateTime%2ccreatedBy%2clastModifiedBy%2ccontentType%2csharepointIds%2cparentReference%2cdeleted&$expand=fields&token=NDslMjM0OyUyMzE7Mzs3Y2QxOWNkNS1lN2ViLTRjYTItYTEzZS0wMjU5OGE1Njg3NTA7NjM5MzE0MDQ5NTkzMDAwMDAwOzE2NzYzMTQ5MTA7JTIzOyUyMzslMjMyOyUyMw",
         "value" : [ ]
       }
     }

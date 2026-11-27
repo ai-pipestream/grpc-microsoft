@@ -99,9 +99,10 @@ Reviewers do not dispatch them.
   the new group, also after one read has already found it; Graph answers 501
   to `grant` on an item's permission route and takes it on `/shares`; a
   sharing link's hidden group carries the link's Graph permission id; a
-  directory group invited to a file gets Limited Access on the site; deleting
-  a shared file without removing its link first leaves the link's group on
-  the site.
+  directory group invited to a file gets Limited Access on the site; removing
+  a link's permission removes its group at once, and deleting a shared file
+  without removing its link first leaves the link's group on the site, so
+  live steps remove their links before the file.
 - Updates and deletes send `expected_etag` as If-Match; 412 maps to
   `ABORTED`. 429 and 503 map to `RESOURCE_EXHAUSTED` / `UNAVAILABLE` with
   `RetryInfo`.

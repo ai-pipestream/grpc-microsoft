@@ -1,7 +1,7 @@
 {
   "request" : {
     "method" : "GET",
-    "url" : "https://graph.microsoft.com/v1.0/drives/b!drive-0001/root/delta?$select=id,name,eTag,cTag,createdBy,createdDateTime,lastModifiedBy,lastModifiedDateTime,parentReference,webUrl,webDavUrl,description,size,file,folder,fileSystemInfo,deleted,root,package,remoteItem,shared,specialFolder,image,photo,video,audio,location,malware,sharepointIds,pendingOperations,@microsoft.graph.downloadUrl&token=NDslMjM0OyUyMzE7MztjNjAzNDAwYS1jMTEyLTQ3ZjItYjBkZS02NmRlZDRiNGJhYWM7NjM5MzE0MDMzNDUzMzMwMDAwOzE2NzYzMTIwMTM7JTIzOyUyMzslMjMwOyUyMw",
+    "url" : "https://graph.microsoft.com/v1.0/drives/b!drive-0001/root/delta?$select=id,name,eTag,cTag,createdBy,createdDateTime,lastModifiedBy,lastModifiedDateTime,parentReference,webUrl,webDavUrl,description,size,file,folder,fileSystemInfo,deleted,root,package,remoteItem,shared,specialFolder,image,photo,video,audio,location,malware,sharepointIds,pendingOperations,@microsoft.graph.downloadUrl&token=NDslMjM0OyUyMzE7MztjNjAzNDAwYS1jMTEyLTQ3ZjItYjBkZS02NmRlZDRiNGJhYWM7NjM5MzE0MDQ5NTI0MjAwMDAwOzE2NzYzMTQ4NjA7JTIzOyUyMzslMjMwOyUyMw",
     "authorized" : true,
     "headers" : { }
   },
@@ -13,7 +13,7 @@
     "body" : {
       "json" : {
         "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#Collection(driveItem)",
-        "@odata.deltaLink" : "https://graph.microsoft.com/v1.0/drives/b!drive-0001/root/delta?$select=id,name,eTag,cTag,createdBy,createdDateTime,lastModifiedBy,lastModifiedDateTime,parentReference,webUrl,webDavUrl,description,size,file,folder,fileSystemInfo,deleted,root,package,remoteItem,shared,specialFolder,image,photo,video,audio,location,malware,sharepointIds,pendingOperations,@microsoft.graph.downloadUrl&token=NDslMjM0OyUyMzE7MztjNjAzNDAwYS1jMTEyLTQ3ZjItYjBkZS02NmRlZDRiNGJhYWM7NjM5MzE0MDMzNTMyMjcwMDAwOzE2NzYzMTIwNDI7JTIzOyUyMzslMjMwOyUyMw",
+        "@odata.deltaLink" : "https://graph.microsoft.com/v1.0/drives/b!drive-0001/root/delta?$select=id,name,eTag,cTag,createdBy,createdDateTime,lastModifiedBy,lastModifiedDateTime,parentReference,webUrl,webDavUrl,description,size,file,folder,fileSystemInfo,deleted,root,package,remoteItem,shared,specialFolder,image,photo,video,audio,location,malware,sharepointIds,pendingOperations,@microsoft.graph.downloadUrl&token=NDslMjM0OyUyMzE7MztjNjAzNDAwYS1jMTEyLTQ3ZjItYjBkZS02NmRlZDRiNGJhYWM7NjM5MzE0MDQ5NTkzMDAwMDAwOzE2NzYzMTQ5MTA7JTIzOyUyMzslMjMwOyUyMw",
         "@microsoft.graph.hasMoreData" : false,
         "@microsoft.graph.syncStatus" : "NoChanges",
         "value" : [ ]

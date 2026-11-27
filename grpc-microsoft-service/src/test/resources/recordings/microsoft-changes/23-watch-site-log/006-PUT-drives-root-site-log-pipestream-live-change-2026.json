@@ -1,0 +1,74 @@
+{
+  "request" : {
+    "method" : "PUT",
+    "url" : "https://graph.microsoft.com/v1.0/drives/b!drive-0001/root:/site-log-pipestream-live-change-20261127-194012-2550a466.txt:/content",
+    "authorized" : true,
+    "headers" : {
+      "content-type" : "text/plain"
+    },
+    "body" : {
+      "sha256" : "57d304bc173a31657df0419786fcc67a2342078fd0ae163c3acf8a301de20330",
+      "length" : 47
+    }
+  },
+  "response" : {
+    "status" : 201,
+    "headers" : {
+      "content-type" : "application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8"
+    },
+    "body" : {
+      "json" : {
+        "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#drives('b%21drive-0001')/root/$entity",
+        "@microsoft.graph.downloadUrl" : "https://redacted.example/url/16",
+        "createdDateTime" : "2026-11-27T20:14:35Z",
+        "eTag" : "\"{00000000-0000-4000-8000-000000000058},1\"",
+        "id" : "item-0004",
+        "lastModifiedDateTime" : "2026-11-27T20:14:35Z",
+        "name" : "site-log-pipestream-live-change-20261127-194012-2550a466.txt",
+        "webUrl" : "https://redacted.example/url/17",
+        "cTag" : "\"c:{00000000-0000-4000-8000-000000000058},1\"",
+        "isAuthoritative" : false,
+        "size" : 47,
+        "createdBy" : {
+          "application" : {
+            "id" : "00000000-0000-4000-8000-000000000004",
+            "displayName" : "Identity 3"
+          },
+          "user" : {
+            "displayName" : "Identity 4"
+          }
+        },
+        "lastModifiedBy" : {
+          "application" : {
+            "id" : "00000000-0000-4000-8000-000000000004",
+            "displayName" : "Identity 3"
+          },
+          "user" : {
+            "displayName" : "Identity 4"
+          }
+        },
+        "parentReference" : {
+          "driveType" : "documentLibrary",
+          "driveId" : "b!drive-0001",
+          "id" : "item-0001",
+          "name" : "Shared Documents",
+          "path" : "/drives/b!drive-0001/root:",
+          "siteId" : "00000000-0000-4000-8000-000000000001"
+        },
+        "file" : {
+          "mimeType" : "text/plain",
+          "hashes" : {
+            "quickXorHash" : "KJPbgbjg2kcug4849XOebDVlJ1U="
+          }
+        },
+        "fileSystemInfo" : {
+          "createdDateTime" : "2026-11-27T20:14:35Z",
+          "lastModifiedDateTime" : "2026-11-27T20:14:35Z"
+        },
+        "shared" : {
+          "scope" : "users"
+        }
+      }
+    }
+  }
+}

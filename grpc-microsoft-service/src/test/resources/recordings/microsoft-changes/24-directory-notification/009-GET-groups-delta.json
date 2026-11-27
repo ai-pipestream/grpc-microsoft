@@ -1,7 +1,7 @@
 {
   "request" : {
     "method" : "GET",
-    "url" : "https://graph.microsoft.com/v1.0/groups/delta?$deltatoken=cursor-0004",
+    "url" : "https://graph.microsoft.com/v1.0/groups/delta?$deltatoken=cursor-0011",
     "authorized" : true,
     "headers" : { }
   },
@@ -13,16 +13,20 @@
     "body" : {
       "json" : {
         "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#groups",
-        "@odata.deltaLink" : "https://graph.microsoft.com/v1.0/groups/delta?$deltatoken=cursor-0009",
+        "@odata.deltaLink" : "https://graph.microsoft.com/v1.0/groups/delta?$deltatoken=cursor-0036",
         "value" : [ {
-          "displayName" : "pipestream-live-change-20261127-174229-070d6c9c-entra",
-          "description" : "pipestream-live-change-20261127-174229-070d6c9c-entra created by a live test run; safe to delete",
-          "mailNickname" : "pipestream-live-change-20261127-174229-070d6c9c-entra",
+          "displayName" : "pipestream-live-change-20261127-194012-2550a466-entra",
+          "description" : "pipestream-live-change-20261127-194012-2550a466-entra created by a live test run; safe to delete",
+          "mailNickname" : "pipestream-live-change-20261127-194012-2550a466-entra",
           "mailEnabled" : false,
           "securityEnabled" : true,
           "visibility" : null,
           "securityIdentifier" : "Directory value 22",
-          "id" : "00000000-0000-4000-8000-000000000052"
+          "id" : "00000000-0000-4000-8000-000000000087",
+          "members@delta" : [ {
+            "@odata.type" : "#microsoft.graph.user",
+            "id" : "00000000-0000-4000-8000-000000000007"
+          } ]
         } ]
       }
     }

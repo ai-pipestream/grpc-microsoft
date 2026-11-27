@@ -1,0 +1,59 @@
+{
+  "request" : {
+    "method" : "POST",
+    "url" : "https://redacted.example/url/6/_api/site/getchanges",
+    "authorized" : true,
+    "headers" : {
+      "content-type" : "application/json"
+    },
+    "body" : {
+      "json" : {
+        "query" : {
+          "Item" : true,
+          "List" : true,
+          "Web" : true,
+          "Site" : true,
+          "File" : true,
+          "Folder" : true,
+          "User" : true,
+          "Group" : true,
+          "Field" : true,
+          "ContentType" : true,
+          "View" : true,
+          "Alert" : true,
+          "SecurityPolicy" : true,
+          "Add" : true,
+          "Update" : true,
+          "DeleteObject" : true,
+          "Rename" : true,
+          "Move" : true,
+          "Restore" : true,
+          "RoleDefinitionAdd" : true,
+          "RoleDefinitionDelete" : true,
+          "RoleDefinitionUpdate" : true,
+          "RoleAssignmentAdd" : true,
+          "RoleAssignmentDelete" : true,
+          "GroupMembershipAdd" : true,
+          "GroupMembershipDelete" : true,
+          "SystemUpdate" : true,
+          "Navigation" : true,
+          "ChangeTokenStart" : {
+            "StringValue" : "1;1;00000000-0000-4000-8000-000000000001;639314072766970000;1676318963"
+          }
+        }
+      }
+    }
+  },
+  "response" : {
+    "status" : 200,
+    "headers" : {
+      "content-type" : "application/json;odata=minimalmetadata;streaming=true;charset=utf-8"
+    },
+    "body" : {
+      "json" : {
+        "odata.metadata" : "https://redacted.example/url/22",
+        "value" : [ ]
+      }
+    }
+  }
+}

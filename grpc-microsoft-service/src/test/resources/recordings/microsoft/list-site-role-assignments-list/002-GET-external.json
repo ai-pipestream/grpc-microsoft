@@ -155,6 +155,34 @@
             "RoleTypeKind" : 9
           } ],
           "PrincipalId" : 12
+        }, {
+          "Member" : {
+            "Id" : 41,
+            "IsHiddenInUI" : false,
+            "LoginName" : "c:0o.c|federateddirectoryclaimprovider|00000000-0000-4000-8000-000000000054",
+            "Title" : "Principal 7",
+            "PrincipalType" : 4,
+            "Email" : "email-4@example.invalid",
+            "Expiration" : "",
+            "IsEmailAuthenticationGuestUser" : false,
+            "IsShareByEmailGuestUser" : false,
+            "IsSiteAdmin" : false,
+            "UserId" : null,
+            "UserPrincipalName" : null
+          },
+          "RoleDefinitionBindings" : [ {
+            "BasePermissions" : {
+              "High" : "48",
+              "Low" : "134287360"
+            },
+            "Description" : "Can view specific lists, document libraries, list items, folders, or documents when given permissions.",
+            "Hidden" : true,
+            "Id" : 1073741825,
+            "Name" : "Limited Access",
+            "Order" : 160,
+            "RoleTypeKind" : 1
+          } ],
+          "PrincipalId" : 41
         } ]
       }
     }
