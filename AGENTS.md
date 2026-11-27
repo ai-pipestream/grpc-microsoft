@@ -30,7 +30,7 @@ build. Do not change how tests are run.
 | Module | What |
 |---|---|
 | `grpc-microsoft-api` | `ai.pipestream.microsoft.v1`. `microsoft_service.proto` is the service; `drive.proto`, `list.proto`, `site.proto`, `permission.proto`, `write.proto`, `directory.proto` (Entra), `site_security.proto` (SharePoint groups, role assignments, `SiteAcl`, `SiteAdmins`), `site_change.proto` (the SharePoint change log), `term_store.proto`, `microsoft_admin_service.proto` and `change_feed.proto` (`MicrosoftChangeService`). |
-| `grpc-microsoft-service` | The process (port 9096). `MicrosoftGrpcService` (rpc handlers), `GraphClient`, `GraphAuth` and `ClientCertificate` (secret or certificate sign-in), `MicrosoftSessions` (catalog connections), `MicrosoftMapper`, `MicrosoftCrawler` (`Sync`, delta), `WritePlans`, `UploadHandler`, `MutateHandler` (`$batch`), `ListFieldWriter` and `ColumnSpecs` (typed column values), `SharePointRest`, `SiteSecurityReader`, `SiteSecurityWriter`, `SiteSecurityMapper` and `SiteChanges` (`getchanges`). Change stream: `MicrosoftChangeGrpcService`, `GraphSubscriptions`, `SubscriptionRenewer`, `NotificationReceiver`, `NotificationBus`. |
+| `grpc-microsoft-service` | The process (port 9096). `MicrosoftGrpcService` (rpc handlers), `GraphClient`, `GraphAuth` and `ClientCertificate` (secret or certificate sign-in), `MicrosoftSessions` (catalog connections), `MicrosoftMapper`, `MicrosoftCrawler` (`Sync`, delta), `WritePlans`, `UploadHandler`, `MutateHandler` (`$batch`), `ListFieldWriter` and `ColumnSpecs` (typed column values), `SharePointRest`, `SiteSecurityReader`, `SiteSecurityWriter`, `SiteSecurityMapper` and `SiteChanges` (`getchanges`), `DirectoryWriter` (Entra group writes). Change stream: `MicrosoftChangeGrpcService`, `GraphSubscriptions`, `SubscriptionRenewer`, `NotificationReceiver`, `NotificationBus`. |
 | `grpc-microsoft-admin` | `MicrosoftAdminService`: list, ensure (with `dry_run`) and revoke per-site application grants. The only process that signs in with `Sites.FullControl.All`; deployed on its own. Default port 9097, the same as the sync ledger's default. |
 | `grpc-microsoft-connector` | Microsoft Copilot / Graph Connector Agent adapter (port 30303). Its `Contracts/` protos are a frozen MIT copy of Microsoft's wire and are outside the Buf workspace. |
 | `grpc-microsoft-output` | Store keys, OKF catalog mapping, the `microsoft-connector` output format. |
@@ -85,7 +85,9 @@ Reviewers do not dispatch them.
   `SCOPE_DELETE` on the item, and accepts a token older than the log;
   group and group member changes are only in the site collection log and
   name the group, not the member; Graph asks for a reauthorization of a
-  50 minute drive subscription about 16 minutes before it expires.
+  50 minute drive subscription about 16 minutes before it expires; for
+  some seconds after `CreateGroup`, Entra answers 404 to reads and writes of
+  the new group, also after one read has already found it.
 - Updates and deletes send `expected_etag` as If-Match; 412 maps to
   `ABORTED`. 429 and 503 map to `RESOURCE_EXHAUSTED` / `UNAVAILABLE` with
   `RetryInfo`.

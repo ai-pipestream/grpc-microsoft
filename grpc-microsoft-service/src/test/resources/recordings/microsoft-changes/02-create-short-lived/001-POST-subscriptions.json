@@ -11,8 +11,8 @@
         "changeType" : "updated",
         "notificationUrl" : "https://redacted.example/url/1",
         "resource" : "/drives/b%21drive-0001/root",
-        "expirationDateTime" : "2026-11-24T21:05:39Z",
-        "clientState" : "pipestream-live-change-20261124-201539-f66a325e",
+        "expirationDateTime" : "2026-11-27T18:32:29Z",
+        "clientState" : "pipestream-live-change-20261127-174229-070d6c9c",
         "lifecycleNotificationUrl" : "https://redacted.example/url/2"
       }
     }
@@ -30,11 +30,11 @@
         "resource" : "/drives/b%21drive-0001/root",
         "applicationId" : "00000000-0000-4000-8000-000000000004",
         "changeType" : "updated",
-        "clientState" : "pipestream-live-change-20261124-201539-f66a325e",
+        "clientState" : "pipestream-live-change-20261127-174229-070d6c9c",
         "notificationUrl" : "https://redacted.example/url/1",
         "notificationQueryOptions" : null,
         "lifecycleNotificationUrl" : "https://redacted.example/url/2",
-        "expirationDateTime" : "2026-11-24T21:05:39Z",
+        "expirationDateTime" : "2026-11-27T18:32:29Z",
         "creatorId" : "00000000-0000-4000-8000-000000000005",
         "includeResourceData" : null,
         "latestSupportedTlsVersion" : null,

@@ -1,7 +1,7 @@
 {
   "request" : {
     "method" : "POST",
-    "url" : "https://redacted.example/url/3/_api/web/sitegroups/getbyid(26)/users/removebyid(6)",
+    "url" : "https://redacted.example/url/3/_api/web/sitegroups/getbyid(29)/users/removebyid(6)",
     "authorized" : true,
     "headers" : {
       "content-type" : "application/json"

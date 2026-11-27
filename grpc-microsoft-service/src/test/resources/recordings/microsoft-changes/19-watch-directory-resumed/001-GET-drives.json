@@ -16,7 +16,7 @@
         "createdDateTime" : "2026-10-10T02:58:54Z",
         "description" : "",
         "id" : "b!drive-0001",
-        "lastModifiedDateTime" : "2026-11-24T20:18:31Z",
+        "lastModifiedDateTime" : "2026-11-27T17:45:13Z",
         "name" : "Documents",
         "webUrl" : "https://redacted.example/url/5",
         "driveType" : "documentLibrary",
@@ -33,11 +33,11 @@
           }
         },
         "quota" : {
-          "deleted" : 10614005,
-          "remaining" : 27487767368454,
+          "deleted" : 10957570,
+          "remaining" : 27487767023637,
           "state" : "normal",
           "total" : 27487790694400,
-          "used" : 12711941
+          "used" : 12713193
         },
         "sharePointIds" : {
           "listId" : "00000000-0000-4000-8000-000000000008",

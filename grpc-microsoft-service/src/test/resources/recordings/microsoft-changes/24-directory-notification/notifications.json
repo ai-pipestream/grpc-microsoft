@@ -1,0 +1,16 @@
+[ {
+  "value" : [ {
+    "changeType" : "updated",
+    "clientState" : "pipestream-live-change-20261127-174229-070d6c9c",
+    "resource" : "Groups/00000000-0000-4000-8000-000000000052",
+    "resourceData" : {
+      "@odata.type" : "#Microsoft.Graph.Group",
+      "@odata.id" : "Groups/00000000-0000-4000-8000-000000000052",
+      "id" : "00000000-0000-4000-8000-000000000052",
+      "organizationId" : "00000000-0000-4000-8000-000000000009"
+    },
+    "subscriptionExpirationDateTime" : "2026-11-28T09:42:29-08:00",
+    "subscriptionId" : "00000000-0000-4000-8000-000000000054",
+    "tenantId" : "00000000-0000-4000-8000-000000000009"
+  } ]
+} ]

@@ -139,6 +139,11 @@ class MicrosoftChangeReplayTest {
             public void settle(Duration quiet) {
                 // Nothing arrives on its own during replay.
             }
+
+            @Override
+            public void pause(Duration time) {
+                // The recorded answers are there at once.
+            }
         };
         scenarios = new ChangeScenarios(MicrosoftChangeServiceGrpc.newBlockingStub(channel),
                 MicrosoftChangeServiceGrpc.newStub(channel),

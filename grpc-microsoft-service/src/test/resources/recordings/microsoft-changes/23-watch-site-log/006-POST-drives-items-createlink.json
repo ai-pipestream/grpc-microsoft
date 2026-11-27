@@ -24,7 +24,7 @@
         "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#microsoft.graph.permission",
         "id" : "permission-0002",
         "roles" : [ "read" ],
-        "shareId" : "u!aHR0cHM6Ly9waXBlc3RyZWFtYWkuc2hhcmVwb2ludC5jb20vOnQ6L3MvV2VsY29tZVRvUGlwZXN0cmVhbS9JUUNyODN4M0RKWnlUTE5oUUxoamE0cldBUzN5THV2eGlNOTY3OFU3d0E1bHVRSQ",
+        "shareId" : "u!aHR0cHM6Ly9waXBlc3RyZWFtYWkuc2hhcmVwb2ludC5jb20vOnQ6L3MvV2VsY29tZVRvUGlwZXN0cmVhbS9JUURtLXVMYU5iYVRUcl8xLVcwcUtRbWpBWGhYakd6OUNUWUR0SGd1aFhaallfcw",
         "hasPassword" : false,
         "link" : {
           "scope" : "organization",

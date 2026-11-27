@@ -8,7 +8,7 @@
     },
     "body" : {
       "json" : {
-        "displayName" : "pipestream-live-write-20261124-212204-980f52a8-lib",
+        "displayName" : "pipestream-live-write-20261127-173717-ecc2f242-lib",
         "description" : "Created by the live write test; safe to delete.",
         "list" : {
           "template" : "documentLibrary"
@@ -19,22 +19,22 @@
   "response" : {
     "status" : 201,
     "headers" : {
-      "etag" : "00000000-0000-4000-8000-000000000218,0",
+      "etag" : "00000000-0000-4000-8000-000000000227,0",
       "location" : "https://redacted.example/url/181",
       "content-type" : "application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8"
     },
     "body" : {
       "json" : {
         "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#sites('tenant-1.example%2C00000000-0000-4000-8000-000000000001%2C00000000-0000-4000-8000-000000000002')/lists/$entity",
-        "@odata.etag" : "00000000-0000-4000-8000-000000000218,0",
-        "eTag" : "00000000-0000-4000-8000-000000000218,0",
-        "lastModifiedDateTime" : "2026-11-24T21:22:57Z",
-        "createdDateTime" : "2026-11-24T21:22:57Z",
+        "@odata.etag" : "00000000-0000-4000-8000-000000000227,0",
+        "eTag" : "00000000-0000-4000-8000-000000000227,0",
+        "lastModifiedDateTime" : "2026-11-27T17:38:42Z",
+        "createdDateTime" : "2026-11-27T17:38:42Z",
         "description" : "Created by the live write test; safe to delete.",
-        "id" : "00000000-0000-4000-8000-000000000218",
-        "name" : "pipestreamlivewrite20261124212204980f52a8lib",
+        "id" : "00000000-0000-4000-8000-000000000227",
+        "name" : "pipestreamlivewrite20261127173717ecc2f242lib",
         "webUrl" : "https://redacted.example/url/182",
-        "displayName" : "pipestream-live-write-20261124-212204-980f52a8-lib",
+        "displayName" : "pipestream-live-write-20261127-173717-ecc2f242-lib",
         "parentReference" : {
           "siteId" : "tenant-1.example,00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000002"
         },

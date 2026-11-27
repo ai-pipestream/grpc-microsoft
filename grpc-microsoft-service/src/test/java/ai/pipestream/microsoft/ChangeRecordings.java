@@ -15,7 +15,8 @@ final class ChangeRecordings {
     static final String NOTIFICATIONS_FILE = "notifications.json";
     /** Steps that wait for notifications and save them. */
     static final Set<String> NOTIFIED_STEPS = Set.of("09-notified-pass",
-            "10-permission-notification", ChangeScenarios.LIFECYCLE_STEP);
+            "10-permission-notification", ChangeScenarios.LIFECYCLE_STEP,
+            ChangeScenarios.DIRECTORY_STEP);
 
     private ChangeRecordings() {
     }

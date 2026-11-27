@@ -1,7 +1,7 @@
 {
   "request" : {
     "method" : "POST",
-    "url" : "https://redacted.example/url/3/_api/web/sitegroups/getbyid(26)/users",
+    "url" : "https://redacted.example/url/3/_api/web/sitegroups/getbyid(29)/users",
     "authorized" : true,
     "headers" : {
       "content-type" : "application/json"

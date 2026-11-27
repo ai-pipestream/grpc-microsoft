@@ -1,0 +1,27 @@
+{
+  "request" : {
+    "method" : "GET",
+    "url" : "https://graph.microsoft.com/v1.0/groups/00000000-0000-4000-8000-000000000065?$select=id,displayName,description,mail,mailNickname,mailEnabled,securityEnabled,groupTypes,visibility,securityIdentifier",
+    "authorized" : true,
+    "headers" : { }
+  },
+  "response" : {
+    "status" : 404,
+    "headers" : {
+      "content-type" : "application/json"
+    },
+    "body" : {
+      "json" : {
+        "error" : {
+          "code" : "Request_ResourceNotFound",
+          "message" : "Resource '00000000-0000-4000-8000-000000000065' does not exist or one of its queried reference-property objects are not present.",
+          "innerError" : {
+            "date" : "2026-11-27T17:37:36",
+            "request-id" : "00000000-0000-4000-8000-000000000066",
+            "client-request-id" : "00000000-0000-4000-8000-000000000066"
+          }
+        }
+      }
+    }
+  }
+}

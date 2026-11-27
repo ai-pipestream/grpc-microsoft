@@ -168,6 +168,10 @@ final class RecordingScrubber {
             return out;
         }
         String text = value.asText();
+        if (text.startsWith(LIVE_RUN_PREFIX)) {
+            // A group a live run created carries the run's own name.
+            return value;
+        }
         String scrubbed = text(text);
         return JsonNodeFactory.instance.textNode(scrubbed.equals(text)
                 ? name("directory", text, "Directory value %d") : scrubbed);

@@ -183,6 +183,11 @@ class MicrosoftLiveChangeIT {
                         pending.clear();
                     }
                 }
+
+                @Override
+                public void pause(Duration time) throws InterruptedException {
+                    Thread.sleep(time);
+                }
             };
             ChangeScenarios scenarios = new ChangeScenarios(
                     MicrosoftChangeServiceGrpc.newBlockingStub(channel),

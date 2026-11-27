@@ -8,17 +8,17 @@
   "response" : {
     "status" : 200,
     "headers" : {
-      "etag" : "\"00000000-0000-4000-8000-000000000216,2\"",
+      "etag" : "\"00000000-0000-4000-8000-000000000225,2\"",
       "content-type" : "application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8"
     },
     "body" : {
       "json" : {
         "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#sites('tenant-1.example%2C00000000-0000-4000-8000-000000000001%2C00000000-0000-4000-8000-000000000002')/lists('00000000-0000-4000-8000-000000000022')/items(fields())/$entity",
-        "@odata.etag" : "\"00000000-0000-4000-8000-000000000216,2\"",
-        "createdDateTime" : "2026-11-24T21:22:56Z",
-        "eTag" : "\"00000000-0000-4000-8000-000000000216,2\"",
+        "@odata.etag" : "\"00000000-0000-4000-8000-000000000225,2\"",
+        "createdDateTime" : "2026-11-27T17:38:41Z",
+        "eTag" : "\"00000000-0000-4000-8000-000000000225,2\"",
         "id" : "5",
-        "lastModifiedDateTime" : "2026-11-24T21:22:56Z",
+        "lastModifiedDateTime" : "2026-11-27T17:38:41Z",
         "webUrl" : "https://redacted.example/url/180",
         "createdBy" : {
           "user" : {
@@ -39,12 +39,12 @@
           "siteId" : "tenant-1.example,00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000002"
         },
         "contentType" : {
-          "id" : "0x010069D3B95A0F86A9439AE46DA06A0277B8",
+          "id" : "0x0100D07CD66CD97EB3409E1FA0A2E88FC5ED",
           "name" : "Item"
         },
         "fields@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#sites('tenant-1.example%2C00000000-0000-4000-8000-000000000001%2C00000000-0000-4000-8000-000000000002')/lists('00000000-0000-4000-8000-000000000022')/items('5')/fields/$entity",
         "fields" : {
-          "@odata.etag" : "\"00000000-0000-4000-8000-000000000216,2\"",
+          "@odata.etag" : "\"00000000-0000-4000-8000-000000000225,2\"",
           "Title" : "batch link",
           "PsLink" : {
             "Description" : "A page",
@@ -54,8 +54,8 @@
           "PsTerms" : [ ],
           "id" : "5",
           "ContentType" : "Item",
-          "Modified" : "2026-11-24T21:22:56Z",
-          "Created" : "2026-11-24T21:22:56Z",
+          "Modified" : "2026-11-27T17:38:41Z",
+          "Created" : "2026-11-27T17:38:41Z",
           "AuthorLookupId" : "1073741822",
           "EditorLookupId" : "1073741822",
           "_UIVersionString" : "2.0",

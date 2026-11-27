@@ -15,20 +15,20 @@
   "response" : {
     "status" : 200,
     "headers" : {
-      "etag" : "\"00000000-0000-4000-8000-000000000234,2\"",
+      "etag" : "\"00000000-0000-4000-8000-000000000243,2\"",
       "content-type" : "application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8"
     },
     "body" : {
       "json" : {
         "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#drives('b%21drive-0013')/items('item-0010')/listItem/fields/$entity",
-        "@odata.etag" : "\"00000000-0000-4000-8000-000000000234,2\"",
+        "@odata.etag" : "\"00000000-0000-4000-8000-000000000243,2\"",
         "FileLeafRef" : "with-fields.txt",
         "PsText" : "from the upload",
         "id" : "1",
         "ContentType" : "Document",
-        "Created" : "2026-11-24T21:22:59Z",
+        "Created" : "2026-11-27T17:38:43Z",
         "AuthorLookupId" : "1073741822",
-        "Modified" : "2026-11-24T21:22:59Z",
+        "Modified" : "2026-11-27T17:38:43Z",
         "EditorLookupId" : "1073741822",
         "_CheckinComment" : "",
         "LinkFilenameNoMenu" : "with-fields.txt",

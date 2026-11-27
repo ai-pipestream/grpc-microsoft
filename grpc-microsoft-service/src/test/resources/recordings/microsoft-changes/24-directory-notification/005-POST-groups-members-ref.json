@@ -1,0 +1,19 @@
+{
+  "request" : {
+    "method" : "POST",
+    "url" : "https://graph.microsoft.com/v1.0/groups/00000000-0000-4000-8000-000000000052/members/$ref",
+    "authorized" : true,
+    "headers" : {
+      "content-type" : "application/json"
+    },
+    "body" : {
+      "json" : {
+        "@odata.id" : "https://graph.microsoft.com/v1.0/directoryObjects/00000000-0000-4000-8000-000000000007"
+      }
+    }
+  },
+  "response" : {
+    "status" : 204,
+    "headers" : { }
+  }
+}
