@@ -1,23 +1,40 @@
 {
   "request" : {
     "method" : "POST",
-    "url" : "https://redacted.example/url/6/_api/web/sitegroups/removebyid(32)",
+    "url" : "https://redacted.example/url/6/_api/web/sitegroups/getbyid(48)/users",
     "authorized" : true,
     "headers" : {
       "content-type" : "application/json"
     },
     "body" : {
-      "json" : { }
+      "json" : {
+        "LoginName" : "i:0#.f|membership|email-1@example.invalid"
+      }
     }
   },
   "response" : {
-    "status" : 200,
+    "status" : 201,
     "headers" : {
+      "location" : "https://redacted.example/url/21",
       "content-type" : "application/json;odata=nometadata;streaming=true;charset=utf-8"
     },
     "body" : {
       "json" : {
-        "odata.null" : true
+        "Id" : 6,
+        "IsHiddenInUI" : false,
+        "LoginName" : "i:0#.f|membership|email-1@example.invalid",
+        "Title" : "Principal 8",
+        "PrincipalType" : 1,
+        "Email" : "email-1@example.invalid",
+        "Expiration" : "",
+        "IsEmailAuthenticationGuestUser" : false,
+        "IsShareByEmailGuestUser" : false,
+        "IsSiteAdmin" : true,
+        "UserId" : {
+          "NameId" : "nameid-0001",
+          "NameIdIssuer" : "urn:federation:microsoftonline"
+        },
+        "UserPrincipalName" : "email-1@example.invalid"
       }
     }
   }

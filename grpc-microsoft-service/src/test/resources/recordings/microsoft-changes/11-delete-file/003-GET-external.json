@@ -1,0 +1,253 @@
+{
+  "request" : {
+    "method" : "GET",
+    "url" : "https://redacted.example/url/6/_api/web/sitegroups",
+    "authorized" : true,
+    "headers" : { }
+  },
+  "response" : {
+    "status" : 200,
+    "headers" : {
+      "content-type" : "application/json;odata=nometadata;streaming=true;charset=utf-8"
+    },
+    "body" : {
+      "json" : {
+        "value" : [ {
+          "Id" : 11,
+          "IsHiddenInUI" : false,
+          "LoginName" : "Limited Access System Group For List 00000000-0000-4000-8000-000000000008",
+          "Title" : "Limited Access System Group For List 00000000-0000-4000-8000-000000000008",
+          "PrincipalType" : 8,
+          "AllowMembersEditMembership" : false,
+          "AllowRequestToJoinLeave" : false,
+          "AutoAcceptRequestToJoinLeave" : false,
+          "Description" : "Limited Access System Group For List 00000000-0000-4000-8000-000000000008",
+          "OnlyAllowMembersViewMembership" : true,
+          "OwnerTitle" : "Principal 1",
+          "RequestToJoinLeaveEmailSetting" : null
+        }, {
+          "Id" : 12,
+          "IsHiddenInUI" : false,
+          "LoginName" : "Limited Access System Group For Web 00000000-0000-4000-8000-000000000002",
+          "Title" : "Limited Access System Group For Web 00000000-0000-4000-8000-000000000002",
+          "PrincipalType" : 8,
+          "AllowMembersEditMembership" : false,
+          "AllowRequestToJoinLeave" : false,
+          "AutoAcceptRequestToJoinLeave" : false,
+          "Description" : "Limited Access System Group For Web 00000000-0000-4000-8000-000000000002",
+          "OnlyAllowMembersViewMembership" : true,
+          "OwnerTitle" : "Principal 1",
+          "RequestToJoinLeaveEmailSetting" : null
+        }, {
+          "Id" : 16,
+          "IsHiddenInUI" : false,
+          "LoginName" : "SharingLinks.00000000-0000-4000-8000-000000000014.OrganizationView.00000000-0000-4000-8000-000000000015",
+          "Title" : "SharingLinks.00000000-0000-4000-8000-000000000014.OrganizationView.00000000-0000-4000-8000-000000000015",
+          "PrincipalType" : 8,
+          "AllowMembersEditMembership" : false,
+          "AllowRequestToJoinLeave" : false,
+          "AutoAcceptRequestToJoinLeave" : false,
+          "Description" : "Principal 2",
+          "OnlyAllowMembersViewMembership" : true,
+          "OwnerTitle" : "Principal 1",
+          "RequestToJoinLeaveEmailSetting" : null
+        }, {
+          "Id" : 13,
+          "IsHiddenInUI" : false,
+          "LoginName" : "SharingLinks.00000000-0000-4000-8000-000000000016.OrganizationView.00000000-0000-4000-8000-000000000017",
+          "Title" : "SharingLinks.00000000-0000-4000-8000-000000000016.OrganizationView.00000000-0000-4000-8000-000000000017",
+          "PrincipalType" : 8,
+          "AllowMembersEditMembership" : false,
+          "AllowRequestToJoinLeave" : false,
+          "AutoAcceptRequestToJoinLeave" : false,
+          "Description" : "Principal 2",
+          "OnlyAllowMembersViewMembership" : true,
+          "OwnerTitle" : "Principal 1",
+          "RequestToJoinLeaveEmailSetting" : null
+        }, {
+          "Id" : 19,
+          "IsHiddenInUI" : false,
+          "LoginName" : "SharingLinks.00000000-0000-4000-8000-000000000018.OrganizationView.00000000-0000-4000-8000-000000000019",
+          "Title" : "SharingLinks.00000000-0000-4000-8000-000000000018.OrganizationView.00000000-0000-4000-8000-000000000019",
+          "PrincipalType" : 8,
+          "AllowMembersEditMembership" : false,
+          "AllowRequestToJoinLeave" : false,
+          "AutoAcceptRequestToJoinLeave" : false,
+          "Description" : "Principal 2",
+          "OnlyAllowMembersViewMembership" : true,
+          "OwnerTitle" : "Principal 1",
+          "RequestToJoinLeaveEmailSetting" : null
+        }, {
+          "Id" : 23,
+          "IsHiddenInUI" : false,
+          "LoginName" : "SharingLinks.00000000-0000-4000-8000-000000000020.OrganizationView.00000000-0000-4000-8000-000000000021",
+          "Title" : "SharingLinks.00000000-0000-4000-8000-000000000020.OrganizationView.00000000-0000-4000-8000-000000000021",
+          "PrincipalType" : 8,
+          "AllowMembersEditMembership" : false,
+          "AllowRequestToJoinLeave" : false,
+          "AutoAcceptRequestToJoinLeave" : false,
+          "Description" : "Principal 2",
+          "OnlyAllowMembersViewMembership" : true,
+          "OwnerTitle" : "Principal 1",
+          "RequestToJoinLeaveEmailSetting" : null
+        }, {
+          "Id" : 10,
+          "IsHiddenInUI" : false,
+          "LoginName" : "SharingLinks.00000000-0000-4000-8000-000000000022.OrganizationView.00000000-0000-4000-8000-000000000023",
+          "Title" : "SharingLinks.00000000-0000-4000-8000-000000000022.OrganizationView.00000000-0000-4000-8000-000000000023",
+          "PrincipalType" : 8,
+          "AllowMembersEditMembership" : false,
+          "AllowRequestToJoinLeave" : false,
+          "AutoAcceptRequestToJoinLeave" : false,
+          "Description" : "Principal 2",
+          "OnlyAllowMembersViewMembership" : true,
+          "OwnerTitle" : "Principal 1",
+          "RequestToJoinLeaveEmailSetting" : null
+        }, {
+          "Id" : 22,
+          "IsHiddenInUI" : false,
+          "LoginName" : "SharingLinks.00000000-0000-4000-8000-000000000024.OrganizationView.00000000-0000-4000-8000-000000000025",
+          "Title" : "SharingLinks.00000000-0000-4000-8000-000000000024.OrganizationView.00000000-0000-4000-8000-000000000025",
+          "PrincipalType" : 8,
+          "AllowMembersEditMembership" : false,
+          "AllowRequestToJoinLeave" : false,
+          "AutoAcceptRequestToJoinLeave" : false,
+          "Description" : "Principal 2",
+          "OnlyAllowMembersViewMembership" : true,
+          "OwnerTitle" : "Principal 1",
+          "RequestToJoinLeaveEmailSetting" : null
+        }, {
+          "Id" : 14,
+          "IsHiddenInUI" : false,
+          "LoginName" : "SharingLinks.00000000-0000-4000-8000-000000000026.OrganizationView.00000000-0000-4000-8000-000000000027",
+          "Title" : "SharingLinks.00000000-0000-4000-8000-000000000026.OrganizationView.00000000-0000-4000-8000-000000000027",
+          "PrincipalType" : 8,
+          "AllowMembersEditMembership" : false,
+          "AllowRequestToJoinLeave" : false,
+          "AutoAcceptRequestToJoinLeave" : false,
+          "Description" : "Principal 2",
+          "OnlyAllowMembersViewMembership" : true,
+          "OwnerTitle" : "Principal 1",
+          "RequestToJoinLeaveEmailSetting" : null
+        }, {
+          "Id" : 18,
+          "IsHiddenInUI" : false,
+          "LoginName" : "SharingLinks.00000000-0000-4000-8000-000000000028.OrganizationView.00000000-0000-4000-8000-000000000029",
+          "Title" : "SharingLinks.00000000-0000-4000-8000-000000000028.OrganizationView.00000000-0000-4000-8000-000000000029",
+          "PrincipalType" : 8,
+          "AllowMembersEditMembership" : false,
+          "AllowRequestToJoinLeave" : false,
+          "AutoAcceptRequestToJoinLeave" : false,
+          "Description" : "Principal 2",
+          "OnlyAllowMembersViewMembership" : true,
+          "OwnerTitle" : "Principal 1",
+          "RequestToJoinLeaveEmailSetting" : null
+        }, {
+          "Id" : 15,
+          "IsHiddenInUI" : false,
+          "LoginName" : "SharingLinks.00000000-0000-4000-8000-000000000030.OrganizationView.00000000-0000-4000-8000-000000000031",
+          "Title" : "SharingLinks.00000000-0000-4000-8000-000000000030.OrganizationView.00000000-0000-4000-8000-000000000031",
+          "PrincipalType" : 8,
+          "AllowMembersEditMembership" : false,
+          "AllowRequestToJoinLeave" : false,
+          "AutoAcceptRequestToJoinLeave" : false,
+          "Description" : "Principal 2",
+          "OnlyAllowMembersViewMembership" : true,
+          "OwnerTitle" : "Principal 1",
+          "RequestToJoinLeaveEmailSetting" : null
+        }, {
+          "Id" : 30,
+          "IsHiddenInUI" : false,
+          "LoginName" : "SharingLinks.00000000-0000-4000-8000-000000000032.OrganizationView.00000000-0000-4000-8000-000000000033",
+          "Title" : "SharingLinks.00000000-0000-4000-8000-000000000032.OrganizationView.00000000-0000-4000-8000-000000000033",
+          "PrincipalType" : 8,
+          "AllowMembersEditMembership" : false,
+          "AllowRequestToJoinLeave" : false,
+          "AutoAcceptRequestToJoinLeave" : false,
+          "Description" : "Principal 2",
+          "OnlyAllowMembersViewMembership" : true,
+          "OwnerTitle" : "Principal 1",
+          "RequestToJoinLeaveEmailSetting" : null
+        }, {
+          "Id" : 20,
+          "IsHiddenInUI" : false,
+          "LoginName" : "SharingLinks.00000000-0000-4000-8000-000000000034.OrganizationView.00000000-0000-4000-8000-000000000035",
+          "Title" : "SharingLinks.00000000-0000-4000-8000-000000000034.OrganizationView.00000000-0000-4000-8000-000000000035",
+          "PrincipalType" : 8,
+          "AllowMembersEditMembership" : false,
+          "AllowRequestToJoinLeave" : false,
+          "AutoAcceptRequestToJoinLeave" : false,
+          "Description" : "Principal 2",
+          "OnlyAllowMembersViewMembership" : true,
+          "OwnerTitle" : "Principal 1",
+          "RequestToJoinLeaveEmailSetting" : null
+        }, {
+          "Id" : 31,
+          "IsHiddenInUI" : false,
+          "LoginName" : "SharingLinks.00000000-0000-4000-8000-000000000036.OrganizationView.00000000-0000-4000-8000-000000000037",
+          "Title" : "SharingLinks.00000000-0000-4000-8000-000000000036.OrganizationView.00000000-0000-4000-8000-000000000037",
+          "PrincipalType" : 8,
+          "AllowMembersEditMembership" : false,
+          "AllowRequestToJoinLeave" : false,
+          "AutoAcceptRequestToJoinLeave" : false,
+          "Description" : "Principal 2",
+          "OnlyAllowMembersViewMembership" : true,
+          "OwnerTitle" : "Principal 1",
+          "RequestToJoinLeaveEmailSetting" : null
+        }, {
+          "Id" : 17,
+          "IsHiddenInUI" : false,
+          "LoginName" : "SharingLinks.00000000-0000-4000-8000-000000000038.OrganizationView.00000000-0000-4000-8000-000000000039",
+          "Title" : "SharingLinks.00000000-0000-4000-8000-000000000038.OrganizationView.00000000-0000-4000-8000-000000000039",
+          "PrincipalType" : 8,
+          "AllowMembersEditMembership" : false,
+          "AllowRequestToJoinLeave" : false,
+          "AutoAcceptRequestToJoinLeave" : false,
+          "Description" : "Principal 2",
+          "OnlyAllowMembersViewMembership" : true,
+          "OwnerTitle" : "Principal 1",
+          "RequestToJoinLeaveEmailSetting" : null
+        }, {
+          "Id" : 5,
+          "IsHiddenInUI" : false,
+          "LoginName" : "Principal 3",
+          "Title" : "Principal 3",
+          "PrincipalType" : 8,
+          "AllowMembersEditMembership" : true,
+          "AllowRequestToJoinLeave" : false,
+          "AutoAcceptRequestToJoinLeave" : false,
+          "Description" : null,
+          "OnlyAllowMembersViewMembership" : false,
+          "OwnerTitle" : "Principal 4",
+          "RequestToJoinLeaveEmailSetting" : ""
+        }, {
+          "Id" : 3,
+          "IsHiddenInUI" : false,
+          "LoginName" : "Principal 4",
+          "Title" : "Principal 4",
+          "PrincipalType" : 8,
+          "AllowMembersEditMembership" : false,
+          "AllowRequestToJoinLeave" : false,
+          "AutoAcceptRequestToJoinLeave" : false,
+          "Description" : null,
+          "OnlyAllowMembersViewMembership" : false,
+          "OwnerTitle" : "Principal 4",
+          "RequestToJoinLeaveEmailSetting" : ""
+        }, {
+          "Id" : 4,
+          "IsHiddenInUI" : false,
+          "LoginName" : "Principal 5",
+          "Title" : "Principal 5",
+          "PrincipalType" : 8,
+          "AllowMembersEditMembership" : false,
+          "AllowRequestToJoinLeave" : false,
+          "AutoAcceptRequestToJoinLeave" : false,
+          "Description" : null,
+          "OnlyAllowMembersViewMembership" : false,
+          "OwnerTitle" : "Principal 4",
+          "RequestToJoinLeaveEmailSetting" : ""
+        } ]
+      }
+    }
+  }
+}

@@ -1,23 +1,38 @@
 {
   "request" : {
     "method" : "POST",
-    "url" : "https://redacted.example/url/6/_api/web/sitegroups/getbyid(32)/users/removebyid(6)",
+    "url" : "https://redacted.example/url/6/_api/web/sitegroups",
     "authorized" : true,
     "headers" : {
       "content-type" : "application/json"
     },
     "body" : {
-      "json" : { }
+      "json" : {
+        "Title" : "pipestream-live-change-20261127-194012-2550a466-group",
+        "Description" : "Created by a live test run; safe to delete."
+      }
     }
   },
   "response" : {
-    "status" : 200,
+    "status" : 201,
     "headers" : {
+      "location" : "https://redacted.example/url/20",
       "content-type" : "application/json;odata=nometadata;streaming=true;charset=utf-8"
     },
     "body" : {
       "json" : {
-        "odata.null" : true
+        "Id" : 48,
+        "IsHiddenInUI" : false,
+        "LoginName" : "pipestream-live-change-20261127-194012-2550a466-group",
+        "Title" : "pipestream-live-change-20261127-194012-2550a466-group",
+        "PrincipalType" : 8,
+        "AllowMembersEditMembership" : false,
+        "AllowRequestToJoinLeave" : false,
+        "AutoAcceptRequestToJoinLeave" : false,
+        "Description" : "Principal 6",
+        "OnlyAllowMembersViewMembership" : true,
+        "OwnerTitle" : "Principal 7",
+        "RequestToJoinLeaveEmailSetting" : null
       }
     }
   }

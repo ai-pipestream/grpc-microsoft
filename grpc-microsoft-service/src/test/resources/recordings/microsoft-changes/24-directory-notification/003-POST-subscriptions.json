@@ -10,9 +10,9 @@
       "json" : {
         "changeType" : "updated,deleted",
         "notificationUrl" : "https://redacted.example/url/1",
-        "resource" : "/groups/00000000-0000-4000-8000-000000000052",
-        "expirationDateTime" : "2026-11-28T17:42:29Z",
-        "clientState" : "pipestream-live-change-20261127-174229-070d6c9c",
+        "resource" : "/groups/00000000-0000-4000-8000-000000000087",
+        "expirationDateTime" : "2026-11-28T19:40:12Z",
+        "clientState" : "pipestream-live-change-20261127-194012-2550a466",
         "lifecycleNotificationUrl" : "https://redacted.example/url/2"
       }
     }
@@ -28,9 +28,9 @@
           "code" : "ExtensionError",
           "message" : "Operation: Create; Exception: [Status Code: NotFound; Reason: Not Found; Message : Resource not found.]",
           "innerError" : {
-            "date" : "2026-11-27T18:16:55",
-            "request-id" : "00000000-0000-4000-8000-000000000053",
-            "client-request-id" : "00000000-0000-4000-8000-000000000053"
+            "date" : "2026-11-27T20:14:38",
+            "request-id" : "00000000-0000-4000-8000-000000000088",
+            "client-request-id" : "00000000-0000-4000-8000-000000000088"
           }
         }
       }

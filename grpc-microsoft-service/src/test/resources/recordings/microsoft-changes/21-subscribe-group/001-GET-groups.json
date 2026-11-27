@@ -13,9 +13,9 @@
     "body" : {
       "json" : {
         "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#groups(id)",
-        "@odata.nextLink" : "https://graph.microsoft.com/v1.0/groups?$top=1&$select=id&$skiptoken=cursor-0007",
+        "@odata.nextLink" : "https://graph.microsoft.com/v1.0/groups?$top=1&$select=id&$skiptoken=cursor-0034",
         "value" : [ {
-          "id" : "00000000-0000-4000-8000-000000000015"
+          "id" : "00000000-0000-4000-8000-000000000042"
         } ]
       }
     }
