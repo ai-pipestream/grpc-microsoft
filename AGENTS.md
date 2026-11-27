@@ -46,8 +46,10 @@ build. Do not change how tests are run.
   inheritance, site admins, the change log (`getchanges`), hyperlink and term column creation
   (`CreateFieldAsXml`), hyperlink values (`ValidateUpdateListItem`).
   SharePoint REST app-only calls need the certificate credential.
-- The README's "Permissions" table lists which permission and site grant
-  each group of rpcs needs, as proven on the test tenant.
+- `docs/permissions.md` lists which permission and site grant each rpc
+  needs and whether that is proven on the test tenant. A pull request that
+  adds an rpc or changes what an identity must hold updates it
+  (`PermissionsDocTest`).
 
 ## Tests
 

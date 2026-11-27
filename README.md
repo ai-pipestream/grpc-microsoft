@@ -80,8 +80,8 @@ MICROSOFT_GRPC_PORT=9096
 RPCs: `GetMe`, `ListSites`, `ListDrives`, `ListChildren` (stream), `GetItem`,
 `DownloadItem`, `Sync` (stream). Handlers run on virtual threads.
 
-Write RPCs (need `Sites.ReadWrite.All` / `Files.ReadWrite.All` or a
-`Sites.Selected` write grant): `UploadItem` (bidi stream; upload sessions
+Write RPCs (need a `Sites.Selected` site grant of `write` or higher, see
+[Permissions](#permissions)): `UploadItem` (bidi stream; upload sessions
 for large files, resumable), `CreateFolder`, `UpdateDriveItem`,
 `DeleteDriveItem`, `RestoreDriveItemVersion`, `CopyDriveItem` (stream),
 `CreateListItem`, `UpdateListItemFields`, `DeleteListItem`,
@@ -255,20 +255,14 @@ certificate credential.
 
 ## Permissions
 
-What each group of rpcs needs, as proven against a real tenant on 2026-11-22.
-All are application permissions with admin consent.
-
-| rpcs | Needs | Proven with |
-|---|---|---|
-| Everything scoped to a site: `GetSite`, drives, items, downloads, lists, list items, columns, item / list / list-item `ListPermissions`, the delta rpcs, `Sync`, and every write rpc | Graph `Sites.Selected` plus a grant on the site | site grant `manage` |
-| `ListSites`, `ListAllSites`, `DeltaSites` | Graph `Sites.Read.All` (tenant-wide) | refused with `Sites.Selected` alone |
-| `ListUsers`, `ListGroups`, `DeltaUsers`, `DeltaGroups`, `ListGroupTransitiveMembers`, `ListUserTransitiveMemberOf`, `WatchChanges` with `directory` | Graph `User.Read.All` and `GroupMember.Read.All` | those two |
-| `ListSiteGroups`, `GetSiteRoleInheritance` | SharePoint `Sites.Selected` plus a grant on the site, certificate credential | site grant `manage` |
-| `ListSiteGroupMembers`, `ListSiteRoleAssignments` | SharePoint `Sites.Selected` plus site grant `fullcontrol`, certificate credential (refused with `manage`) | site grant `fullcontrol`; also SharePoint `Sites.FullControl.All` |
-| `ListSiteChanges`, `WatchChanges` with `site_changes` | SharePoint `Sites.Selected` plus a grant on the site, certificate credential | site grant `fullcontrol` (not tried with `manage`) |
-| `CreateSiteGroup`, `DeleteSiteGroup`, `AddSiteGroupMember`, `RemoveSiteGroupMember`, `ListSiteRoleDefinitions`, `AddSiteRoleAssignment`, `RemoveSiteRoleAssignment`, `SetSiteRoleInheritance` | SharePoint `Sites.Selected` plus a grant on the site, certificate credential | site grant `fullcontrol` (not tried with `manage`) |
-| `ListPermissions` on a site | Graph `Sites.FullControl.All` | that |
-| `MicrosoftAdminService` | Graph `Sites.FullControl.All` | that (grant created, changed and revoked) |
+[docs/permissions.md](docs/permissions.md) is the record of the least
+privilege each rpc needs, and of which rows are proven against a real tenant.
+In short: the connector app holds Graph and SharePoint Online
+`Sites.Selected` and one grant per site (`read` to index, `manage` to write,
+`fullcontrol` to read or change access control), plus Graph `User.Read.All`
+and `GroupMember.Read.All` for Entra users and groups; rpcs that call
+SharePoint REST need the certificate credential. Only the admin service
+holds `Sites.FullControl.All`.
 
 ## Site grants (admin service)
 
@@ -453,9 +447,8 @@ credentials are in the environment:
 
 It uses **Entra application** (client credentials), not a user mailbox
 login. `/me` does not exist on an app-only token, so the probe is
-`ListSites` and, when a site id is known, `ListDrives`. Create an app
-registration with application permissions `Sites.Read.All` and
-`Files.Read.All` (admin consent), then a client secret.
+`ListSites` and, when a site id is known, `ListDrives`. The app registration
+and what it must hold are in [docs/permissions.md](docs/permissions.md).
 
 The live write test is opt-in. It calls every write RPC inside one new
 folder (`pipestream-live-write-<timestamp>-<random>` at the drive root)
