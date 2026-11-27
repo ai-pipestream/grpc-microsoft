@@ -1,0 +1,190 @@
+{
+  "request" : {
+    "method" : "GET",
+    "url" : "https://redacted.example/url/3/_api/web/roleassignments?$expand=Member,RoleDefinitionBindings",
+    "authorized" : true,
+    "headers" : { }
+  },
+  "response" : {
+    "status" : 200,
+    "headers" : {
+      "content-type" : "application/json;odata=nometadata;streaming=true;charset=utf-8"
+    },
+    "body" : {
+      "json" : {
+        "value" : [ {
+          "Member" : {
+            "Id" : 3,
+            "IsHiddenInUI" : false,
+            "LoginName" : "Principal 4",
+            "Title" : "Principal 4",
+            "PrincipalType" : 8,
+            "AllowMembersEditMembership" : false,
+            "AllowRequestToJoinLeave" : false,
+            "AutoAcceptRequestToJoinLeave" : false,
+            "Description" : null,
+            "OnlyAllowMembersViewMembership" : false,
+            "OwnerTitle" : "Principal 4",
+            "RequestToJoinLeaveEmailSetting" : ""
+          },
+          "RoleDefinitionBindings" : [ {
+            "BasePermissions" : {
+              "High" : "2147483647",
+              "Low" : "4294967295"
+            },
+            "Description" : "Has full control.",
+            "Hidden" : false,
+            "Id" : 1073741829,
+            "Name" : "Full Control",
+            "Order" : 1,
+            "RoleTypeKind" : 5
+          } ],
+          "PrincipalId" : 3
+        }, {
+          "Member" : {
+            "Id" : 4,
+            "IsHiddenInUI" : false,
+            "LoginName" : "Principal 5",
+            "Title" : "Principal 5",
+            "PrincipalType" : 8,
+            "AllowMembersEditMembership" : false,
+            "AllowRequestToJoinLeave" : false,
+            "AutoAcceptRequestToJoinLeave" : false,
+            "Description" : null,
+            "OnlyAllowMembersViewMembership" : false,
+            "OwnerTitle" : "Principal 4",
+            "RequestToJoinLeaveEmailSetting" : ""
+          },
+          "RoleDefinitionBindings" : [ {
+            "BasePermissions" : {
+              "High" : "176",
+              "Low" : "138612833"
+            },
+            "Description" : "Can view pages and list items and download documents.",
+            "Hidden" : false,
+            "Id" : 1073741826,
+            "Name" : "Read",
+            "Order" : 128,
+            "RoleTypeKind" : 2
+          } ],
+          "PrincipalId" : 4
+        }, {
+          "Member" : {
+            "Id" : 5,
+            "IsHiddenInUI" : false,
+            "LoginName" : "Principal 3",
+            "Title" : "Principal 3",
+            "PrincipalType" : 8,
+            "AllowMembersEditMembership" : true,
+            "AllowRequestToJoinLeave" : false,
+            "AutoAcceptRequestToJoinLeave" : false,
+            "Description" : null,
+            "OnlyAllowMembersViewMembership" : false,
+            "OwnerTitle" : "Principal 4",
+            "RequestToJoinLeaveEmailSetting" : ""
+          },
+          "RoleDefinitionBindings" : [ {
+            "BasePermissions" : {
+              "High" : "432",
+              "Low" : "1011030767"
+            },
+            "Description" : "Can add, edit and delete lists; can view, add, update and delete list items and documents.",
+            "Hidden" : false,
+            "Id" : 1073741830,
+            "Name" : "Edit",
+            "Order" : 48,
+            "RoleTypeKind" : 6
+          } ],
+          "PrincipalId" : 5
+        }, {
+          "Member" : {
+            "Id" : 6,
+            "IsHiddenInUI" : false,
+            "LoginName" : "i:0#.f|membership|email-1@example.invalid",
+            "Title" : "Principal 6",
+            "PrincipalType" : 1,
+            "Email" : "email-1@example.invalid",
+            "Expiration" : "",
+            "IsEmailAuthenticationGuestUser" : false,
+            "IsShareByEmailGuestUser" : false,
+            "IsSiteAdmin" : true,
+            "UserId" : {
+              "NameId" : "nameid-0001",
+              "NameIdIssuer" : "urn:federation:microsoftonline"
+            },
+            "UserPrincipalName" : "email-1@example.invalid"
+          },
+          "RoleDefinitionBindings" : [ {
+            "BasePermissions" : {
+              "High" : "48",
+              "Low" : "134287360"
+            },
+            "Description" : "Can view specific lists, document libraries, list items, folders, or documents when given permissions.",
+            "Hidden" : true,
+            "Id" : 1073741825,
+            "Name" : "Limited Access",
+            "Order" : 160,
+            "RoleTypeKind" : 1
+          } ],
+          "PrincipalId" : 6
+        }, {
+          "Member" : {
+            "Id" : 12,
+            "IsHiddenInUI" : false,
+            "LoginName" : "Limited Access System Group For Web 00000000-0000-4000-8000-000000000002",
+            "Title" : "Limited Access System Group For Web 00000000-0000-4000-8000-000000000002",
+            "PrincipalType" : 8,
+            "AllowMembersEditMembership" : false,
+            "AllowRequestToJoinLeave" : false,
+            "AutoAcceptRequestToJoinLeave" : false,
+            "Description" : "Limited Access System Group For Web 00000000-0000-4000-8000-000000000002",
+            "OnlyAllowMembersViewMembership" : true,
+            "OwnerTitle" : "Principal 1",
+            "RequestToJoinLeaveEmailSetting" : null
+          },
+          "RoleDefinitionBindings" : [ {
+            "BasePermissions" : {
+              "High" : "560",
+              "Low" : "134221824"
+            },
+            "Description" : "Can only view the web when given permissions.",
+            "Hidden" : true,
+            "Id" : 1073741833,
+            "Name" : "Web-Only Limited Access",
+            "Order" : 176,
+            "RoleTypeKind" : 9
+          } ],
+          "PrincipalId" : 12
+        }, {
+          "Member" : {
+            "Id" : 41,
+            "IsHiddenInUI" : false,
+            "LoginName" : "c:0o.c|federateddirectoryclaimprovider|00000000-0000-4000-8000-000000000054",
+            "Title" : "Principal 7",
+            "PrincipalType" : 4,
+            "Email" : "email-4@example.invalid",
+            "Expiration" : "",
+            "IsEmailAuthenticationGuestUser" : false,
+            "IsShareByEmailGuestUser" : false,
+            "IsSiteAdmin" : false,
+            "UserId" : null,
+            "UserPrincipalName" : null
+          },
+          "RoleDefinitionBindings" : [ {
+            "BasePermissions" : {
+              "High" : "48",
+              "Low" : "134287360"
+            },
+            "Description" : "Can view specific lists, document libraries, list items, folders, or documents when given permissions.",
+            "Hidden" : true,
+            "Id" : 1073741825,
+            "Name" : "Limited Access",
+            "Order" : 160,
+            "RoleTypeKind" : 1
+          } ],
+          "PrincipalId" : 41
+        } ]
+      }
+    }
+  }
+}

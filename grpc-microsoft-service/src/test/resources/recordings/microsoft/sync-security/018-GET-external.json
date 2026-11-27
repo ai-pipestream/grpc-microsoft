@@ -1,7 +1,7 @@
 {
   "request" : {
     "method" : "GET",
-    "url" : "https://redacted.example/url/3/_api/web/sitegroups/getbyid(3)/users",
+    "url" : "https://redacted.example/url/3/_api/web/sitegroups/getbyid(39)/users",
     "authorized" : true,
     "headers" : { }
   },
@@ -12,23 +12,7 @@
     },
     "body" : {
       "json" : {
-        "value" : [ {
-          "Id" : 6,
-          "IsHiddenInUI" : false,
-          "LoginName" : "i:0#.f|membership|email-1@example.invalid",
-          "Title" : "Principal 19",
-          "PrincipalType" : 1,
-          "Email" : "email-1@example.invalid",
-          "Expiration" : "",
-          "IsEmailAuthenticationGuestUser" : false,
-          "IsShareByEmailGuestUser" : false,
-          "IsSiteAdmin" : true,
-          "UserId" : {
-            "NameId" : "nameid-0001",
-            "NameIdIssuer" : "urn:federation:microsoftonline"
-          },
-          "UserPrincipalName" : "email-1@example.invalid"
-        } ]
+        "value" : [ ]
       }
     }
   }

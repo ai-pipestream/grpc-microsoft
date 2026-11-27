@@ -8,7 +8,7 @@
     },
     "body" : {
       "json" : {
-        "Title" : "pipestream-live-write-20261127-173717-ecc2f242-group",
+        "Title" : "pipestream-live-write-20261127-190819-c90fc85b-group",
         "Description" : "Created by a live test run; safe to delete."
       }
     }
@@ -16,22 +16,22 @@
   "response" : {
     "status" : 201,
     "headers" : {
-      "location" : "https://redacted.example/url/61",
+      "location" : "https://redacted.example/url/71",
       "content-type" : "application/json;odata=nometadata;streaming=true;charset=utf-8"
     },
     "body" : {
       "json" : {
-        "Id" : 29,
+        "Id" : 42,
         "IsHiddenInUI" : false,
-        "LoginName" : "pipestream-live-write-20261127-173717-ecc2f242-group",
-        "Title" : "pipestream-live-write-20261127-173717-ecc2f242-group",
+        "LoginName" : "pipestream-live-write-20261127-190819-c90fc85b-group",
+        "Title" : "pipestream-live-write-20261127-190819-c90fc85b-group",
         "PrincipalType" : 8,
         "AllowMembersEditMembership" : false,
         "AllowRequestToJoinLeave" : false,
         "AutoAcceptRequestToJoinLeave" : false,
-        "Description" : "Principal 20",
+        "Description" : "Principal 8",
         "OnlyAllowMembersViewMembership" : true,
-        "OwnerTitle" : "Principal 21",
+        "OwnerTitle" : "Principal 9",
         "RequestToJoinLeaveEmailSetting" : null
       }
     }

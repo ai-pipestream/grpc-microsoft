@@ -1,0 +1,38 @@
+{
+  "request" : {
+    "method" : "POST",
+    "url" : "https://graph.microsoft.com/v1.0/drives/b!drive-0001/items/item-0008/createLink",
+    "authorized" : true,
+    "headers" : {
+      "content-type" : "application/json"
+    },
+    "body" : {
+      "json" : {
+        "type" : "view",
+        "scope" : "organization"
+      }
+    }
+  },
+  "response" : {
+    "status" : 200,
+    "headers" : {
+      "location" : "https://graph.microsoft.com",
+      "content-type" : "application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8"
+    },
+    "body" : {
+      "json" : {
+        "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#microsoft.graph.permission",
+        "id" : "permission-0005",
+        "roles" : [ "read" ],
+        "shareId" : "share-0001",
+        "hasPassword" : false,
+        "link" : {
+          "scope" : "organization",
+          "type" : "view",
+          "webUrl" : "https://redacted.example/url/45",
+          "preventsDownload" : false
+        }
+      }
+    }
+  }
+}

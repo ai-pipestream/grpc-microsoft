@@ -15,11 +15,11 @@
         "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#directoryObjects",
         "value" : [ {
           "@odata.type" : "#microsoft.graph.directoryRole",
-          "id" : "00000000-0000-4000-8000-000000000061",
+          "id" : "00000000-0000-4000-8000-000000000065",
           "deletedDateTime" : null,
           "description" : null,
           "displayName" : null,
-          "roleTemplateId" : "00000000-0000-4000-8000-000000000062"
+          "roleTemplateId" : "00000000-0000-4000-8000-000000000066"
         }, {
           "@odata.type" : "#microsoft.graph.group",
           "id" : "00000000-0000-4000-8000-000000000059",
@@ -46,7 +46,7 @@
           "onPremisesSyncEnabled" : null,
           "preferredDataLocation" : null,
           "preferredLanguage" : null,
-          "proxyAddresses" : [ "SPO:SPO_00000000-0000-4000-8000-000000000063@SPO_00000000-0000-4000-8000-000000000010", "SMTP:email-9@example.invalid" ],
+          "proxyAddresses" : [ "SPO:SPO_00000000-0000-4000-8000-000000000067@SPO_00000000-0000-4000-8000-000000000010", "SMTP:email-9@example.invalid" ],
           "renewedDateTime" : "2026-07-15T19:06:24Z",
           "resourceBehaviorOptions" : [ "Directory value 23" ],
           "resourceProvisioningOptions" : [ ],
@@ -194,7 +194,7 @@
           "onPremisesSyncEnabled" : null,
           "preferredDataLocation" : null,
           "preferredLanguage" : null,
-          "proxyAddresses" : [ "SPO:SPO_00000000-0000-4000-8000-000000000064@SPO_00000000-0000-4000-8000-000000000010", "SMTP:email-6@example.invalid" ],
+          "proxyAddresses" : [ "SPO:SPO_00000000-0000-4000-8000-000000000068@SPO_00000000-0000-4000-8000-000000000010", "SMTP:email-6@example.invalid" ],
           "renewedDateTime" : "2026-07-15T19:04:23Z",
           "resourceBehaviorOptions" : [ "Directory value 26", "Directory value 27", "Directory value 28" ],
           "resourceProvisioningOptions" : [ "Directory value 24" ],

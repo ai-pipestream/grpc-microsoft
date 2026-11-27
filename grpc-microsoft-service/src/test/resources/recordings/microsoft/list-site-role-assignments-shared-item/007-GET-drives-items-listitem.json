@@ -1,0 +1,77 @@
+{
+  "request" : {
+    "method" : "GET",
+    "url" : "https://graph.microsoft.com/v1.0/drives/b!drive-0001/items/item-0001/listItem?$expand=fields",
+    "authorized" : true,
+    "headers" : { }
+  },
+  "response" : {
+    "status" : 200,
+    "headers" : {
+      "etag" : "\"00000000-0000-4000-8000-000000000006,2\"",
+      "content-type" : "application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8"
+    },
+    "body" : {
+      "json" : {
+        "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#drives('b%21drive-0001')/items('item-0001')/listItem(fields())/$entity",
+        "@odata.etag" : "\"00000000-0000-4000-8000-000000000006,2\"",
+        "createdDateTime" : "2026-11-27T19:08:20Z",
+        "eTag" : "\"00000000-0000-4000-8000-000000000006,2\"",
+        "id" : "319",
+        "lastModifiedDateTime" : "2026-11-27T19:08:20Z",
+        "webUrl" : "https://redacted.example/url/2",
+        "createdBy" : {
+          "user" : {
+            "displayName" : "Identity 2"
+          }
+        },
+        "lastModifiedBy" : {
+          "application" : {
+            "id" : "00000000-0000-4000-8000-000000000007",
+            "displayName" : "Identity 1"
+          },
+          "user" : {
+            "displayName" : "Identity 2"
+          }
+        },
+        "parentReference" : {
+          "id" : "00000000-0000-4000-8000-000000000009",
+          "siteId" : "tenant-1.example,00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000002"
+        },
+        "contentType" : {
+          "id" : "0x012000661EAB7E3159E54AB727CAFB64BDD9C8",
+          "name" : "Folder"
+        },
+        "fields@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#drives('b%21drive-0001')/items('item-0001')/listItem/fields/$entity",
+        "fields" : {
+          "@odata.etag" : "\"00000000-0000-4000-8000-000000000006,2\"",
+          "id" : "319",
+          "ContentType" : "Folder",
+          "Created" : "2026-11-27T19:08:20Z",
+          "AuthorLookupId" : "1073741822",
+          "Modified" : "2026-11-27T19:08:20Z",
+          "EditorLookupId" : "1073741822",
+          "FileLeafRef" : "pipestream-live-write-20261127-190819-c90fc85b",
+          "_CheckinComment" : "",
+          "LinkFilenameNoMenu" : "pipestream-live-write-20261127-190819-c90fc85b",
+          "LinkFilename" : "pipestream-live-write-20261127-190819-c90fc85b",
+          "ItemChildCount" : "6",
+          "FolderChildCount" : "0",
+          "_ComplianceFlags" : "",
+          "_ComplianceTag" : "",
+          "_ComplianceTagWrittenTime" : "",
+          "_ComplianceTagUserId" : "",
+          "_CommentCount" : "",
+          "_LikeCount" : "",
+          "_DisplayName" : "",
+          "AppAuthorLookupId" : "4",
+          "AppEditorLookupId" : "4",
+          "Edit" : "0",
+          "_UIVersionString" : "1.0",
+          "ParentVersionStringLookupId" : "319",
+          "ParentLeafNameLookupId" : "319"
+        }
+      }
+    }
+  }
+}
