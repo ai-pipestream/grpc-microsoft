@@ -980,8 +980,9 @@ message ListColumnsRequest {
   string site_id = 1;
   // List id; when set, the list's columns are returned.
   string list_id = 2;
-  // Content type id; when set (and list_id is empty), the content type's
-  // columns are returned. Both empty = the site's columns.
+  // Content type id; when set, the content type's columns are returned: a
+  // content type of the list when list_id is set (a list item names one of
+  // these), else a content type of the site. Both empty = the site's columns.
   string content_type_id = 3;
   // Catalog connection to use. Empty = the process-default (env) connection.
   string connection_id = 4;
