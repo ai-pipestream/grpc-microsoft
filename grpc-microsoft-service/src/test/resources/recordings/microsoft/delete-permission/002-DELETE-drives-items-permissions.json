@@ -1,0 +1,12 @@
+{
+  "request" : {
+    "method" : "DELETE",
+    "url" : "https://graph.microsoft.com/v1.0/drives/b!drive-0001/items/item-0008/permissions/permission-0006",
+    "authorized" : true,
+    "headers" : { }
+  },
+  "response" : {
+    "status" : 204,
+    "headers" : { }
+  }
+}

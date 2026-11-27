@@ -95,6 +95,7 @@ public final class GraphErrors {
                 case 410, 423, 424 -> Status.FAILED_PRECONDITION;
                 case 416 -> Status.OUT_OF_RANGE;
                 case 429, 507 -> Status.RESOURCE_EXHAUSTED;
+                case 501 -> Status.UNIMPLEMENTED;
                 case 503, 504 -> Status.UNAVAILABLE;
                 default -> e.code().equals("nameAlreadyExists") ? Status.ABORTED : Status.INTERNAL;
             }).withDescription(e.getMessage());

@@ -20,7 +20,7 @@
             "displayName" : "Identity 2"
           }
         },
-        "createdDateTime" : "2026-11-27T17:37:19Z",
+        "createdDateTime" : "2026-11-27T19:08:20Z",
         "eTag" : "\"{00000000-0000-4000-8000-000000000018},1\"",
         "id" : "item-0006",
         "lastModifiedBy" : {
@@ -28,14 +28,14 @@
             "displayName" : "Identity 2"
           }
         },
-        "lastModifiedDateTime" : "2026-11-27T17:37:28Z",
+        "lastModifiedDateTime" : "2026-11-27T19:08:28Z",
         "name" : "copy.txt",
         "parentReference" : {
           "driveType" : "documentLibrary",
           "driveId" : "b!drive-0001",
           "id" : "item-0001",
-          "name" : "pipestream-live-write-20261127-173717-ecc2f242",
-          "path" : "/drives/b!drive-0001/root:/pipestream-live-write-20261127-173717-ecc2f242",
+          "name" : "pipestream-live-write-20261127-190819-c90fc85b",
+          "path" : "/drives/b!drive-0001/root:/pipestream-live-write-20261127-190819-c90fc85b",
           "siteId" : "00000000-0000-4000-8000-000000000001"
         },
         "webUrl" : "https://redacted.example/url/25",
@@ -43,13 +43,13 @@
         "file" : {
           "fileExtension" : ".txt",
           "hashes" : {
-            "quickXorHash" : "CRVNRUSPbM/pT/ht2AbuFPWbRH0="
+            "quickXorHash" : "OZVKRYSObP9pWV4tXQTGNPXLRGE="
           },
           "mimeType" : "text/plain"
         },
         "fileSystemInfo" : {
-          "createdDateTime" : "2026-11-27T17:37:19Z",
-          "lastModifiedDateTime" : "2026-11-27T17:37:28Z"
+          "createdDateTime" : "2026-11-27T19:08:20Z",
+          "lastModifiedDateTime" : "2026-11-27T19:08:28Z"
         },
         "isAuthoritative" : false,
         "shared" : {

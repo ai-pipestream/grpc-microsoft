@@ -1,7 +1,7 @@
 {
   "request" : {
     "method" : "PATCH",
-    "url" : "https://graph.microsoft.com/v1.0/drives/b!drive-0013/items/item-0010/listItem/fields",
+    "url" : "https://graph.microsoft.com/v1.0/drives/b!drive-0013/items/item-0012/listItem/fields",
     "authorized" : true,
     "headers" : {
       "content-type" : "application/json"
@@ -15,20 +15,20 @@
   "response" : {
     "status" : 200,
     "headers" : {
-      "etag" : "\"00000000-0000-4000-8000-000000000243,2\"",
+      "etag" : "\"00000000-0000-4000-8000-000000000329,2\"",
       "content-type" : "application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8"
     },
     "body" : {
       "json" : {
-        "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#drives('b%21drive-0013')/items('item-0010')/listItem/fields/$entity",
-        "@odata.etag" : "\"00000000-0000-4000-8000-000000000243,2\"",
+        "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#drives('b%21drive-0013')/items('item-0012')/listItem/fields/$entity",
+        "@odata.etag" : "\"00000000-0000-4000-8000-000000000329,2\"",
         "FileLeafRef" : "with-fields.txt",
         "PsText" : "from the upload",
         "id" : "1",
         "ContentType" : "Document",
-        "Created" : "2026-11-27T17:38:43Z",
+        "Created" : "2026-11-27T19:09:31Z",
         "AuthorLookupId" : "1073741822",
-        "Modified" : "2026-11-27T17:38:43Z",
+        "Modified" : "2026-11-27T19:09:31Z",
         "EditorLookupId" : "1073741822",
         "_CheckinComment" : "",
         "LinkFilenameNoMenu" : "with-fields.txt",

@@ -1,0 +1,352 @@
+{
+  "request" : {
+    "method" : "POST",
+    "url" : "https://redacted.example/url/3/_api/web/getchanges",
+    "authorized" : true,
+    "headers" : {
+      "content-type" : "application/json"
+    },
+    "body" : {
+      "json" : {
+        "query" : {
+          "Item" : true,
+          "List" : true,
+          "Add" : true,
+          "Update" : true,
+          "DeleteObject" : true,
+          "Rename" : true,
+          "Move" : true,
+          "Restore" : true,
+          "RoleDefinitionAdd" : true,
+          "RoleDefinitionDelete" : true,
+          "RoleDefinitionUpdate" : true,
+          "RoleAssignmentAdd" : true,
+          "RoleAssignmentDelete" : true,
+          "GroupMembershipAdd" : true,
+          "GroupMembershipDelete" : true,
+          "SystemUpdate" : true,
+          "Navigation" : true,
+          "ChangeTokenStart" : {
+            "StringValue" : "1;2;00000000-0000-4000-8000-000000000002;639314033453330000;1676312013"
+          }
+        }
+      }
+    }
+  },
+  "response" : {
+    "status" : 200,
+    "headers" : {
+      "content-type" : "application/json;odata=minimalmetadata;streaming=true;charset=utf-8"
+    },
+    "body" : {
+      "json" : {
+        "odata.metadata" : "https://redacted.example/url/73",
+        "value" : [ {
+          "odata.type" : "SP.ChangeItem",
+          "odata.id" : "https://redacted.example/url/74",
+          "odata.editLink" : "SP.ChangeItem00000000-0000-4000-8000-000000000126",
+          "ChangeToken" : {
+            "StringValue" : "1;2;00000000-0000-4000-8000-000000000002;639314033485830000;1676312016"
+          },
+          "ChangeType" : 12,
+          "SiteId" : "00000000-0000-4000-8000-000000000001",
+          "Time" : "2026-11-27T19:09:08.583Z",
+          "Editor" : "",
+          "EditorEmailHint" : null,
+          "ItemId" : 325,
+          "ListId" : "00000000-0000-4000-8000-000000000008",
+          "ServerRelativeUrl" : "",
+          "SharedByUser" : null,
+          "SharedWithUsers" : null,
+          "UniqueId" : "00000000-0000-4000-8000-000000000100",
+          "WebId" : "00000000-0000-4000-8000-000000000002"
+        }, {
+          "odata.type" : "SP.ChangeItem",
+          "odata.id" : "https://redacted.example/url/75",
+          "odata.editLink" : "SP.ChangeItem00000000-0000-4000-8000-000000000127",
+          "ChangeToken" : {
+            "StringValue" : "1;2;00000000-0000-4000-8000-000000000002;639314033487670000;1676312017"
+          },
+          "ChangeType" : 12,
+          "SiteId" : "00000000-0000-4000-8000-000000000001",
+          "Time" : "2026-11-27T19:09:08.767Z",
+          "Editor" : "",
+          "EditorEmailHint" : null,
+          "ItemId" : 325,
+          "ListId" : "00000000-0000-4000-8000-000000000008",
+          "ServerRelativeUrl" : "",
+          "SharedByUser" : null,
+          "SharedWithUsers" : null,
+          "UniqueId" : "00000000-0000-4000-8000-000000000100",
+          "WebId" : "00000000-0000-4000-8000-000000000002"
+        }, {
+          "odata.type" : "SP.ChangeItem",
+          "odata.id" : "https://redacted.example/url/76",
+          "odata.editLink" : "SP.ChangeItem00000000-0000-4000-8000-000000000128",
+          "ChangeToken" : {
+            "StringValue" : "1;2;00000000-0000-4000-8000-000000000002;639314033488130000;1676312018"
+          },
+          "ChangeType" : 3,
+          "SiteId" : "00000000-0000-4000-8000-000000000001",
+          "Time" : "2026-11-27T19:09:09Z",
+          "Editor" : "",
+          "EditorEmailHint" : null,
+          "ItemId" : 40,
+          "ListId" : "00000000-0000-4000-8000-000000000123",
+          "ServerRelativeUrl" : "",
+          "SharedByUser" : null,
+          "SharedWithUsers" : null,
+          "UniqueId" : "00000000-0000-4000-8000-000000000129",
+          "WebId" : "00000000-0000-4000-8000-000000000002"
+        }, {
+          "odata.type" : "SP.ChangeItem",
+          "odata.id" : "https://redacted.example/url/77",
+          "odata.editLink" : "SP.ChangeItem00000000-0000-4000-8000-000000000130",
+          "ChangeToken" : {
+            "StringValue" : "1;2;00000000-0000-4000-8000-000000000002;639314033490830000;1676312020"
+          },
+          "ChangeType" : 12,
+          "SiteId" : "00000000-0000-4000-8000-000000000001",
+          "Time" : "2026-11-27T19:09:09.083Z",
+          "Editor" : "",
+          "EditorEmailHint" : null,
+          "ItemId" : 325,
+          "ListId" : "00000000-0000-4000-8000-000000000008",
+          "ServerRelativeUrl" : "",
+          "SharedByUser" : null,
+          "SharedWithUsers" : null,
+          "UniqueId" : "00000000-0000-4000-8000-000000000100",
+          "WebId" : "00000000-0000-4000-8000-000000000002"
+        }, {
+          "odata.type" : "SP.ChangeItem",
+          "odata.id" : "https://redacted.example/url/78",
+          "odata.editLink" : "SP.ChangeItem00000000-0000-4000-8000-000000000131",
+          "ChangeToken" : {
+            "StringValue" : "1;2;00000000-0000-4000-8000-000000000002;639314033491400000;1676312021"
+          },
+          "ChangeType" : 3,
+          "SiteId" : "00000000-0000-4000-8000-000000000001",
+          "Time" : "2026-11-27T19:09:09Z",
+          "Editor" : "",
+          "EditorEmailHint" : null,
+          "ItemId" : 39,
+          "ListId" : "00000000-0000-4000-8000-000000000123",
+          "ServerRelativeUrl" : "",
+          "SharedByUser" : null,
+          "SharedWithUsers" : null,
+          "UniqueId" : "00000000-0000-4000-8000-000000000132",
+          "WebId" : "00000000-0000-4000-8000-000000000002"
+        }, {
+          "odata.type" : "SP.ChangeItem",
+          "odata.id" : "https://redacted.example/url/79",
+          "odata.editLink" : "SP.ChangeItem00000000-0000-4000-8000-000000000133",
+          "ChangeToken" : {
+            "StringValue" : "1;2;00000000-0000-4000-8000-000000000002;639314033494800000;1676312024"
+          },
+          "ChangeType" : 1,
+          "SiteId" : "00000000-0000-4000-8000-000000000001",
+          "Time" : "2026-11-27T19:09:09Z",
+          "Editor" : "",
+          "EditorEmailHint" : null,
+          "ItemId" : 42,
+          "ListId" : "00000000-0000-4000-8000-000000000123",
+          "ServerRelativeUrl" : "",
+          "SharedByUser" : null,
+          "SharedWithUsers" : null,
+          "UniqueId" : "00000000-0000-4000-8000-000000000134",
+          "WebId" : "00000000-0000-4000-8000-000000000002"
+        }, {
+          "odata.type" : "SP.ChangeItem",
+          "odata.id" : "https://redacted.example/url/80",
+          "odata.editLink" : "SP.ChangeItem00000000-0000-4000-8000-000000000135",
+          "ChangeToken" : {
+            "StringValue" : "1;2;00000000-0000-4000-8000-000000000002;639314033495330000;1676312026"
+          },
+          "ChangeType" : 15,
+          "SiteId" : "00000000-0000-4000-8000-000000000001",
+          "Time" : "2026-11-27T19:09:09Z",
+          "Editor" : "",
+          "EditorEmailHint" : null,
+          "ItemId" : 42,
+          "ListId" : "00000000-0000-4000-8000-000000000123",
+          "ServerRelativeUrl" : "",
+          "SharedByUser" : null,
+          "SharedWithUsers" : null,
+          "UniqueId" : "00000000-0000-4000-8000-000000000134",
+          "WebId" : "00000000-0000-4000-8000-000000000002"
+        }, {
+          "odata.type" : "SP.ChangeItem",
+          "odata.id" : "https://redacted.example/url/81",
+          "odata.editLink" : "SP.ChangeItem00000000-0000-4000-8000-000000000136",
+          "ChangeToken" : {
+            "StringValue" : "1;2;00000000-0000-4000-8000-000000000002;639314033500830000;1676312029"
+          },
+          "ChangeType" : 15,
+          "SiteId" : "00000000-0000-4000-8000-000000000001",
+          "Time" : "2026-11-27T19:09:10Z",
+          "Editor" : "",
+          "EditorEmailHint" : null,
+          "ItemId" : 6,
+          "ListId" : "00000000-0000-4000-8000-000000000123",
+          "ServerRelativeUrl" : "",
+          "SharedByUser" : null,
+          "SharedWithUsers" : null,
+          "UniqueId" : "00000000-0000-4000-8000-000000000137",
+          "WebId" : "00000000-0000-4000-8000-000000000002"
+        }, {
+          "odata.type" : "SP.ChangeItem",
+          "odata.id" : "https://redacted.example/url/82",
+          "odata.editLink" : "SP.ChangeItem00000000-0000-4000-8000-000000000138",
+          "ChangeToken" : {
+            "StringValue" : "1;2;00000000-0000-4000-8000-000000000002;639314033501370000;1676312032"
+          },
+          "ChangeType" : 15,
+          "SiteId" : "00000000-0000-4000-8000-000000000001",
+          "Time" : "2026-11-27T19:09:10Z",
+          "Editor" : "",
+          "EditorEmailHint" : null,
+          "ItemId" : 6,
+          "ListId" : "00000000-0000-4000-8000-000000000123",
+          "ServerRelativeUrl" : "",
+          "SharedByUser" : null,
+          "SharedWithUsers" : null,
+          "UniqueId" : "00000000-0000-4000-8000-000000000137",
+          "WebId" : "00000000-0000-4000-8000-000000000002"
+        }, {
+          "odata.type" : "SP.ChangeItem",
+          "odata.id" : "https://redacted.example/url/83",
+          "odata.editLink" : "SP.ChangeItem00000000-0000-4000-8000-000000000139",
+          "ChangeToken" : {
+            "StringValue" : "1;2;00000000-0000-4000-8000-000000000002;639314033503870000;1676312033"
+          },
+          "ChangeType" : 11,
+          "SiteId" : "00000000-0000-4000-8000-000000000001",
+          "Time" : "2026-11-27T19:09:10.387Z",
+          "Editor" : "",
+          "EditorEmailHint" : null,
+          "ItemId" : 1,
+          "ListId" : "00000000-0000-4000-8000-000000000022",
+          "ServerRelativeUrl" : "",
+          "SharedByUser" : null,
+          "SharedWithUsers" : null,
+          "UniqueId" : "00000000-0000-4000-8000-000000000052",
+          "WebId" : "00000000-0000-4000-8000-000000000002"
+        }, {
+          "odata.type" : "SP.ChangeItem",
+          "odata.id" : "https://redacted.example/url/84",
+          "odata.editLink" : "SP.ChangeItem00000000-0000-4000-8000-000000000140",
+          "ChangeToken" : {
+            "StringValue" : "1;2;00000000-0000-4000-8000-000000000002;639314033508100000;1676312034"
+          },
+          "ChangeType" : 12,
+          "SiteId" : "00000000-0000-4000-8000-000000000001",
+          "Time" : "2026-11-27T19:09:10.81Z",
+          "Editor" : "",
+          "EditorEmailHint" : null,
+          "ItemId" : 1,
+          "ListId" : "00000000-0000-4000-8000-000000000022",
+          "ServerRelativeUrl" : "",
+          "SharedByUser" : null,
+          "SharedWithUsers" : null,
+          "UniqueId" : "00000000-0000-4000-8000-000000000052",
+          "WebId" : "00000000-0000-4000-8000-000000000002"
+        }, {
+          "odata.type" : "SP.ChangeItem",
+          "odata.id" : "https://redacted.example/url/85",
+          "odata.editLink" : "SP.ChangeItem00000000-0000-4000-8000-000000000141",
+          "ChangeToken" : {
+            "StringValue" : "1;2;00000000-0000-4000-8000-000000000002;639314033512870000;1676312036"
+          },
+          "ChangeType" : 3,
+          "SiteId" : "00000000-0000-4000-8000-000000000001",
+          "Time" : "2026-11-27T19:09:11Z",
+          "Editor" : "",
+          "EditorEmailHint" : null,
+          "ItemId" : 42,
+          "ListId" : "00000000-0000-4000-8000-000000000123",
+          "ServerRelativeUrl" : "",
+          "SharedByUser" : null,
+          "SharedWithUsers" : null,
+          "UniqueId" : "00000000-0000-4000-8000-000000000134",
+          "WebId" : "00000000-0000-4000-8000-000000000002"
+        }, {
+          "odata.type" : "SP.ChangeItem",
+          "odata.id" : "https://redacted.example/url/86",
+          "odata.editLink" : "SP.ChangeItem00000000-0000-4000-8000-000000000142",
+          "ChangeToken" : {
+            "StringValue" : "1;2;00000000-0000-4000-8000-000000000002;639314033516800000;1676312038"
+          },
+          "ChangeType" : 12,
+          "SiteId" : "00000000-0000-4000-8000-000000000001",
+          "Time" : "2026-11-27T19:09:11.68Z",
+          "Editor" : "",
+          "EditorEmailHint" : null,
+          "ItemId" : 1,
+          "ListId" : "00000000-0000-4000-8000-000000000022",
+          "ServerRelativeUrl" : "",
+          "SharedByUser" : null,
+          "SharedWithUsers" : null,
+          "UniqueId" : "00000000-0000-4000-8000-000000000052",
+          "WebId" : "00000000-0000-4000-8000-000000000002"
+        }, {
+          "odata.type" : "SP.ChangeItem",
+          "odata.id" : "https://redacted.example/url/87",
+          "odata.editLink" : "SP.ChangeItem00000000-0000-4000-8000-000000000143",
+          "ChangeToken" : {
+            "StringValue" : "1;2;00000000-0000-4000-8000-000000000002;639314033516800000;1676312039"
+          },
+          "ChangeType" : 18,
+          "SiteId" : "00000000-0000-4000-8000-000000000001",
+          "Time" : "2026-11-27T19:09:11.68Z",
+          "Editor" : "",
+          "EditorEmailHint" : null,
+          "ItemId" : 1,
+          "ListId" : "00000000-0000-4000-8000-000000000022",
+          "ServerRelativeUrl" : "",
+          "SharedByUser" : null,
+          "SharedWithUsers" : null,
+          "UniqueId" : "00000000-0000-4000-8000-000000000052",
+          "WebId" : "00000000-0000-4000-8000-000000000002"
+        }, {
+          "odata.type" : "SP.ChangeItem",
+          "odata.id" : "https://redacted.example/url/88",
+          "odata.editLink" : "SP.ChangeItem00000000-0000-4000-8000-000000000144",
+          "ChangeToken" : {
+            "StringValue" : "1;2;00000000-0000-4000-8000-000000000002;639314033518800000;1676312040"
+          },
+          "ChangeType" : 12,
+          "SiteId" : "00000000-0000-4000-8000-000000000001",
+          "Time" : "2026-11-27T19:09:11.88Z",
+          "Editor" : "",
+          "EditorEmailHint" : null,
+          "ItemId" : 319,
+          "ListId" : "00000000-0000-4000-8000-000000000008",
+          "ServerRelativeUrl" : "",
+          "SharedByUser" : null,
+          "SharedWithUsers" : null,
+          "UniqueId" : "00000000-0000-4000-8000-000000000006",
+          "WebId" : "00000000-0000-4000-8000-000000000002"
+        }, {
+          "odata.type" : "SP.ChangeItem",
+          "odata.id" : "https://redacted.example/url/89",
+          "odata.editLink" : "SP.ChangeItem00000000-0000-4000-8000-000000000145",
+          "ChangeToken" : {
+            "StringValue" : "1;2;00000000-0000-4000-8000-000000000002;639314033518800000;1676312041"
+          },
+          "ChangeType" : 18,
+          "SiteId" : "00000000-0000-4000-8000-000000000001",
+          "Time" : "2026-11-27T19:09:11.88Z",
+          "Editor" : "",
+          "EditorEmailHint" : null,
+          "ItemId" : 319,
+          "ListId" : "00000000-0000-4000-8000-000000000008",
+          "ServerRelativeUrl" : "",
+          "SharedByUser" : null,
+          "SharedWithUsers" : null,
+          "UniqueId" : "00000000-0000-4000-8000-000000000006",
+          "WebId" : "00000000-0000-4000-8000-000000000002"
+        } ]
+      }
+    }
+  }
+}

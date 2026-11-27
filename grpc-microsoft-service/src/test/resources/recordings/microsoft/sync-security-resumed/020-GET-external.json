@@ -1,7 +1,7 @@
 {
   "request" : {
     "method" : "GET",
-    "url" : "https://redacted.example/url/3/_api/web/siteusers?$filter=IsSiteAdmin%20eq%20true",
+    "url" : "https://redacted.example/url/3/_api/web/sitegroups/getbyid(3)/users",
     "authorized" : true,
     "headers" : { }
   },
@@ -16,7 +16,7 @@
           "Id" : 6,
           "IsHiddenInUI" : false,
           "LoginName" : "i:0#.f|membership|email-1@example.invalid",
-          "Title" : "Principal 19",
+          "Title" : "Principal 6",
           "PrincipalType" : 1,
           "Email" : "email-1@example.invalid",
           "Expiration" : "",

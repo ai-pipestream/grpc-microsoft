@@ -102,6 +102,54 @@
           "@removed" : {
             "reason" : "changed"
           }
+        }, {
+          "id" : "00000000-0000-4000-8000-000000000061",
+          "@removed" : {
+            "reason" : "changed"
+          },
+          "members@delta" : [ {
+            "@odata.type" : "#microsoft.graph.user",
+            "id" : "00000000-0000-4000-8000-000000000016",
+            "@removed" : {
+              "reason" : "deleted"
+            }
+          } ]
+        }, {
+          "id" : "00000000-0000-4000-8000-000000000062",
+          "@removed" : {
+            "reason" : "changed"
+          },
+          "members@delta" : [ {
+            "@odata.type" : "#microsoft.graph.user",
+            "id" : "00000000-0000-4000-8000-000000000016",
+            "@removed" : {
+              "reason" : "deleted"
+            }
+          } ]
+        }, {
+          "id" : "00000000-0000-4000-8000-000000000063",
+          "@removed" : {
+            "reason" : "changed"
+          },
+          "members@delta" : [ {
+            "@odata.type" : "#microsoft.graph.user",
+            "id" : "00000000-0000-4000-8000-000000000016",
+            "@removed" : {
+              "reason" : "deleted"
+            }
+          } ]
+        }, {
+          "id" : "00000000-0000-4000-8000-000000000064",
+          "@removed" : {
+            "reason" : "changed"
+          },
+          "members@delta" : [ {
+            "@odata.type" : "#microsoft.graph.user",
+            "id" : "00000000-0000-4000-8000-000000000016",
+            "@removed" : {
+              "reason" : "deleted"
+            }
+          } ]
         } ]
       }
     }

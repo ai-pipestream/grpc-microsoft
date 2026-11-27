@@ -38,7 +38,7 @@
           "SystemUpdate" : true,
           "Navigation" : true,
           "ChangeTokenStart" : {
-            "StringValue" : "1;2;00000000-0000-4000-8000-000000000002;639313979036300000;1676303797"
+            "StringValue" : "1;2;00000000-0000-4000-8000-000000000002;639314033518800000;1676312041"
           }
         }
       }
@@ -51,7 +51,7 @@
     },
     "body" : {
       "json" : {
-        "odata.metadata" : "https://redacted.example/url/63",
+        "odata.metadata" : "https://redacted.example/url/73",
         "value" : [ ]
       }
     }

@@ -1,0 +1,49 @@
+{
+  "request" : {
+    "method" : "POST",
+    "url" : "https://graph.microsoft.com/v1.0/drives/b!drive-0001/items/item-0008/invite",
+    "authorized" : true,
+    "headers" : {
+      "content-type" : "application/json"
+    },
+    "body" : {
+      "json" : {
+        "recipients" : [ {
+          "objectId" : "00000000-0000-4000-8000-000000000054"
+        } ],
+        "roles" : [ "read" ],
+        "requireSignIn" : true,
+        "sendInvitation" : false
+      }
+    }
+  },
+  "response" : {
+    "status" : 200,
+    "headers" : {
+      "location" : "https://graph.microsoft.com",
+      "content-type" : "application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8"
+    },
+    "body" : {
+      "json" : {
+        "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#Collection(microsoft.graph.permission)",
+        "value" : [ {
+          "id" : "permission-0007",
+          "roles" : [ "read" ],
+          "grantedToV2" : {
+            "user" : {
+              "@odata.type" : "#microsoft.graph.sharePointIdentity",
+              "displayName" : "Identity 7",
+              "email" : "email-4@example.invalid"
+            }
+          },
+          "grantedTo" : {
+            "group" : {
+              "displayName" : "Identity 7",
+              "email" : "email-4@example.invalid"
+            }
+          }
+        } ]
+      }
+    }
+  }
+}

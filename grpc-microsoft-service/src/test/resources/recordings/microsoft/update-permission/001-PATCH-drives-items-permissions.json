@@ -1,0 +1,50 @@
+{
+  "request" : {
+    "method" : "PATCH",
+    "url" : "https://graph.microsoft.com/v1.0/drives/b!drive-0001/items/item-0008/permissions/permission-0007",
+    "authorized" : true,
+    "headers" : {
+      "content-type" : "application/json"
+    },
+    "body" : {
+      "json" : {
+        "roles" : [ "write" ]
+      }
+    }
+  },
+  "response" : {
+    "status" : 200,
+    "headers" : {
+      "content-type" : "application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8"
+    },
+    "body" : {
+      "json" : {
+        "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#drives('b%21drive-0001')/items('item-0008')/permissions/$entity",
+        "id" : "permission-0007",
+        "roles" : [ "write" ],
+        "shareId" : "permission-0007",
+        "grantedToV2" : {
+          "group" : {
+            "@odata.type" : "#microsoft.graph.sharePointIdentity",
+            "displayName" : "Identity 7",
+            "email" : "email-4@example.invalid",
+            "id" : "00000000-0000-4000-8000-000000000054"
+          },
+          "siteUser" : {
+            "displayName" : "Identity 7",
+            "email" : "email-4@example.invalid",
+            "id" : "41",
+            "loginName" : "c:0o.c|federateddirectoryclaimprovider|00000000-0000-4000-8000-000000000054"
+          }
+        },
+        "grantedTo" : {
+          "user" : {
+            "displayName" : "Identity 7",
+            "email" : "email-4@example.invalid",
+            "id" : "00000000-0000-4000-8000-000000000054"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "request" : {
+    "method" : "POST",
+    "url" : "https://graph.microsoft.com/v1.0/drives/b!drive-0001/items/item-0008/createLink",
+    "authorized" : true,
+    "headers" : {
+      "content-type" : "application/json"
+    },
+    "body" : {
+      "json" : {
+        "type" : "view",
+        "scope" : "anonymous"
+      }
+    }
+  },
+  "response" : {
+    "status" : 403,
+    "headers" : {
+      "content-type" : "application/json"
+    },
+    "body" : {
+      "json" : {
+        "error" : {
+          "code" : "notAllowed",
+          "message" : "The operation failed because sharing has been disabled on this site.",
+          "innerError" : {
+            "code" : "sharingDisabled",
+            "date" : "2026-11-27T19:09:02",
+            "request-id" : "00000000-0000-4000-8000-000000000104",
+            "client-request-id" : "00000000-0000-4000-8000-000000000104"
+          }
+        }
+      }
+    }
+  }
+}

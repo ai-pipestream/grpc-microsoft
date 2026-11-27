@@ -105,6 +105,48 @@ class RecordingScrubberTest {
     }
 
     @Test
+    void aShareIdIsReplacedAndTheLeakCheckSeesOne() throws Exception {
+        String share = "u!aHR0cHM6Ly9jb250b3NvLnNoYXJlcG9pbnQuY29tLzp0Oi9zL1RlYW0vYWJj";
+        JsonNode scrubbed = scrubber.json(Recordings.JSON.readTree("""
+                {"value":[{"id":"%s","roles":["read"],"shareId":"%s","link":{"scope":"organization"}},
+                          {"id":"aTowIy5mfG1lbWJlcnNoaXB8c29tZW9uZQ","roles":["write"],
+                           "shareId":"aTowIy5mfG1lbWJlcnNoaXB8c29tZW9uZQ"}]}""".formatted(GUID_A, share)));
+
+        assertThat(scrubbed.path("value").path(0).path("shareId").asText()).isEqualTo("share-0001");
+        assertThat(scrubber.text(GRAPH + "/shares/" + share + "/permission/grant"))
+                .isEqualTo(GRAPH + "/shares/share-0001/permission/grant");
+        assertThat(scrubbed.path("value").path(1).path("shareId").asText())
+                .isEqualTo(scrubbed.path("value").path(1).path("id").asText());
+        assertThat(RecordingScrubber.violations("\"shareId\":\"" + share + "\""))
+                .containsExactly("encoded sharing URL");
+        assertThat(RecordingScrubber.violations(scrubbed.toString())).isEmpty();
+    }
+
+    @Test
+    void theGroupOfASharingLinkOrOfLimitedAccessKeepsItsKind() throws Exception {
+        JsonNode scrubbed = scrubber.json(Recordings.JSON.readTree("""
+                {"value":[
+                 {"Id":20,"LoginName":"SharingLinks.%1$s.OrganizationView.%2$s",
+                  "Title":"SharingLinks.%1$s.OrganizationView.%2$s","Description":"made for a link"},
+                 {"Id":21,"LoginName":"Limited Access System Group For List %1$s",
+                  "Title":"Limited Access System Group For List %1$s"},
+                 {"Id":22,"LoginName":"SharingLinks and more","Title":"SharingLinks and more"}],
+                 "UniqueId":"%1$s"}""".formatted(GUID_A, GUID_B)));
+
+        String item = scrubbed.path("UniqueId").asText();
+        JsonNode link = scrubbed.path("value").path(0);
+        assertThat(item).startsWith(RecordingScrubber.GUID_PREFIX);
+        assertThat(link.path("LoginName").asText()).startsWith("SharingLinks." + item + ".OrganizationView.")
+                .doesNotContain(GUID_B);
+        assertThat(link.path("Title").asText()).isEqualTo(link.path("LoginName").asText());
+        assertThat(link.path("Description").asText()).isEqualTo("Principal 1");
+        assertThat(scrubbed.path("value").path(1).path("LoginName").asText())
+                .isEqualTo("Limited Access System Group For List " + item);
+        assertThat(scrubbed.path("value").path(2).path("LoginName").asText()).isEqualTo("Principal 2");
+        assertThat(RecordingScrubber.violations(scrubbed.toString())).isEmpty();
+    }
+
+    @Test
     void violationsNameWhatStillLooksLikeTenantData() {
         assertThat(RecordingScrubber.violations("{\"fields@odata.context\":\"x\",\"id\":\""
                 + RecordingScrubber.GUID_PREFIX + "000000000007\",\"@odata.etag\":\"1\"}"))

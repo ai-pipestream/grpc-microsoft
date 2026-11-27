@@ -990,22 +990,102 @@ public final class MicrosoftGrpcService
         stream(observer, () -> {
             MicrosoftSessions.Session session = sessions.resolve(request.getConnectionId());
             PermissionTarget target = request.getTarget();
-            String route = switch (target.getTargetCase()) {
-                case DRIVE_ITEM -> GraphPaths.item(target.getDriveItem().getDriveId(),
-                        target.getDriveItem().getItemId()) + "/permissions";
-                case LIST_ITEM -> GraphPaths.listItem(target.getListItem().getSiteId(),
-                        target.getListItem().getListId(), target.getListItem().getItemId())
-                        + "/permissions";
-                case LIST -> GraphPaths.list(target.getList().getSiteId(), target.getList().getListId())
-                        + "/permissions";
-                case SITE_ID -> "/sites/" + GraphPaths.site(target.getSiteId()) + "/permissions";
-                case TARGET_NOT_SET -> throw new IllegalArgumentException("target is required");
-            };
+            String route = PermissionWriter.permissions(target);
             session.pager().forEach(List.of(route), Map.of(), node -> {
                 observer.onNext(ListPermissionsResponse.newBuilder()
                         .setPermission(valid(mapper.toPermission(node, target))).build());
                 return true;
             });
+        });
+    }
+
+    @Override
+    public void getPermission(ai.pipestream.microsoft.v1.GetPermissionRequest request,
+            StreamObserver<ai.pipestream.microsoft.v1.GetPermissionResponse> observer) {
+        unary(observer, () -> {
+            MicrosoftSessions.Session session = sessions.resolve(request.getConnectionId());
+            JsonNode node = session.graph().get(
+                    PermissionWriter.permission(request.getTarget(), request.getPermissionId()));
+            return ai.pipestream.microsoft.v1.GetPermissionResponse.newBuilder()
+                    .setPermission(valid(mapper.toPermission(node, request.getTarget()))).build();
+        });
+    }
+
+    @Override
+    public void createSharingLink(ai.pipestream.microsoft.v1.CreateSharingLinkRequest request,
+            StreamObserver<ai.pipestream.microsoft.v1.CreateSharingLinkResponse> observer) {
+        unary(observer, () -> {
+            MicrosoftSessions.Session session = sessions.resolve(request.getConnectionId());
+            GraphClient.Reply reply = PermissionWriter.createLink(session.graph(), request);
+            return ai.pipestream.microsoft.v1.CreateSharingLinkResponse.newBuilder()
+                    .setPermission(valid(mapper.toPermission(reply.body(), request.getTarget())))
+                    .setCreated(reply.status() == 201)
+                    .build();
+        });
+    }
+
+    @Override
+    public void inviteRecipients(ai.pipestream.microsoft.v1.InviteRecipientsRequest request,
+            StreamObserver<ai.pipestream.microsoft.v1.InviteRecipientsResponse> observer) {
+        unary(observer, () -> {
+            MicrosoftSessions.Session session = sessions.resolve(request.getConnectionId());
+            PermissionTarget target = PermissionWriter.target(request.getItem());
+            ai.pipestream.microsoft.v1.InviteRecipientsResponse.Builder response =
+                    ai.pipestream.microsoft.v1.InviteRecipientsResponse.newBuilder();
+            for (JsonNode node : PermissionWriter.invite(session.graph(), request).path("value")) {
+                response.addPermissions(valid(mapper.toPermission(node, target)));
+            }
+            return response.build();
+        });
+    }
+
+    @Override
+    public void updatePermission(ai.pipestream.microsoft.v1.UpdatePermissionRequest request,
+            StreamObserver<ai.pipestream.microsoft.v1.UpdatePermissionResponse> observer) {
+        unary(observer, () -> {
+            MicrosoftSessions.Session session = sessions.resolve(request.getConnectionId());
+            return ai.pipestream.microsoft.v1.UpdatePermissionResponse.newBuilder()
+                    .setPermission(valid(mapper.toPermission(
+                            PermissionWriter.update(session.graph(), request), request.getTarget())))
+                    .build();
+        });
+    }
+
+    @Override
+    public void deletePermission(ai.pipestream.microsoft.v1.DeletePermissionRequest request,
+            StreamObserver<ai.pipestream.microsoft.v1.DeletePermissionResponse> observer) {
+        unary(observer, () -> {
+            MicrosoftSessions.Session session = sessions.resolve(request.getConnectionId());
+            PermissionWriter.delete(session.graph(), request.getTarget(), request.getPermissionId());
+            return ai.pipestream.microsoft.v1.DeletePermissionResponse.getDefaultInstance();
+        });
+    }
+
+    @Override
+    public void grantLinkAccess(ai.pipestream.microsoft.v1.GrantLinkAccessRequest request,
+            StreamObserver<ai.pipestream.microsoft.v1.GrantLinkAccessResponse> observer) {
+        unary(observer, () -> {
+            MicrosoftSessions.Session session = sessions.resolve(request.getConnectionId());
+            PermissionTarget target = PermissionWriter.target(request.getItem());
+            ai.pipestream.microsoft.v1.GrantLinkAccessResponse.Builder response =
+                    ai.pipestream.microsoft.v1.GrantLinkAccessResponse.newBuilder();
+            for (JsonNode node : PermissionWriter.grant(session.graph(), request).path("value")) {
+                response.addPermissions(valid(mapper.toPermission(node, target)));
+            }
+            return response.build();
+        });
+    }
+
+    @Override
+    public void revokeLinkAccess(ai.pipestream.microsoft.v1.RevokeLinkAccessRequest request,
+            StreamObserver<ai.pipestream.microsoft.v1.RevokeLinkAccessResponse> observer) {
+        unary(observer, () -> {
+            MicrosoftSessions.Session session = sessions.resolve(request.getConnectionId());
+            return ai.pipestream.microsoft.v1.RevokeLinkAccessResponse.newBuilder()
+                    .setPermission(valid(mapper.toPermission(
+                            PermissionWriter.revoke(session.graph(), request),
+                            PermissionWriter.target(request.getItem()))))
+                    .build();
         });
     }
 

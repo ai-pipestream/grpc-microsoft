@@ -1,25 +1,25 @@
 {
   "request" : {
     "method" : "GET",
-    "url" : "https://graph.microsoft.com/v1.0/drives/b!drive-0001/items/item-0009/listItem?$expand=fields",
+    "url" : "https://graph.microsoft.com/v1.0/drives/b!drive-0001/items/item-0011/listItem?$expand=fields",
     "authorized" : true,
     "headers" : { }
   },
   "response" : {
     "status" : 200,
     "headers" : {
-      "etag" : "\"00000000-0000-4000-8000-000000000220,2\"",
+      "etag" : "\"00000000-0000-4000-8000-000000000306,2\"",
       "content-type" : "application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8"
     },
     "body" : {
       "json" : {
-        "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#drives('b%21drive-0001')/items('item-0009')/listItem(fields())/$entity",
-        "@odata.etag" : "\"00000000-0000-4000-8000-000000000220,2\"",
-        "createdDateTime" : "2026-11-27T17:38:39Z",
-        "eTag" : "\"00000000-0000-4000-8000-000000000220,2\"",
-        "id" : "289",
-        "lastModifiedDateTime" : "2026-11-27T17:38:40Z",
-        "webUrl" : "https://redacted.example/url/176",
+        "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#drives('b%21drive-0001')/items('item-0011')/listItem(fields())/$entity",
+        "@odata.etag" : "\"00000000-0000-4000-8000-000000000306,2\"",
+        "createdDateTime" : "2026-11-27T19:09:27Z",
+        "eTag" : "\"00000000-0000-4000-8000-000000000306,2\"",
+        "id" : "327",
+        "lastModifiedDateTime" : "2026-11-27T19:09:27Z",
+        "webUrl" : "https://redacted.example/url/234",
         "createdBy" : {
           "user" : {
             "displayName" : "Identity 2"
@@ -42,14 +42,14 @@
           "id" : "0x012000661EAB7E3159E54AB727CAFB64BDD9C8",
           "name" : "Folder"
         },
-        "fields@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#drives('b%21drive-0001')/items('item-0009')/listItem/fields/$entity",
+        "fields@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#drives('b%21drive-0001')/items('item-0011')/listItem/fields/$entity",
         "fields" : {
-          "@odata.etag" : "\"00000000-0000-4000-8000-000000000220,2\"",
-          "id" : "289",
+          "@odata.etag" : "\"00000000-0000-4000-8000-000000000306,2\"",
+          "id" : "327",
           "ContentType" : "Folder",
-          "Created" : "2026-11-27T17:38:39Z",
+          "Created" : "2026-11-27T19:09:27Z",
           "AuthorLookupId" : "1073741822",
-          "Modified" : "2026-11-27T17:38:40Z",
+          "Modified" : "2026-11-27T19:09:27Z",
           "EditorLookupId" : "1073741822",
           "FileLeafRef" : "batch-b",
           "_CheckinComment" : "",
@@ -68,8 +68,8 @@
           "AppEditorLookupId" : "4",
           "Edit" : "0",
           "_UIVersionString" : "1.0",
-          "ParentVersionStringLookupId" : "289",
-          "ParentLeafNameLookupId" : "289"
+          "ParentVersionStringLookupId" : "327",
+          "ParentLeafNameLookupId" : "327"
         }
       }
     }
