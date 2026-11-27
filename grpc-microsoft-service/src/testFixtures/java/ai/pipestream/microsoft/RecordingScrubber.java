@@ -293,6 +293,13 @@ final class RecordingScrubber {
                     continue;
                 }
             }
+            if (boundary && guidless.startsWith(ENCODED_SHARE_URL, i)) {
+                // A share id in the URL of a request.
+                int end = run(guidless, i + 2, RecordingScrubber::idChar);
+                out.append(placeholder("share", guidless.substring(i, end), "share-%04d"));
+                i = end;
+                continue;
+            }
             if (boundary && guidless.startsWith("b%21", i)) {
                 // The same drive id inside a URL, with its '!' percent-encoded.
                 int end = run(guidless, i + 4, RecordingScrubber::idChar);

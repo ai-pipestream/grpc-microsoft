@@ -113,6 +113,8 @@ class RecordingScrubberTest {
                            "shareId":"aTowIy5mfG1lbWJlcnNoaXB8c29tZW9uZQ"}]}""".formatted(GUID_A, share)));
 
         assertThat(scrubbed.path("value").path(0).path("shareId").asText()).isEqualTo("share-0001");
+        assertThat(scrubber.text(GRAPH + "/shares/" + share + "/permission/grant"))
+                .isEqualTo(GRAPH + "/shares/share-0001/permission/grant");
         assertThat(scrubbed.path("value").path(1).path("shareId").asText())
                 .isEqualTo(scrubbed.path("value").path(1).path("id").asText());
         assertThat(RecordingScrubber.violations("\"shareId\":\"" + share + "\""))

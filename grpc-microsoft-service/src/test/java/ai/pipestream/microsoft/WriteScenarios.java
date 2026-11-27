@@ -305,7 +305,7 @@ final class WriteScenarios {
     private String usersLinkId;
     private String anyoneLinkId;
     private String invitedPermissionId;
-    /** Roles the invited user held on the shared file before the invitation. */
+    /** Roles the invited group held on the shared file before the invitation. */
     private final Set<String> rolesBeforeTheInvitation = new TreeSet<>();
     private boolean linkColumn;
     private String libraryId;
@@ -436,7 +436,7 @@ final class WriteScenarios {
                         "GrantLinkAccess [a directory user on the link for named people]",
                         this::grantLinkAccess),
                 new Scenario("invite-recipients", "InviteRecipients",
-                        "InviteRecipients [a directory user, no mail]", this::inviteRecipients),
+                        "InviteRecipients [a directory group, no mail]", this::inviteRecipients),
                 new Scenario("update-permission", "UpdatePermission",
                         "UpdatePermission [read to write]", this::updatePermission),
                 new Scenario("create-sharing-link-anonymous", "CreateSharingLink",
@@ -2309,10 +2309,12 @@ final class WriteScenarios {
         return SharingRecipient.newBuilder().setObjectId(need(userId, "a directory user")).build();
     }
 
-    private static boolean names(Permission permission, String user) {
-        return permission.getGrantedTo().getUser().getId().equalsIgnoreCase(user)
-                || permission.getGrantedToIdentitiesList().stream()
-                        .anyMatch(grantee -> grantee.getUser().getId().equalsIgnoreCase(user));
+    /** Whether a permission names the user or group with this directory id as a grantee. */
+    private static boolean names(Permission permission, String id) {
+        List<SharePointIdentitySet> grantees = new ArrayList<>(permission.getGrantedToIdentitiesList());
+        grantees.add(permission.getGrantedTo());
+        return grantees.stream().anyMatch(grantee -> grantee.getUser().getId().equalsIgnoreCase(id)
+                || grantee.getGroup().getId().equalsIgnoreCase(id));
     }
 
     private String shareWithTheOrganization() throws Exception {
@@ -2385,15 +2387,18 @@ final class WriteScenarios {
 
     private String inviteRecipients() {
         need(organizationLinkId, "the shared file");
+        need(groupId, "a directory group");
         stub().listPermissions(ListPermissionsRequest.newBuilder().setTarget(sharedTarget()).build())
                 .forEachRemaining(response -> {
-                    if (!response.getPermission().hasLink() && names(response.getPermission(), theUser()
-                            .getObjectId())) {
+                    if (!response.getPermission().hasLink() && names(response.getPermission(), groupId)) {
                         rolesBeforeTheInvitation.addAll(response.getPermission().getRolesList());
                     }
                 });
+        check(rolesBeforeTheInvitation.isEmpty(), "the group already holds " + rolesBeforeTheInvitation
+                + " on the file");
         List<Permission> made = stub().inviteRecipients(InviteRecipientsRequest.newBuilder()
-                .setItem(ref(shared.getId())).addRecipients(theUser()).addRoles("read")
+                .setItem(ref(shared.getId()))
+                .addRecipients(SharingRecipient.newBuilder().setObjectId(groupId)).addRoles("read")
                 .setRequireSignIn(true).build()).getPermissionsList();
         check(made.size() == 1, "one recipient got " + made.size() + " permission(s)");
         Permission permission = made.get(0);
@@ -2401,14 +2406,14 @@ final class WriteScenarios {
         check(permission.getRolesList().contains("read"), "asked for read, got " + permission.getRolesList());
         check(permission.getTarget().equals(sharedTarget()), "the permission names another target");
         invitedPermissionId = permission.getId();
-        return "1 permission with roles " + permission.getRolesList() + ", a link "
-                + (permission.hasLink() ? "for " + permission.getLink().getScope() : "is not part of it")
-                + ", no mail asked for; before, the user held " + (rolesBeforeTheInvitation.isEmpty()
-                        ? "no permission of their own on the file" : rolesBeforeTheInvitation + " on the file");
+        return "1 permission with roles " + permission.getRolesList() + " for a "
+                + (permission.hasGrantedTo() ? kind(permission.getGrantedTo()) : "grantee Graph does not name")
+                + ", a link " + (permission.hasLink() ? "for " + permission.getLink().getScope()
+                        : "is not part of it") + ", no mail asked for";
     }
 
     private String updatePermission() {
-        need(invitedPermissionId, "the invited user's permission");
+        need(invitedPermissionId, "the invited group's permission");
         Permission changed = stub().updatePermission(UpdatePermissionRequest.newBuilder()
                 .setTarget(sharedTarget()).setPermissionId(invitedPermissionId).addRoles("write").build())
                 .getPermission();
@@ -2474,10 +2479,11 @@ final class WriteScenarios {
         if (invitedPermissionId != null) {
             Permission invited = byId.get(invitedPermissionId);
             check(invited != null && invited.getRolesList().contains("write"),
-                    "the ACL does not list the invited user with write");
+                    "the ACL does not list the invited group with write"
+                            + (invited == null ? "" : ", but with " + invited.getRolesList()));
         }
         return byId.size() + " permission(s), links by scope " + scopes
-                + (invitedPermissionId == null ? "" : ", the invited user with write");
+                + (invitedPermissionId == null ? "" : ", the invited group with write");
     }
 
     /** A drive item of the test library as a list item. */
@@ -2531,11 +2537,27 @@ final class WriteScenarios {
         check(usersLinkId == null || levels.keySet().stream().anyMatch(scope -> scope.startsWith("users ")),
                 "no role assignment names the group of the link for named people: " + levels.keySet());
         Set<String> siteLevels = new TreeSet<>();
+        Set<String> groupOnTheSite = new TreeSet<>();
+        int limited = 0;
         for (SiteRoleAssignment assignment : onTheSite) {
             if (assignment.getMember().getSharingLink().getItemUniqueId().equalsIgnoreCase(unique)) {
                 assignment.getRolesList().forEach(role -> siteLevels.add(role.getName()));
             }
+            if (groupId != null && assignment.getMember().getDirectoryObjectId().equalsIgnoreCase(groupId)) {
+                assignment.getRolesList().forEach(role -> groupOnTheSite.add(role.getName()));
+            }
+            // Role type 1 is SharePoint's Guest type: Limited Access.
+            limited += assignment.getRolesCount() > 0 && assignment.getRolesList().stream()
+                    .allMatch(role -> role.getRoleTypeKind() == 1) ? 1 : 0;
         }
+        Set<String> groupOnTheFile = new TreeSet<>();
+        for (SiteRoleAssignment assignment : assignments) {
+            if (groupId != null && assignment.getMember().getDirectoryObjectId().equalsIgnoreCase(groupId)) {
+                assignment.getRolesList().forEach(role -> groupOnTheFile.add(role.getName()));
+            }
+        }
+        check(invitedPermissionId == null || !groupOnTheFile.isEmpty(),
+                "the file's role assignments do not name the invited group");
         int linkGroups = 0;
         int members = 0;
         boolean userIsMember = false;
@@ -2563,17 +2585,27 @@ final class WriteScenarios {
         return "the file has its own role assignments; link groups and their levels " + levels + "; "
                 + linkGroups + " link group(s) of the file among the site's groups, " + members
                 + " member(s) in the one for named people; on the site those groups hold "
-                + (siteLevels.isEmpty() ? "nothing" : siteLevels);
+                + (siteLevels.isEmpty() ? "nothing" : siteLevels)
+                + (invitedPermissionId == null ? "" : "; the invited group holds " + groupOnTheFile
+                        + " on the file and " + (groupOnTheSite.isEmpty() ? "nothing" : groupOnTheSite)
+                        + " on the site")
+                + "; " + limited + " assignment(s) on the site hold only Limited Access";
     }
 
-    private String revokeLinkAccess() {
+    private String revokeLinkAccess() throws InterruptedException {
         need(usersLinkId, "the link for named people");
         Permission after = stub().revokeLinkAccess(RevokeLinkAccessRequest.newBuilder()
                 .setItem(ref(shared.getId())).setPermissionId(usersLinkId).addGrantees(theUser()).build())
                 .getPermission();
-        check(!names(after, userId), "the answer still names the user");
-        check(!names(permissionOfTheSharedFile(usersLinkId), userId), "the link read back still names the user");
-        return "the link read back names " + after.getGrantedToIdentitiesCount() + " grantee(s), not the user";
+        check(after.getId().equals(usersLinkId), "the answer is another permission");
+        int reads = 1;
+        while (names(permissionOfTheSharedFile(usersLinkId), userId)) {
+            check(reads < DIRECTORY_READS, "after " + reads + " reads the link still names the user");
+            reads++;
+            pause();
+        }
+        return "the answer names " + after.getGrantedToIdentitiesCount()
+                + " grantee(s); the link read back no longer names the user on read " + reads;
     }
 
     private String deletePermissions() {
@@ -2603,12 +2635,12 @@ final class WriteScenarios {
         left.keySet().retainAll(ids);
         String user = "";
         if (invited != null && left.containsKey(invited)) {
-            // The user held a permission of their own before the invitation; that one stays.
+            // The group held a permission of its own before the invitation; that one stays.
             Set<String> roles = new TreeSet<>(left.remove(invited).getRolesList());
             check(!rolesBeforeTheInvitation.isEmpty() && roles.equals(rolesBeforeTheInvitation),
-                    "the invited user is still in the ACL with " + roles + "; before the invitation "
+                    "the invited group is still in the ACL with " + roles + "; before the invitation "
                             + rolesBeforeTheInvitation);
-            user = "; the user is back to " + roles + ", as before the invitation";
+            user = "; the group is back to " + roles + ", as before the invitation";
         }
         check(left.isEmpty(), left.size() + " removed permission(s) are still in the ACL");
         return ids.size() + " permission(s) removed; the ACL lists no link" + user;
