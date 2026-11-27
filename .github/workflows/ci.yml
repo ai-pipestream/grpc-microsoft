@@ -102,6 +102,7 @@ jobs:
         with:
           distribution: temurin
           java-version: "25"
+          cache: gradle
       - run: ./gradlew --no-daemon build -PintegrationDir=../grpc-integration
         working-directory: grpc-microsoft
 
@@ -206,6 +207,7 @@ jobs:
         with:
           distribution: temurin
           java-version: "25"
+          cache: gradle
       - name: Live Microsoft Graph smoke
         working-directory: grpc-microsoft
         env:
@@ -263,6 +265,7 @@ jobs:
         with:
           distribution: temurin
           java-version: "25"
+          cache: gradle
       - name: Live Microsoft Graph coverage run
         working-directory: grpc-microsoft
         env:
@@ -314,6 +317,7 @@ jobs:
         with:
           distribution: temurin
           java-version: "25"
+          cache: gradle
       - name: Live admin service read and dry run
         working-directory: grpc-microsoft
         env:
@@ -371,6 +375,7 @@ jobs:
         with:
           distribution: temurin
           java-version: "25"
+          cache: gradle
       - name: Set the test app's role back
         working-directory: grpc-microsoft
         env:
@@ -419,6 +424,7 @@ jobs:
         with:
           distribution: temurin
           java-version: "25"
+          cache: gradle
       - name: Live Microsoft Graph write test
         working-directory: grpc-microsoft
         env:
@@ -479,6 +485,7 @@ jobs:
         with:
           distribution: temurin
           java-version: "25"
+          cache: gradle
       - name: Start a temporary tunnel to the receiver port
         id: tunnel
         run: |
@@ -606,6 +613,7 @@ jobs:
         with:
           distribution: temurin
           java-version: "25"
+          cache: gradle
       - name: Hygiene test on the imported recordings
         working-directory: grpc-microsoft
         run: |
@@ -687,6 +695,7 @@ jobs:
         with:
           distribution: temurin
           java-version: "25"
+          cache: gradle
       - name: Replay and hygiene tests on the imported recordings
         working-directory: grpc-microsoft
         run: |
