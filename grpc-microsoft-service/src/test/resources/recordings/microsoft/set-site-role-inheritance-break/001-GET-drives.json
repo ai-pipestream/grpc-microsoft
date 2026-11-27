@@ -16,7 +16,7 @@
         "createdDateTime" : "2026-10-10T02:58:54Z",
         "description" : "",
         "id" : "b!drive-0001",
-        "lastModifiedDateTime" : "2026-11-24T21:22:05Z",
+        "lastModifiedDateTime" : "2026-11-27T17:37:18Z",
         "name" : "Documents",
         "webUrl" : "https://redacted.example/url/42",
         "driveType" : "documentLibrary",
@@ -33,8 +33,8 @@
           }
         },
         "quota" : {
-          "deleted" : 10682927,
-          "remaining" : 27487767298906,
+          "deleted" : 10888638,
+          "remaining" : 27487767093195,
           "state" : "normal",
           "total" : 27487790694400,
           "used" : 12712567

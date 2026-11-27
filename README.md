@@ -104,6 +104,10 @@ permission level (`ListSiteRoleDefinitions` lists them) on a site, list or
 list item that has its own role assignments. These writes need the
 certificate credential and the site grant `fullcontrol`.
 
+`GetGroup` reads one Entra group. `CreateGroup`, `UpdateGroup` and
+`DeleteGroup` make, change and delete a group in the directory;
+`AddGroupMember` and `RemoveGroupMember` change its direct members.
+
 Point the proxy at a running sync-table (from grpc-integration) to record
 crawl / update / delete rows:
 
@@ -260,8 +264,9 @@ privilege each rpc needs, and of which rows are proven against a real tenant.
 In short: the connector app holds Graph and SharePoint Online
 `Sites.Selected` and one grant per site (`read` to index, `manage` to write,
 `fullcontrol` to read or change access control), plus Graph `User.Read.All`
-and `GroupMember.Read.All` for Entra users and groups; rpcs that call
-SharePoint REST need the certificate credential. Only the admin service
+and `GroupMember.Read.All` to read Entra users and groups and
+`Group.ReadWrite.All` to change groups; rpcs that call SharePoint REST need
+the certificate credential. Only the admin service
 holds `Sites.FullControl.All`.
 
 ## Site grants (admin service)

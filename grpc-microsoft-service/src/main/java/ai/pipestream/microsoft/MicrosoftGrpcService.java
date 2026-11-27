@@ -507,6 +507,71 @@ public final class MicrosoftGrpcService
         });
     }
 
+    @Override
+    public void getGroup(ai.pipestream.microsoft.v1.GetGroupRequest request,
+            StreamObserver<ai.pipestream.microsoft.v1.GetGroupResponse> observer) {
+        unary(observer, () -> {
+            MicrosoftSessions.Session session = sessions.resolve(request.getConnectionId());
+            String route = DirectoryWriter.group(request.getGroupId());
+            return ai.pipestream.microsoft.v1.GetGroupResponse.newBuilder()
+                    .setGroup(valid(mapper.toGroup(session.pager().get(
+                            List.of(route + "?$select=" + GraphPaths.GROUP_SELECT, route), Map.of()))))
+                    .build();
+        });
+    }
+
+    @Override
+    public void createGroup(ai.pipestream.microsoft.v1.CreateGroupRequest request,
+            StreamObserver<ai.pipestream.microsoft.v1.CreateGroupResponse> observer) {
+        unary(observer, () -> {
+            MicrosoftSessions.Session session = sessions.resolve(request.getConnectionId());
+            return ai.pipestream.microsoft.v1.CreateGroupResponse.newBuilder()
+                    .setGroup(valid(mapper.toGroup(
+                            DirectoryWriter.createGroup(session.graph(), request.getGroup()))))
+                    .build();
+        });
+    }
+
+    @Override
+    public void updateGroup(ai.pipestream.microsoft.v1.UpdateGroupRequest request,
+            StreamObserver<ai.pipestream.microsoft.v1.UpdateGroupResponse> observer) {
+        unary(observer, () -> {
+            MicrosoftSessions.Session session = sessions.resolve(request.getConnectionId());
+            DirectoryWriter.updateGroup(session.graph(), request);
+            return ai.pipestream.microsoft.v1.UpdateGroupResponse.getDefaultInstance();
+        });
+    }
+
+    @Override
+    public void deleteGroup(ai.pipestream.microsoft.v1.DeleteGroupRequest request,
+            StreamObserver<ai.pipestream.microsoft.v1.DeleteGroupResponse> observer) {
+        unary(observer, () -> {
+            MicrosoftSessions.Session session = sessions.resolve(request.getConnectionId());
+            DirectoryWriter.deleteGroup(session.graph(), request.getGroupId());
+            return ai.pipestream.microsoft.v1.DeleteGroupResponse.getDefaultInstance();
+        });
+    }
+
+    @Override
+    public void addGroupMember(ai.pipestream.microsoft.v1.AddGroupMemberRequest request,
+            StreamObserver<ai.pipestream.microsoft.v1.AddGroupMemberResponse> observer) {
+        unary(observer, () -> {
+            MicrosoftSessions.Session session = sessions.resolve(request.getConnectionId());
+            DirectoryWriter.addMember(session.graph(), request.getGroupId(), request.getMemberId());
+            return ai.pipestream.microsoft.v1.AddGroupMemberResponse.getDefaultInstance();
+        });
+    }
+
+    @Override
+    public void removeGroupMember(ai.pipestream.microsoft.v1.RemoveGroupMemberRequest request,
+            StreamObserver<ai.pipestream.microsoft.v1.RemoveGroupMemberResponse> observer) {
+        unary(observer, () -> {
+            MicrosoftSessions.Session session = sessions.resolve(request.getConnectionId());
+            DirectoryWriter.removeMember(session.graph(), request.getGroupId(), request.getMemberId());
+            return ai.pipestream.microsoft.v1.RemoveGroupMemberResponse.getDefaultInstance();
+        });
+    }
+
     /**
      * Reads {@code /groups/delta}.
      *

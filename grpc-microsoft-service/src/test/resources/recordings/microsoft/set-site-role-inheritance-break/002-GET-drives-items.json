@@ -23,7 +23,7 @@
             "displayName" : "Identity 2"
           }
         },
-        "createdDateTime" : "2026-11-24T21:22:05Z",
+        "createdDateTime" : "2026-11-27T17:37:18Z",
         "eTag" : "\"{00000000-0000-4000-8000-000000000006},2\"",
         "id" : "item-0001",
         "lastModifiedBy" : {
@@ -35,8 +35,8 @@
             "displayName" : "Identity 2"
           }
         },
-        "lastModifiedDateTime" : "2026-11-24T21:22:05Z",
-        "name" : "pipestream-live-write-20261124-212204-980f52a8",
+        "lastModifiedDateTime" : "2026-11-27T17:37:19Z",
+        "name" : "pipestream-live-write-20261127-173717-ecc2f242",
         "parentReference" : {
           "driveType" : "documentLibrary",
           "driveId" : "b!drive-0001",
@@ -54,8 +54,8 @@
         },
         "webUrl" : "https://redacted.example/url/2",
         "fileSystemInfo" : {
-          "createdDateTime" : "2026-11-24T21:22:05Z",
-          "lastModifiedDateTime" : "2026-11-24T21:22:05Z"
+          "createdDateTime" : "2026-11-27T17:37:18Z",
+          "lastModifiedDateTime" : "2026-11-27T17:37:19Z"
         },
         "folder" : {
           "childCount" : 5
@@ -65,7 +65,7 @@
         },
         "sharepointIds" : {
           "listId" : "00000000-0000-4000-8000-000000000008",
-          "listItemId" : "258",
+          "listItemId" : "282",
           "listItemUniqueId" : "00000000-0000-4000-8000-000000000006",
           "siteId" : "00000000-0000-4000-8000-000000000001",
           "siteUrl" : "https://redacted.example/url/3",

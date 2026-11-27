@@ -13,12 +13,12 @@
     "body" : {
       "json" : {
         "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#Collection(microsoft.graph.listItem)",
-        "@odata.deltaLink" : "https://graph.microsoft.com/v1.0/sites/tenant-1.example,00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000002/lists/00000000-0000-4000-8000-000000000022/items/delta?$select=id%2cname%2cwebUrl%2cdescription%2ceTag%2ccreatedDateTime%2clastModifiedDateTime%2ccreatedBy%2clastModifiedBy%2ccontentType%2csharepointIds%2cparentReference%2cdeleted&$expand=fields&token=NDslMjM0OyUyMzE7MzsxMDY0NTAwNC1iMWFlLTRkMmYtYmFhZi05ZWVhMmMzMTRjNTQ7NjM5MzExNTIxNTE0MDcwMDAwOzE2NzU3NDEyNDk7JTIzOyUyMzslMjMyOyUyMw",
+        "@odata.deltaLink" : "https://graph.microsoft.com/v1.0/sites/tenant-1.example,00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000002/lists/00000000-0000-4000-8000-000000000022/items/delta?$select=id%2cname%2cwebUrl%2cdescription%2ceTag%2ccreatedDateTime%2clastModifiedDateTime%2ccreatedBy%2clastModifiedBy%2ccontentType%2csharepointIds%2cparentReference%2cdeleted&$expand=fields&token=NDslMjM0OyUyMzE7MzsxZTk2YTljMC02NzU2LTQzZjMtOTAwOC1hNDIzMjgzYTc0MmQ7NjM5MzEzOTc5MDA4NDMwMDAwOzE2NzYzMDM3NzU7JTIzOyUyMzslMjMyOyUyMw",
         "value" : [ {
           "@odata.etag" : "00000000-0000-4000-8000-000000000052,1",
           "eTag" : "00000000-0000-4000-8000-000000000052,1",
-          "lastModifiedDateTime" : "2026-11-24T21:22:25Z",
-          "createdDateTime" : "2026-11-24T21:22:25Z",
+          "lastModifiedDateTime" : "2026-11-27T17:37:32Z",
+          "createdDateTime" : "2026-11-27T17:37:32Z",
           "id" : "1",
           "webUrl" : "https://redacted.example/url/41",
           "createdBy" : {
@@ -32,7 +32,7 @@
           },
           "parentReference" : {
             "id" : "0",
-            "path" : "Lists/pipestreamlivewrite20261124212204980f52a8",
+            "path" : "Lists/pipestreamlivewrite20261127173717ecc2f242",
             "siteId" : "00000000-0000-4000-8000-000000000001"
           },
           "sharepointIds" : {
@@ -45,7 +45,7 @@
             "webId" : "00000000-0000-4000-8000-000000000002"
           },
           "contentType" : {
-            "id" : "0x010069D3B95A0F86A9439AE46DA06A0277B8",
+            "id" : "0x0100D07CD66CD97EB3409E1FA0A2E88FC5ED",
             "name" : "Item"
           },
           "fields" : {
@@ -53,8 +53,8 @@
             "id" : "1",
             "Title" : "live write",
             "ContentType" : "Item",
-            "Modified" : "2026-11-24T21:22:25Z",
-            "Created" : "2026-11-24T21:22:25Z",
+            "Modified" : "2026-11-27T17:37:32Z",
+            "Created" : "2026-11-27T17:37:32Z",
             "AuthorLookupId" : "1073741822",
             "EditorLookupId" : "1073741822",
             "_UIVersionString" : "1.0",

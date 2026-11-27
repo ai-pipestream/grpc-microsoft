@@ -161,6 +161,16 @@ class RecordingScrubberTest {
         assertThat(own.path("Title").asText()).isEqualTo("pipestream-live-write-1-group");
         assertThat(own.path("LoginName").asText()).isEqualTo("pipestream-live-write-1-group");
         assertThat(own.path("OwnerTitle").asText()).isEqualTo("Principal 1");
+        JsonNode made = scrubber.json(Recordings.JSON.readTree("""
+                {"id":"g1","displayName":"pipestream-live-write-1-entra",
+                 "mailNickname":"pipestream-live-write-1-entra","securityEnabled":true,
+                 "description":"pipestream-live-write-1-entra created by a live test run",
+                 "securityIdentifier":"S-1-12-1-1"}"""));
+        assertThat(made.path("displayName").asText()).isEqualTo("pipestream-live-write-1-entra");
+        assertThat(made.path("mailNickname").asText()).isEqualTo("pipestream-live-write-1-entra");
+        assertThat(made.path("description").asText())
+                .isEqualTo("pipestream-live-write-1-entra created by a live test run");
+        assertThat(made.path("securityIdentifier").asText()).isEqualTo("Directory value 4");
         JsonNode member = scrubber.json(Recordings.JSON.readTree("""
                 {"Id":9,"LoginName":"i:0#.f|membership|ada@contoso.com","Title":"Ada Lovelace",
                  "UserId":{"NameId":"100320012345abcd","NameIdIssuer":"urn:federation:microsoftonline"}}"""));

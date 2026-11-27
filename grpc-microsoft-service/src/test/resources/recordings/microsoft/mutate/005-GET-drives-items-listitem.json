@@ -8,17 +8,17 @@
   "response" : {
     "status" : 200,
     "headers" : {
-      "etag" : "\"00000000-0000-4000-8000-000000000211,2\"",
+      "etag" : "\"00000000-0000-4000-8000-000000000220,2\"",
       "content-type" : "application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8"
     },
     "body" : {
       "json" : {
         "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#drives('b%21drive-0001')/items('item-0009')/listItem(fields())/$entity",
-        "@odata.etag" : "\"00000000-0000-4000-8000-000000000211,2\"",
-        "createdDateTime" : "2026-11-24T21:22:54Z",
-        "eTag" : "\"00000000-0000-4000-8000-000000000211,2\"",
-        "id" : "265",
-        "lastModifiedDateTime" : "2026-11-24T21:22:54Z",
+        "@odata.etag" : "\"00000000-0000-4000-8000-000000000220,2\"",
+        "createdDateTime" : "2026-11-27T17:38:39Z",
+        "eTag" : "\"00000000-0000-4000-8000-000000000220,2\"",
+        "id" : "289",
+        "lastModifiedDateTime" : "2026-11-27T17:38:40Z",
         "webUrl" : "https://redacted.example/url/176",
         "createdBy" : {
           "user" : {
@@ -44,12 +44,12 @@
         },
         "fields@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#drives('b%21drive-0001')/items('item-0009')/listItem/fields/$entity",
         "fields" : {
-          "@odata.etag" : "\"00000000-0000-4000-8000-000000000211,2\"",
-          "id" : "265",
+          "@odata.etag" : "\"00000000-0000-4000-8000-000000000220,2\"",
+          "id" : "289",
           "ContentType" : "Folder",
-          "Created" : "2026-11-24T21:22:54Z",
+          "Created" : "2026-11-27T17:38:39Z",
           "AuthorLookupId" : "1073741822",
-          "Modified" : "2026-11-24T21:22:54Z",
+          "Modified" : "2026-11-27T17:38:40Z",
           "EditorLookupId" : "1073741822",
           "FileLeafRef" : "batch-b",
           "_CheckinComment" : "",
@@ -68,8 +68,8 @@
           "AppEditorLookupId" : "4",
           "Edit" : "0",
           "_UIVersionString" : "1.0",
-          "ParentVersionStringLookupId" : "265",
-          "ParentLeafNameLookupId" : "265"
+          "ParentVersionStringLookupId" : "289",
+          "ParentLeafNameLookupId" : "289"
         }
       }
     }

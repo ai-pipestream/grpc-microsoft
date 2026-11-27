@@ -68,7 +68,7 @@ Not tied to a site grant:
 | `ListUsers`, `DeltaUsers` | Graph `User.Read.All` | Proven with both Entra permissions held (run 45031066801). Each alone not tried |
 | `ListGroups`, `DeltaGroups`, `ListGroupTransitiveMembers`, `ListGroupOwners` | Graph `GroupMember.Read.All` | Same |
 | `ListUserTransitiveMemberOf`, `WatchChanges` with `directory`, subscriptions on a user, a group or a group's members | Graph `User.Read.All` and `GroupMember.Read.All` | Proven |
-| `GetGroup`, `CreateGroup`, `UpdateGroup`, `DeleteGroup`, `AddGroupMember`, `RemoveGroupMember` (on a branch, not merged) | Graph `Group.ReadWrite.All` | Not proven. Granted to the test app on 2026-11-27 |
+| `GetGroup`, `CreateGroup`, `UpdateGroup`, `DeleteGroup`, `AddGroupMember`, `RemoveGroupMember` | Graph `Group.ReadWrite.All` | Proven with it held (write run 46043082830, changes run 46043716533). `GetGroup` with `GroupMember.Read.All` alone not tried |
 | `ListSites`, `ListAllSites`, `DeltaSites` | Graph `Sites.Read.All` (tenant-wide) | Proven refused with `Sites.Selected`. Outside the minimal set: name the sites in the configuration instead |
 | `GetTermStore`, `ListTermGroups`, `ListTermSets`, `ListTerms` | A signed-in user (delegated) | Not proven. Graph does not serve the term store to an application token (run 45095625449) |
 | `GetMe` | A signed-in user (delegated) | Proven: `FAILED_PRECONDITION` with an application token |
@@ -96,8 +96,9 @@ The admin app has no Entra permission and cannot list users or groups
 - List item writes and `Mutate` with `write`: the write run creates its
   list first, which needs `manage`, so they were only tried from `manage` up.
 - `WatchChanges` and subscriptions below `fullcontrol`.
-- Entra group writes need a live run before their row can say proven.
-  `Group.ReadWrite.All` is tenant-wide: it lets the app change every group.
+- `Group.ReadWrite.All` is tenant-wide: it lets the app change every group.
+  Leave it out unless the Entra group writes are used.
+- `GetGroup` with `GroupMember.Read.All` alone.
 - The test admin app also holds SharePoint Online `Sites.FullControl.All`,
   used once to read role assignments as the admin. The admin service does not
   call SharePoint REST, so it should be removable (assumed).
