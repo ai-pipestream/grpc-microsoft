@@ -85,7 +85,9 @@ Reviewers do not dispatch them.
   `SCOPE_DELETE` on the item, and accepts a token older than the log;
   group and group member changes are only in the site collection log and
   name the group, not the member; Graph asks for a reauthorization of a
-  50 minute drive subscription about 16 minutes before it expires.
+  50 minute drive subscription about 16 minutes before it expires; for
+  some seconds after `CreateGroup`, Entra answers 404 to reads and writes of
+  the new group, also after one read has already found it.
 - Updates and deletes send `expected_etag` as If-Match; 412 maps to
   `ABORTED`. 429 and 503 map to `RESOURCE_EXHAUSTED` / `UNAVAILABLE` with
   `RetryInfo`.

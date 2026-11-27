@@ -267,7 +267,7 @@ All are application permissions with admin consent.
 | Everything scoped to a site: `GetSite`, drives, items, downloads, lists, list items, columns, item / list / list-item `ListPermissions`, the delta rpcs, `Sync`, and every write rpc | Graph `Sites.Selected` plus a grant on the site | site grant `manage` |
 | `ListSites`, `ListAllSites`, `DeltaSites` | Graph `Sites.Read.All` (tenant-wide) | refused with `Sites.Selected` alone |
 | `ListUsers`, `ListGroups`, `GetGroup`, `DeltaUsers`, `DeltaGroups`, `ListGroupTransitiveMembers`, `ListUserTransitiveMemberOf`, `WatchChanges` with `directory` | Graph `User.Read.All` and `GroupMember.Read.All` | those two |
-| `CreateGroup`, `UpdateGroup`, `DeleteGroup`, `AddGroupMember`, `RemoveGroupMember` | Graph `Group.ReadWrite.All` (tenant-wide) | not proven yet |
+| `CreateGroup`, `UpdateGroup`, `DeleteGroup`, `AddGroupMember`, `RemoveGroupMember` | Graph `Group.ReadWrite.All` (tenant-wide) | that |
 | `ListSiteGroups`, `GetSiteRoleInheritance` | SharePoint `Sites.Selected` plus a grant on the site, certificate credential | site grant `manage` |
 | `ListSiteGroupMembers`, `ListSiteRoleAssignments` | SharePoint `Sites.Selected` plus site grant `fullcontrol`, certificate credential (refused with `manage`) | site grant `fullcontrol`; also SharePoint `Sites.FullControl.All` |
 | `ListSiteChanges`, `WatchChanges` with `site_changes` | SharePoint `Sites.Selected` plus a grant on the site, certificate credential | site grant `fullcontrol` (not tried with `manage`) |
