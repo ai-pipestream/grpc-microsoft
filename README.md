@@ -274,9 +274,9 @@ certificate credential.
 [docs/permissions.md](docs/permissions.md) is the record of the least
 privilege each rpc needs, and of which rows are proven against a real tenant.
 In short: the connector app holds Graph and SharePoint Online
-`Sites.Selected` and one grant per site (`read` to index, `write` to write into lists that exist, `manage` to
-create lists and columns,
-`fullcontrol` to read or change access control), plus Graph `User.Read.All`
+`Sites.Selected` and one grant per site (`read` to index, `write` to write
+into lists that exist, `manage` to create lists and columns, `fullcontrol`
+to read or change access control), plus Graph `User.Read.All`
 and `GroupMember.Read.All` to read Entra users and groups and
 `Group.ReadWrite.All` to change groups; rpcs that call SharePoint REST need
 the certificate credential. Only the admin service
