@@ -218,7 +218,9 @@ class PermissionWriteRpcTest {
 
     @Test
     void peopleAreAddedToAndTakenOffALink() {
-        fake.stub("POST", ITEM + "/permissions/p1/grant", FakeGraphServer.json(200, """
+        fake.stub(ITEM + "/permissions/p1", LINK);
+        fake.stub(ITEM + "/permissions/p2", "{\"id\":\"p2\",\"roles\":[\"read\"]}");
+        fake.stub("POST", "/shares/u!abc/permission/grant", FakeGraphServer.json(200, """
                 {"value":[{"id":"p1","roles":["read"],"link":{"type":"view","scope":"users"},
                   "grantedToIdentitiesV2":[{"user":{"id":"%s"}}]}]}""".formatted(USER), Map.of()));
         fake.stub("POST", ITEM + "/permissions/p1/revokeGrants", FakeGraphServer.json(200, """
@@ -239,7 +241,7 @@ class PermissionWriteRpcTest {
         });
         assertThat(after.getGrantedToIdentitiesList()).isEmpty();
         assertThat(after.getTarget()).isEqualTo(ON_ITEM);
-        assertThat(fake.only(ITEM + "/permissions/p1/grant").body())
+        assertThat(fake.only("/shares/u!abc/permission/grant").body())
                 .isEqualTo("{\"recipients\":[{\"objectId\":\"" + USER + "\"}],\"roles\":[\"read\"]}");
         assertThat(fake.only(ITEM + "/permissions/p1/revokeGrants").body())
                 .isEqualTo("{\"grantees\":[{\"email\":\"ada@contoso.example\"}]}");
@@ -247,6 +249,9 @@ class PermissionWriteRpcTest {
                 .setPermissionId("p1").addRoles("read").build()));
         assertInvalid(() -> stub.grantLinkAccess(GrantLinkAccessRequest.newBuilder().setItem(ITEM_REF)
                 .setPermissionId("p1").addRecipients(SharingRecipient.newBuilder().setObjectId(USER)).build()));
+        assertInvalid(() -> stub.grantLinkAccess(GrantLinkAccessRequest.newBuilder().setItem(ITEM_REF)
+                .setPermissionId("p2").addRecipients(SharingRecipient.newBuilder().setObjectId(USER))
+                .addRoles("read").build()));
         assertInvalid(() -> stub.revokeLinkAccess(RevokeLinkAccessRequest.newBuilder().setItem(ITEM_REF)
                 .setPermissionId("p1").build()));
         assertInvalid(() -> stub.revokeLinkAccess(RevokeLinkAccessRequest.newBuilder().setItem(ITEM_REF)
@@ -262,6 +267,11 @@ class PermissionWriteRpcTest {
                 CreateSharingLinkRequest.newBuilder().setTarget(ON_ITEM).setType("view").build()));
         assertStatus(Status.Code.NOT_FOUND, () -> stub.deletePermission(DeletePermissionRequest.newBuilder()
                 .setTarget(ON_ITEM).setPermissionId("p1").build()));
+        fake.stub("POST", ITEM + "/permissions/p1/revokeGrants",
+                FakeGraphServer.error(501, "notSupported", Map.of()));
+        assertStatus(Status.Code.UNIMPLEMENTED, () -> stub.revokeLinkAccess(RevokeLinkAccessRequest.newBuilder()
+                .setItem(ITEM_REF).setPermissionId("p1")
+                .addGrantees(SharingRecipient.newBuilder().setObjectId(USER)).build()));
     }
 
     private static void assertInvalid(ThrowingCallable call) {

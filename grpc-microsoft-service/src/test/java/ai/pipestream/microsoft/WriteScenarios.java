@@ -305,6 +305,8 @@ final class WriteScenarios {
     private String usersLinkId;
     private String anyoneLinkId;
     private String invitedPermissionId;
+    /** Roles the invited user held on the shared file before the invitation. */
+    private final Set<String> rolesBeforeTheInvitation = new TreeSet<>();
     private boolean linkColumn;
     private String libraryId;
     private boolean libraryTried;
@@ -2383,6 +2385,13 @@ final class WriteScenarios {
 
     private String inviteRecipients() {
         need(organizationLinkId, "the shared file");
+        stub().listPermissions(ListPermissionsRequest.newBuilder().setTarget(sharedTarget()).build())
+                .forEachRemaining(response -> {
+                    if (!response.getPermission().hasLink() && names(response.getPermission(), theUser()
+                            .getObjectId())) {
+                        rolesBeforeTheInvitation.addAll(response.getPermission().getRolesList());
+                    }
+                });
         List<Permission> made = stub().inviteRecipients(InviteRecipientsRequest.newBuilder()
                 .setItem(ref(shared.getId())).addRecipients(theUser()).addRoles("read")
                 .setRequireSignIn(true).build()).getPermissionsList();
@@ -2394,7 +2403,8 @@ final class WriteScenarios {
         invitedPermissionId = permission.getId();
         return "1 permission with roles " + permission.getRolesList() + ", a link "
                 + (permission.hasLink() ? "for " + permission.getLink().getScope() : "is not part of it")
-                + ", no mail asked for";
+                + ", no mail asked for; before, the user held " + (rolesBeforeTheInvitation.isEmpty()
+                        ? "no permission of their own on the file" : rolesBeforeTheInvitation + " on the file");
     }
 
     private String updatePermission() {
@@ -2484,6 +2494,7 @@ final class WriteScenarios {
         String unique = getItem(shared.getId()).getSharepointIds().getListItemUniqueId();
         check(!unique.isEmpty(), "the shared file's unique id is unknown");
         SiteSecurable file = librarySecurable(shared.getId());
+        sharedSecurable = file;
         List<SiteRoleAssignment> assignments = new ArrayList<>();
         List<SiteRoleAssignment> onTheSite = new ArrayList<>();
         List<SiteGroup> groups = new ArrayList<>();
@@ -2577,20 +2588,30 @@ final class WriteScenarios {
             stub().deletePermission(DeletePermissionRequest.newBuilder().setTarget(sharedTarget())
                     .setPermissionId(id).build());
         }
+        String invited = invitedPermissionId;
         invitedPermissionId = null;
         usersLinkId = null;
         anyoneLinkId = null;
-        Set<String> left = new HashSet<>();
+        Map<String, Permission> left = new HashMap<>();
         int[] links = {0};
         stub().listPermissions(ListPermissionsRequest.newBuilder().setTarget(sharedTarget()).build())
                 .forEachRemaining(response -> {
-                    left.add(response.getPermission().getId());
+                    left.put(response.getPermission().getId(), response.getPermission());
                     links[0] += response.getPermission().hasLink() ? 1 : 0;
                 });
-        left.retainAll(ids);
-        check(left.isEmpty(), left.size() + " removed permission(s) are still in the ACL");
         check(links[0] == 0, links[0] + " link(s) are still in the ACL");
-        return ids.size() + " permission(s) removed; the ACL lists none of them and no link";
+        left.keySet().retainAll(ids);
+        String user = "";
+        if (invited != null && left.containsKey(invited)) {
+            // The user held a permission of their own before the invitation; that one stays.
+            Set<String> roles = new TreeSet<>(left.remove(invited).getRolesList());
+            check(!rolesBeforeTheInvitation.isEmpty() && roles.equals(rolesBeforeTheInvitation),
+                    "the invited user is still in the ACL with " + roles + "; before the invitation "
+                            + rolesBeforeTheInvitation);
+            user = "; the user is back to " + roles + ", as before the invitation";
+        }
+        check(left.isEmpty(), left.size() + " removed permission(s) are still in the ACL");
+        return ids.size() + " permission(s) removed; the ACL lists no link" + user;
     }
 
     private String permissionsOfTheFile() {

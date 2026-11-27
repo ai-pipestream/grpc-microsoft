@@ -171,7 +171,12 @@ final class PermissionWriter {
         ObjectNode body = GraphClient.object();
         body.set("recipients", recipients(request.getRecipientsList(), "recipients"));
         body.set("roles", roles(request.getRolesList()));
-        return graph.post(link(request.getItem(), request.getPermissionId()) + "/grant", body);
+        // Graph answers 501 to the action on the item's own route.
+        String shareId = graph.get(link(request.getItem(), request.getPermissionId())).path("shareId").asText("");
+        if (shareId.isEmpty()) {
+            throw new IllegalArgumentException("permission_id does not name a sharing link");
+        }
+        return graph.post("/shares/" + GraphPaths.segment(shareId, "share id") + "/permission/grant", body);
     }
 
     /**

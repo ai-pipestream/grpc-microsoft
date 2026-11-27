@@ -177,8 +177,8 @@ service MicrosoftService {
   // an inherited one is refused.
   rpc DeletePermission(DeletePermissionRequest) returns (DeletePermissionResponse);
 
-  // POST /drives/{drive-id}/items/{item-id}/permissions/{permission-id}/grant.
-  // Lets people or groups use a sharing link.
+  // POST /shares/{share-id}/permission/grant, with the share id of the link's
+  // permission. Lets people or groups use a sharing link.
   rpc GrantLinkAccess(GrantLinkAccessRequest) returns (GrantLinkAccessResponse);
 
   // POST /drives/{drive-id}/items/{item-id}/permissions/{permission-id}/revokeGrants.
