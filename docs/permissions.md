@@ -47,7 +47,7 @@ the rpc calls SharePoint REST and also needs SharePoint Online
 
 | rpcs | Least site grant | How it is known |
 |---|---|---|
-| `ProbeConnection`, `GetSite`, `ListSubsites`, `ListDrives`, `GetDrive`, `ListChildren`, `GetItem`, `DownloadItem`, `DownloadContent`, `ListItemVersions`, `DeltaDriveItems`, `ListLists`, `GetList`, `ListListItems`, `GetListItem`, `DeltaListItems`, `ListColumns`, `Sync` without `include_security`, `ListPermissions` on a drive item, folder, list or list item | `read` | Proven with `read` (run 46050704996) and `manage` (run 46050146348). `ListItemVersions` and the downloads were read on a file |
+| `ProbeConnection`, `GetSite`, `ListSubsites`, `ListDrives`, `GetDrive`, `ListChildren`, `GetItem`, `DownloadItem`, `DownloadContent`, `ListItemVersions`, `DeltaDriveItems`, `ListLists`, `GetList`, `ListListItems`, `GetListItem`, `DeltaListItems`, `ListColumns`, `Sync` without `include_security`, `ListPermissions` on a drive item, folder, list or list item | `read` | Proven with `read` (run 46050704996) and `manage` (run 46050146348). `ListItemVersions` and the downloads were read on a file. `ListColumns` of a list's own content type was read with `fullcontrol` only (run 46052139239) |
 | `UploadItem`, `CreateFolder`, `UpdateDriveItem`, `DeleteDriveItem`, `RestoreDriveItemVersion`, `CopyDriveItem` | `write` | File writes passed with `write` (2026-11-21). The whole row is proven with `manage` |
 | `CreateListItem`, `UpdateListItemFields`, `DeleteListItem`, `Mutate` | `write` | Assumed for `write`. Proven with `manage` (run 46051076476) |
 | `EnsureList`, `EnsureColumns` | `manage` | Proven: 403 with `write`, pass with `manage` (run 45016824098) |
