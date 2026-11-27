@@ -68,6 +68,15 @@ Recording and scrubbing rules:
 checks every committed file in every build, including percent-encoded
 email addresses.
 
+The write replay can save the records its security and directory reads
+answered (`Sync` with `include_security`, `ListUsers`, a full `DeltaGroups`,
+one group with its owners) as length-delimited protobuf, one file per kind.
+protomolt's ACL mapping tests use those files:
+
+```
+./gradlew :grpc-microsoft-service:test --tests '*MicrosoftWriteReplayTest' -PreplayRecordsDir=/absolute/dir
+```
+
 Live runs go through `.github/workflows/ci.yml` `workflow_dispatch` inputs
 (`run_live_write`, `run_live_coverage`, `run_live_admin`,
 `import_recordings_run_id`, `import_admin_recordings_run_id`,
