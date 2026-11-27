@@ -180,9 +180,9 @@ class MicrosoftLiveGrantProbeIT {
     }
 
     private void fileWrites() throws Exception {
-        String name = FILE_PREFIX + Long.toString(System.currentTimeMillis(), 36) + ".txt";
+        String name = Long.toString(System.currentTimeMillis(), 36) + ".txt";
         DriveItem[] uploaded = new DriveItem[1];
-        row("UploadItem", () -> uploaded[0] = upload(name));
+        row("UploadItem", () -> uploaded[0] = upload(FILE_PREFIX + name));
         String fileId = uploaded[0] != null ? uploaded[0].getId() : fixtureFileId();
         PermissionTarget file = PermissionTarget.newBuilder()
                 .setDriveItem(DriveItemRef.newBuilder().setDriveId(driveId).setItemId(fileId)).build();
@@ -203,10 +203,10 @@ class MicrosoftLiveGrantProbeIT {
             return;
         }
         DriveItemRef ref = DriveItemRef.newBuilder().setDriveId(driveId).setItemId(fileId).build();
-        row("UpdateDriveItem [description]", () -> stub.updateDriveItem(UpdateDriveItemRequest.newBuilder()
-                .setItem(ref).setDescription("grant probe").build()));
+        row("UpdateDriveItem [name]", () -> stub.updateDriveItem(UpdateDriveItemRequest.newBuilder()
+                .setItem(ref).setName(FILE_PREFIX + "renamed-" + name).build()));
         mutate(List.of(MutateRequest.newBuilder().setOpId("update drive item").setUpdateDriveItem(
-                UpdateDriveItemRequest.newBuilder().setItem(ref).setDescription("grant probe, batch")).build()));
+                UpdateDriveItemRequest.newBuilder().setItem(ref).setName(FILE_PREFIX + "batch-" + name)).build()));
         row("DeleteDriveItem", () -> stub.deleteDriveItem(
                 DeleteDriveItemRequest.newBuilder().setItem(ref).build()));
     }
