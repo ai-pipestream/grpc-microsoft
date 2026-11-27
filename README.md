@@ -101,8 +101,8 @@ inheriting, or inherit again. `CreateSiteGroup` and `DeleteSiteGroup`,
 `AddSiteGroupMember` and `RemoveSiteGroupMember` change SharePoint groups;
 `AddSiteRoleAssignment` and `RemoveSiteRoleAssignment` grant or take one
 permission level (`ListSiteRoleDefinitions` lists them) on a site, list or
-list item that has its own role assignments. All need the certificate
-credential and the site grant `fullcontrol`.
+list item that has its own role assignments. These writes need the
+certificate credential and the site grant `fullcontrol`.
 
 Point the proxy at a running sync-table (from grpc-integration) to record
 crawl / update / delete rows:
