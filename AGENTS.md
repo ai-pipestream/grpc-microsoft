@@ -71,7 +71,10 @@ email addresses.
 Live runs go through `.github/workflows/ci.yml` `workflow_dispatch` inputs
 (`run_live_write`, `run_live_coverage`, `run_live_admin`,
 `import_recordings_run_id`, `import_admin_recordings_run_id`,
-`run_live_changes`). Some inputs change tenant grants.
+`run_live_changes`, `run_live_fixture`). Some inputs change tenant grants.
+`run_live_fixture` leaves `pipestream-coverage-sample.txt` and one item in
+the list `pipestream-coverage` on the test site; the read-only coverage run
+reads them, so do not delete them.
 Reviewers do not dispatch them.
 
 ## Microsoft specifics to keep in mind

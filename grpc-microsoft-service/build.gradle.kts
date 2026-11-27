@@ -44,6 +44,7 @@ tasks.named<Test>("test") {
     exclude("**/MicrosoftLiveCoverageIT.class")
     exclude("**/MicrosoftLiveWriteIT.class")
     exclude("**/MicrosoftLiveChangeIT.class")
+    exclude("**/MicrosoftLiveFixtureIT.class")
 }
 
 tasks.register<Test>("liveSmokeTest") {
@@ -66,6 +67,20 @@ tasks.register<Test>("liveCoverageTest") {
     }
     systemProperty("liveCoverage.report", layout.buildDirectory.file("live-coverage.md").get().asFile.path)
     // A live run is never up to date, and the report goes to stdout too.
+    outputs.upToDateWhen { false }
+    testLogging {
+        showStandardStreams = true
+    }
+}
+
+tasks.register<Test>("liveFixtureTest") {
+    description = "Makes sure the test site holds one sample file and one list item for the read-only coverage run, writing only what is missing; needs the live credentials, MICROSOFT_SITE_ID and MICROSOFT_LIVE_FIXTURE=1, skips otherwise"
+    group = "verification"
+    testClassesDirs = sourceSets.test.get().output.classesDirs
+    classpath = sourceSets.test.get().runtimeClasspath
+    filter {
+        includeTestsMatching("ai.pipestream.microsoft.MicrosoftLiveFixtureIT")
+    }
     outputs.upToDateWhen { false }
     testLogging {
         showStandardStreams = true
