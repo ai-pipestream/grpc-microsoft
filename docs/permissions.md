@@ -14,7 +14,8 @@ coverage run each, and to `manage` for one write run (`ci` workflow:
 `run_live_admin`, `live_admin_set_role`, `run_live_coverage` or
 `run_live_write`, `live_admin_restore_role`), then put back to
 `fullcontrol`. The test site keeps one sample file and one list item for
-these runs (`run_live_fixture`).
+these runs (`run_live_fixture`). Writes that need no new list were then
+tried next to that fixture with `read` and `write` (`run_live_grant_probe`).
 
 ## Identities
 
@@ -48,8 +49,8 @@ the rpc calls SharePoint REST and also needs SharePoint Online
 | rpcs | Least site grant | How it is known |
 |---|---|---|
 | `ProbeConnection`, `GetSite`, `ListSubsites`, `ListDrives`, `GetDrive`, `ListChildren`, `GetItem`, `DownloadItem`, `DownloadContent`, `ListItemVersions`, `DeltaDriveItems`, `ListLists`, `GetList`, `ListListItems`, `GetListItem`, `DeltaListItems`, `ListColumns`, `Sync` without `include_security`, `ListPermissions` on a drive item, folder, list or list item | `read` | Proven with `read` (run 46050704996) and `manage` (run 46050146348). `ListItemVersions` and the downloads were read on a file. `ListColumns` of a list's own content type was read with `fullcontrol` only (run 46052139239) |
-| `UploadItem`, `CreateFolder`, `UpdateDriveItem`, `DeleteDriveItem`, `RestoreDriveItemVersion`, `CopyDriveItem` | `write` | File writes passed with `write` (2026-11-21). The whole row is proven with `manage` |
-| `CreateListItem`, `UpdateListItemFields`, `DeleteListItem`, `Mutate` | `write` | Assumed for `write`. Proven with `manage` (run 46051076476) |
+| `UploadItem`, `CreateFolder`, `UpdateDriveItem`, `DeleteDriveItem`, `RestoreDriveItemVersion`, `CopyDriveItem` | `write` | Proven: `UploadItem`, `UpdateDriveItem` and `DeleteDriveItem` pass with `write` (run 46065040742) and the upload is refused with `read` (run 46064204864). The whole row is proven with `manage` |
+| `CreateListItem`, `UpdateListItemFields`, `DeleteListItem`, `Mutate` | `write` | Proven: pass with `write` (run 46065040742), refused with `read` (run 46064204864) |
 | `EnsureList`, `EnsureColumns` | `manage` | Proven: 403 with `write`, pass with `manage` (run 45016824098) |
 | Hyperlink and term columns in `EnsureColumns`, hyperlink values in any list item write (REST) | `manage` | Proven with `manage` (run 46051076476). Graph refuses these, so they go through REST |
 | `ListSiteGroups`, `GetSiteRoleInheritance`, `ListSiteRoleDefinitions`, `ListSiteChanges` (REST) | `read` | Proven with `read` (run 46048663953) |
@@ -57,7 +58,8 @@ the rpc calls SharePoint REST and also needs SharePoint Online
 | `ListPermissions` on a site | `fullcontrol` | Proven: refused with `read`, `write` and `manage` (same runs), pass with `fullcontrol` (run 45065737777) |
 | `WatchChanges` with `site_changes` (REST) | `read` | Assumed below `fullcontrol`: it reads the change log that `ListSiteChanges` reads. Proven with `fullcontrol` |
 | `SetSiteRoleInheritance`, `CreateSiteGroup`, `DeleteSiteGroup`, `AddSiteGroupMember`, `RemoveSiteGroupMember`, `AddSiteRoleAssignment`, `RemoveSiteRoleAssignment` (REST) | `fullcontrol` | Proven: `SetSiteRoleInheritance` and `CreateSiteGroup` are refused with `manage` (run 46051076476), so the steps that build on them did not run there. The whole row passes with `fullcontrol` |
-| `GetPermission`, `CreateSharingLink`, `InviteRecipients`, `UpdatePermission`, `DeletePermission`, `GrantLinkAccess`, `RevokeLinkAccess` | `fullcontrol` until a lower grant is tried | Proven with `fullcontrol` (write run 46054394305). `read`, `write` and `manage` not tried. A link of scope anonymous is refused by the test site (`sharingDisabled`), so that case is not proven |
+| `CreateSharingLink`, `GetPermission`, `DeletePermission` | `write` | Proven: a view link for the organization is created, read and removed with `write` (run 46065040742); the create is refused with `read` (run 46064204864). `GetPermission` with `read` not tried. A link of scope anonymous is refused by the test site (`sharingDisabled`), so that case is not proven |
+| `InviteRecipients`, `UpdatePermission`, `GrantLinkAccess`, `RevokeLinkAccess` | `write` | Assumed for `write`: they change the same permissions as the row above. Proven with `fullcontrol` (write run 46054394305) |
 | `CreateSubscription`, `GetSubscription`, `ListSubscriptions`, `UpdateSubscription`, `ReauthorizeSubscription`, `DeleteSubscription` on a drive | `read` | Assumed below `fullcontrol`. Proven with `fullcontrol`, security notifications included. Microsoft documents `Files.ReadWrite.All`; the site grant was enough. A subscription on a list was not tried |
 | `WatchChanges` | What its `Sync` passes need (rows above) | Proven with `fullcontrol` |
 | `WatchNotifications`, `ListSubscriptionRenewals` | Nothing in Microsoft 365: they read the server's own state | By construction |
@@ -80,7 +82,8 @@ So the smallest working sets are:
 |---|---|---|---|
 | Index content | `read` | none | no |
 | Index content with its access control | `fullcontrol` | `User.Read.All`, `GroupMember.Read.All` | yes |
-| Write content and metadata | `manage` | none | for hyperlink and term columns |
+| Write files, list items and sharing links into lists and libraries that exist | `write` | none | no |
+| Also create lists and columns | `manage` | none | for hyperlink and term columns |
 | Change SharePoint groups and role assignments | `fullcontrol` | none | yes |
 
 ## Admin app
@@ -94,11 +97,10 @@ The admin app has no Entra permission and cannot list users or groups
 
 ## Open
 
-- List item writes and `Mutate` with `write`: the write run creates its
-  list first, which needs `manage`, so they were only tried from `manage` up.
 - `WatchChanges` and subscriptions below `fullcontrol`.
-- The sharing rpcs (`CreateSharingLink` and the rest of its row) below
-  `fullcontrol`, and a link of scope anonymous.
+- `InviteRecipients`, `UpdatePermission`, `GrantLinkAccess` and
+  `RevokeLinkAccess` below `fullcontrol`, `GetPermission` with `read`, and a
+  link of scope anonymous.
 - `Group.ReadWrite.All` is tenant-wide: it lets the app change every group.
   Leave it out unless the Entra group writes are used.
 - `GetGroup` with `GroupMember.Read.All` alone.
