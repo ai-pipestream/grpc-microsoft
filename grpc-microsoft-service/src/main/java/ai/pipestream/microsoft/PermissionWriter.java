@@ -96,7 +96,7 @@ final class PermissionWriter {
         }
         ObjectNode body = GraphClient.object();
         body.set("recipients", recipients(request.getRecipientsList(), "recipients"));
-        body.set("roles", roles(request.getRolesList(), true));
+        body.set("roles", roles(request.getRolesList()));
         body.put("requireSignIn", request.getRequireSignIn());
         body.put("sendInvitation", request.getSendInvitation());
         if (!request.getMessage().isEmpty()) {
@@ -128,7 +128,7 @@ final class PermissionWriter {
         }
         ObjectNode body = GraphClient.object();
         if (request.getRolesCount() > 0) {
-            body.set("roles", roles(request.getRolesList(), true));
+            body.set("roles", roles(request.getRolesList()));
         }
         if (request.hasExpiresAt()) {
             body.put("expirationDateTime", instant(request.getExpiresAt()));
@@ -170,7 +170,7 @@ final class PermissionWriter {
         }
         ObjectNode body = GraphClient.object();
         body.set("recipients", recipients(request.getRecipientsList(), "recipients"));
-        body.set("roles", roles(request.getRolesList(), true));
+        body.set("roles", roles(request.getRolesList()));
         return graph.post(link(request.getItem(), request.getPermissionId()) + "/grant", body);
     }
 
@@ -251,8 +251,8 @@ final class PermissionWriter {
         return array;
     }
 
-    private static ArrayNode roles(List<String> roles, boolean required) {
-        if (required && roles.isEmpty()) {
+    private static ArrayNode roles(List<String> roles) {
+        if (roles.isEmpty()) {
             throw new IllegalArgumentException("roles is required");
         }
         ArrayNode array = GraphClient.object().arrayNode();
