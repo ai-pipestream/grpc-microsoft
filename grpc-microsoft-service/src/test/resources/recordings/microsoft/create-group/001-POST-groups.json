@@ -1,0 +1,67 @@
+{
+  "request" : {
+    "method" : "POST",
+    "url" : "https://graph.microsoft.com/v1.0/groups",
+    "authorized" : true,
+    "headers" : {
+      "content-type" : "application/json"
+    },
+    "body" : {
+      "json" : {
+        "displayName" : "pipestream-live-write-20261127-173717-ecc2f242-entra",
+        "mailNickname" : "pipestream-live-write-20261127-173717-ecc2f242-entra",
+        "mailEnabled" : false,
+        "securityEnabled" : true,
+        "description" : "pipestream-live-write-20261127-173717-ecc2f242-entra created by a live test run; safe to delete",
+        "groupTypes" : [ ]
+      }
+    }
+  },
+  "response" : {
+    "status" : 201,
+    "headers" : {
+      "location" : "https://graph.microsoft.com/v1.0/00000000-0000-4000-8000-000000000010/directoryObjects/00000000-0000-4000-8000-000000000065/Microsoft.DirectoryServices.Group",
+      "content-type" : "application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8"
+    },
+    "body" : {
+      "json" : {
+        "@odata.context" : "Directory value 29",
+        "id" : "00000000-0000-4000-8000-000000000065",
+        "deletedDateTime" : null,
+        "classification" : null,
+        "createdDateTime" : "2026-11-27T17:37:35Z",
+        "creationOptions" : [ ],
+        "description" : "pipestream-live-write-20261127-173717-ecc2f242-entra created by a live test run; safe to delete",
+        "displayName" : "pipestream-live-write-20261127-173717-ecc2f242-entra",
+        "expirationDateTime" : null,
+        "groupTypes" : [ ],
+        "infoCatalogs" : [ ],
+        "isAssignableToRole" : null,
+        "mail" : null,
+        "mailEnabled" : false,
+        "mailNickname" : "pipestream-live-write-20261127-173717-ecc2f242-entra",
+        "membershipRule" : null,
+        "membershipRuleProcessingState" : null,
+        "onPremisesDomainName" : null,
+        "onPremisesLastSyncDateTime" : null,
+        "onPremisesNetBiosName" : null,
+        "onPremisesSamAccountName" : null,
+        "onPremisesSecurityIdentifier" : null,
+        "onPremisesSyncEnabled" : null,
+        "preferredDataLocation" : null,
+        "preferredLanguage" : null,
+        "proxyAddresses" : [ ],
+        "renewedDateTime" : "2026-11-27T17:37:35Z",
+        "resourceBehaviorOptions" : [ ],
+        "resourceProvisioningOptions" : [ ],
+        "securityEnabled" : true,
+        "securityIdentifier" : "Directory value 30",
+        "theme" : null,
+        "uniqueName" : null,
+        "visibility" : null,
+        "onPremisesProvisioningErrors" : [ ],
+        "serviceProvisioningErrors" : [ ]
+      }
+    }
+  }
+}

@@ -39,14 +39,14 @@
             }
           },
           "quota" : {
-            "deleted" : 10682927,
-            "remaining" : 27487767298906,
+            "deleted" : 10888638,
+            "remaining" : 27487767093195,
             "state" : "normal",
             "total" : 27487790694400,
             "used" : 12712567
           },
           "sharePointIds" : {
-            "listId" : "00000000-0000-4000-8000-000000000064",
+            "listId" : "00000000-0000-4000-8000-000000000073",
             "siteId" : "00000000-0000-4000-8000-000000000001",
             "siteUrl" : "https://redacted.example/url/3",
             "tenantId" : "00000000-0000-4000-8000-000000000010",
@@ -74,14 +74,14 @@
             }
           },
           "quota" : {
-            "deleted" : 10682927,
-            "remaining" : 27487767298906,
+            "deleted" : 10888638,
+            "remaining" : 27487767093195,
             "state" : "normal",
             "total" : 27487790694400,
             "used" : 12712567
           },
           "sharePointIds" : {
-            "listId" : "00000000-0000-4000-8000-000000000065",
+            "listId" : "00000000-0000-4000-8000-000000000074",
             "siteId" : "00000000-0000-4000-8000-000000000001",
             "siteUrl" : "https://redacted.example/url/3",
             "tenantId" : "00000000-0000-4000-8000-000000000010",
@@ -109,14 +109,14 @@
             }
           },
           "quota" : {
-            "deleted" : 10682927,
-            "remaining" : 27487767298906,
+            "deleted" : 10888638,
+            "remaining" : 27487767093195,
             "state" : "normal",
             "total" : 27487790694400,
             "used" : 12712567
           },
           "sharePointIds" : {
-            "listId" : "00000000-0000-4000-8000-000000000066",
+            "listId" : "00000000-0000-4000-8000-000000000075",
             "siteId" : "00000000-0000-4000-8000-000000000001",
             "siteUrl" : "https://redacted.example/url/3",
             "tenantId" : "00000000-0000-4000-8000-000000000010",
@@ -127,7 +127,7 @@
           "createdDateTime" : "2026-10-10T02:58:54Z",
           "description" : "",
           "id" : "b!drive-0001",
-          "lastModifiedDateTime" : "2026-11-24T21:22:05Z",
+          "lastModifiedDateTime" : "2026-11-27T17:37:18Z",
           "name" : "Documents",
           "webUrl" : "https://redacted.example/url/42",
           "driveType" : "documentLibrary",
@@ -144,8 +144,8 @@
             }
           },
           "quota" : {
-            "deleted" : 10682927,
-            "remaining" : 27487767298906,
+            "deleted" : 10888638,
+            "remaining" : 27487767093195,
             "state" : "normal",
             "total" : 27487790694400,
             "used" : 12712567
@@ -178,14 +178,14 @@
             }
           },
           "quota" : {
-            "deleted" : 10682927,
-            "remaining" : 27487767298906,
+            "deleted" : 10888638,
+            "remaining" : 27487767093195,
             "state" : "normal",
             "total" : 27487790694400,
             "used" : 12712567
           },
           "sharePointIds" : {
-            "listId" : "00000000-0000-4000-8000-000000000067",
+            "listId" : "00000000-0000-4000-8000-000000000076",
             "siteId" : "00000000-0000-4000-8000-000000000001",
             "siteUrl" : "https://redacted.example/url/3",
             "tenantId" : "00000000-0000-4000-8000-000000000010",
@@ -218,14 +218,14 @@
             }
           },
           "quota" : {
-            "deleted" : 10682927,
-            "remaining" : 27487767298906,
+            "deleted" : 10888638,
+            "remaining" : 27487767093195,
             "state" : "normal",
             "total" : 27487790694400,
             "used" : 12712567
           },
           "sharePointIds" : {
-            "listId" : "00000000-0000-4000-8000-000000000068",
+            "listId" : "00000000-0000-4000-8000-000000000077",
             "siteId" : "00000000-0000-4000-8000-000000000001",
             "siteUrl" : "https://redacted.example/url/3",
             "tenantId" : "00000000-0000-4000-8000-000000000010",
@@ -253,14 +253,14 @@
             }
           },
           "quota" : {
-            "deleted" : 10682927,
-            "remaining" : 27487767298906,
+            "deleted" : 10888638,
+            "remaining" : 27487767093195,
             "state" : "normal",
             "total" : 27487790694400,
             "used" : 12712567
           },
           "sharePointIds" : {
-            "listId" : "00000000-0000-4000-8000-000000000069",
+            "listId" : "00000000-0000-4000-8000-000000000078",
             "siteId" : "00000000-0000-4000-8000-000000000001",
             "siteUrl" : "https://redacted.example/url/3",
             "tenantId" : "00000000-0000-4000-8000-000000000010",
@@ -288,14 +288,14 @@
             }
           },
           "quota" : {
-            "deleted" : 10682927,
-            "remaining" : 27487767298906,
+            "deleted" : 10888638,
+            "remaining" : 27487767093195,
             "state" : "normal",
             "total" : 27487790694400,
             "used" : 12712567
           },
           "sharePointIds" : {
-            "listId" : "00000000-0000-4000-8000-000000000070",
+            "listId" : "00000000-0000-4000-8000-000000000079",
             "siteId" : "00000000-0000-4000-8000-000000000001",
             "siteUrl" : "https://redacted.example/url/3",
             "tenantId" : "00000000-0000-4000-8000-000000000010",
@@ -323,14 +323,14 @@
             }
           },
           "quota" : {
-            "deleted" : 10682927,
-            "remaining" : 27487767298906,
+            "deleted" : 10888638,
+            "remaining" : 27487767093195,
             "state" : "normal",
             "total" : 27487790694400,
             "used" : 12712567
           },
           "sharePointIds" : {
-            "listId" : "00000000-0000-4000-8000-000000000071",
+            "listId" : "00000000-0000-4000-8000-000000000080",
             "siteId" : "00000000-0000-4000-8000-000000000001",
             "siteUrl" : "https://redacted.example/url/3",
             "tenantId" : "00000000-0000-4000-8000-000000000010",
@@ -358,14 +358,14 @@
             }
           },
           "quota" : {
-            "deleted" : 10682927,
-            "remaining" : 27487767298906,
+            "deleted" : 10888638,
+            "remaining" : 27487767093195,
             "state" : "normal",
             "total" : 27487790694400,
             "used" : 12712567
           },
           "sharePointIds" : {
-            "listId" : "00000000-0000-4000-8000-000000000072",
+            "listId" : "00000000-0000-4000-8000-000000000081",
             "siteId" : "00000000-0000-4000-8000-000000000001",
             "siteUrl" : "https://redacted.example/url/3",
             "tenantId" : "00000000-0000-4000-8000-000000000010",
@@ -393,14 +393,14 @@
             }
           },
           "quota" : {
-            "deleted" : 10682927,
-            "remaining" : 27487767298906,
+            "deleted" : 10888638,
+            "remaining" : 27487767093195,
             "state" : "normal",
             "total" : 27487790694400,
             "used" : 12712567
           },
           "sharePointIds" : {
-            "listId" : "00000000-0000-4000-8000-000000000073",
+            "listId" : "00000000-0000-4000-8000-000000000082",
             "siteId" : "00000000-0000-4000-8000-000000000001",
             "siteUrl" : "https://redacted.example/url/3",
             "tenantId" : "00000000-0000-4000-8000-000000000010",
@@ -435,14 +435,14 @@
             }
           },
           "quota" : {
-            "deleted" : 10682927,
-            "remaining" : 27487767298906,
+            "deleted" : 10888638,
+            "remaining" : 27487767093195,
             "state" : "normal",
             "total" : 27487790694400,
             "used" : 12712567
           },
           "sharePointIds" : {
-            "listId" : "00000000-0000-4000-8000-000000000074",
+            "listId" : "00000000-0000-4000-8000-000000000083",
             "siteId" : "00000000-0000-4000-8000-000000000001",
             "siteUrl" : "https://redacted.example/url/3",
             "tenantId" : "00000000-0000-4000-8000-000000000010",
