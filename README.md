@@ -104,6 +104,17 @@ permission level (`ListSiteRoleDefinitions` lists them) on a site, list or
 list item that has its own role assignments. All need the certificate
 credential and the site grant `fullcontrol`.
 
+`CreateSharingLink` makes a sharing link on a drive item or list item (for
+the organization, for anyone, or for named people) and `InviteRecipients`
+grants people or groups access to a drive item; neither sends mail unless
+asked. `GrantLinkAccess` and `RevokeLinkAccess` add people to and take them
+off a link, `GetPermission` reads one permission, `UpdatePermission` changes
+its roles or expiry and `DeletePermission` removes it. SharePoint keeps one
+hidden group for each link; `SiteGroup.sharing_link` and
+`SitePrincipal.sharing_link` say which item, kind of link and scope such a
+group stands for, so a reader of role assignments can tell a link for the
+organization or for anyone from one for named people.
+
 `GetGroup` reads one Entra group. `CreateGroup`, `UpdateGroup` and
 `DeleteGroup` make, change and delete a group in the directory;
 `AddGroupMember` and `RemoveGroupMember` change its direct members.
@@ -268,6 +279,7 @@ All are application permissions with admin consent.
 | `ListSites`, `ListAllSites`, `DeltaSites` | Graph `Sites.Read.All` (tenant-wide) | refused with `Sites.Selected` alone |
 | `ListUsers`, `ListGroups`, `GetGroup`, `DeltaUsers`, `DeltaGroups`, `ListGroupTransitiveMembers`, `ListUserTransitiveMemberOf`, `WatchChanges` with `directory` | Graph `User.Read.All` and `GroupMember.Read.All` | those two |
 | `CreateGroup`, `UpdateGroup`, `DeleteGroup`, `AddGroupMember`, `RemoveGroupMember` | Graph `Group.ReadWrite.All` (tenant-wide) | that |
+| `GetPermission`, `CreateSharingLink`, `InviteRecipients`, `UpdatePermission`, `DeletePermission`, `GrantLinkAccess`, `RevokeLinkAccess` | Graph `Sites.Selected` plus a grant on the site | not run live yet |
 | `ListSiteGroups`, `GetSiteRoleInheritance` | SharePoint `Sites.Selected` plus a grant on the site, certificate credential | site grant `manage` |
 | `ListSiteGroupMembers`, `ListSiteRoleAssignments` | SharePoint `Sites.Selected` plus site grant `fullcontrol`, certificate credential (refused with `manage`) | site grant `fullcontrol`; also SharePoint `Sites.FullControl.All` |
 | `ListSiteChanges`, `WatchChanges` with `site_changes` | SharePoint `Sites.Selected` plus a grant on the site, certificate credential | site grant `fullcontrol` (not tried with `manage`) |

@@ -55,6 +55,19 @@ message SharingInvitation {
   bool sign_in_required = 4;
 }
 
+// One person or group a sharing call names.
+message SharingRecipient {
+  // Exactly one arm names the recipient.
+  oneof recipient {
+    // Email address.
+    string email = 1;
+    // Entra object id of a user or group.
+    string object_id = 2;
+    // Alias of the recipient (OneDrive personal).
+    string alias = 3;
+  }
+}
+
 // The item, list or site a permission belongs to. Graph permissions carry no
 // back-reference; the server fills this in so a permission can travel on its
 // own (for example as a Sync change).

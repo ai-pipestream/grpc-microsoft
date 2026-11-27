@@ -5,6 +5,7 @@ import ai.pipestream.microsoft.v1.SitePrincipal;
 import ai.pipestream.microsoft.v1.SitePrincipalType;
 import ai.pipestream.microsoft.v1.SiteRoleAssignment;
 import ai.pipestream.microsoft.v1.SiteRoleDefinition;
+import ai.pipestream.microsoft.v1.SiteSharingLinkGroup;
 import com.fasterxml.jackson.databind.JsonNode;
 import java.util.UUID;
 
@@ -17,16 +18,64 @@ final class SiteSecurityMapper {
     private SiteSecurityMapper() {
     }
 
+    /** Starts the login name of the group SharePoint keeps for a sharing link. */
+    static final String SHARING_LINK_LOGIN = "SharingLinks.";
+
     static SiteGroup toGroup(JsonNode node) {
-        return SiteGroup.newBuilder()
+        String login = node.path("LoginName").asText("");
+        SiteGroup.Builder group = SiteGroup.newBuilder()
                 .setId(node.path("Id").asInt(0))
                 .setTitle(node.path("Title").asText(""))
-                .setLoginName(node.path("LoginName").asText(""))
+                .setLoginName(login)
                 .setDescription(node.path("Description").asText(""))
                 .setOwnerTitle(node.path("OwnerTitle").asText(""))
                 .setHidden(node.path("IsHiddenInUI").asBoolean(false))
-                .setOnlyMembersViewMembership(node.path("OnlyAllowMembersViewMembership").asBoolean(false))
+                .setOnlyMembersViewMembership(node.path("OnlyAllowMembersViewMembership").asBoolean(false));
+        SiteSharingLinkGroup link = sharingLink(login);
+        if (link != null) {
+            group.setSharingLink(link);
+        }
+        return group.build();
+    }
+
+    /**
+     * Reads the sharing link a group login name of the form
+     * {@code SharingLinks.{item}.{kind}.{share}} stands for.
+     *
+     * @param loginName login name of a SharePoint group
+     * @return the link, or {@code null} when the name has another form
+     */
+    static SiteSharingLinkGroup sharingLink(String loginName) {
+        if (!loginName.startsWith(SHARING_LINK_LOGIN)) {
+            return null;
+        }
+        int kindAt = loginName.indexOf('.', SHARING_LINK_LOGIN.length());
+        int shareAt = kindAt < 0 ? -1 : loginName.indexOf('.', kindAt + 1);
+        if (shareAt < 0) {
+            return null;
+        }
+        String item = loginName.substring(SHARING_LINK_LOGIN.length(), kindAt);
+        String kind = loginName.substring(kindAt + 1, shareAt);
+        String share = loginName.substring(shareAt + 1);
+        if (item.isEmpty() || kind.isEmpty() || share.isEmpty()) {
+            return null;
+        }
+        return SiteSharingLinkGroup.newBuilder()
+                .setItemUniqueId(item)
+                .setKind(kind)
+                .setShareId(share)
+                .setScope(sharingScope(kind))
                 .build();
+    }
+
+    private static String sharingScope(String kind) {
+        if (kind.startsWith("Organization")) {
+            return "organization";
+        }
+        if (kind.startsWith("Anonymous")) {
+            return "anonymous";
+        }
+        return kind.equals("Flexible") ? "users" : "";
     }
 
     /** Ends the login name of the claim for a group's owners. */
@@ -48,6 +97,12 @@ final class SiteSecurityMapper {
             String objectId = directoryObjectId(login);
             principal.setDirectoryObjectId(objectId)
                     .setDirectoryGroupOwners(!objectId.isEmpty() && login.endsWith(OWNERS_SUFFIX));
+        }
+        if (type == SitePrincipalType.SITE_PRINCIPAL_TYPE_SHAREPOINT_GROUP) {
+            SiteSharingLinkGroup link = sharingLink(login);
+            if (link != null) {
+                principal.setSharingLink(link);
+            }
         }
         return principal.build();
     }

@@ -24,7 +24,7 @@
         "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#microsoft.graph.permission",
         "id" : "permission-0001",
         "roles" : [ "read" ],
-        "shareId" : "u!aHR0cHM6Ly9waXBlc3RyZWFtYWkuc2hhcmVwb2ludC5jb20vOnQ6L3MvV2VsY29tZVRvUGlwZXN0cmVhbS9JUUNLcDdISGpER1ZRNnpFRk4wbWpUOC1BVzdwcXpXMlFocWZYTTd4WjZNeUhnQQ",
+        "shareId" : "share-0001",
         "hasPassword" : false,
         "link" : {
           "scope" : "organization",

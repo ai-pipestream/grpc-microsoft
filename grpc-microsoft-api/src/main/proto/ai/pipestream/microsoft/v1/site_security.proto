@@ -29,6 +29,22 @@ enum SitePrincipalType {
   SITE_PRINCIPAL_TYPE_SHAREPOINT_GROUP = 4;
 }
 
+// The sharing link a SharePoint group stands for. SharePoint keeps one hidden
+// group for each sharing link and names it
+// `SharingLinks.{item}.{kind}.{share}`.
+message SiteSharingLinkGroup {
+  // Unique id of the shared list item.
+  string item_unique_id = 1;
+  // Kind of link as SharePoint names it (verbatim), such as
+  // `OrganizationView`, `AnonymousEdit` or `Flexible`.
+  string kind = 2;
+  // Id of the share.
+  string share_id = 3;
+  // Who the link is for, in Graph's words: `organization`, `anonymous` or
+  // `users`. Empty for a kind the server does not know.
+  string scope = 4;
+}
+
 // A user, directory group or SharePoint group as a site knows it.
 message SitePrincipal {
   // Id of the principal within the site collection.
@@ -53,6 +69,8 @@ message SitePrincipal {
   // True when the claim stands for the owners of the Entra group named by
   // `directory_object_id`, not for its members.
   bool directory_group_owners = 10;
+  // Set when the principal is the group of a sharing link.
+  SiteSharingLinkGroup sharing_link = 11;
   // Extensible key-value metadata (extension-metadata map - see convention).
   map<string, string> metadata = 99;
 }
@@ -73,6 +91,8 @@ message SiteGroup {
   bool hidden = 6;
   // True when only members may see who is in the group.
   bool only_members_view_membership = 7;
+  // Set when the group is the group of a sharing link.
+  SiteSharingLinkGroup sharing_link = 8;
   // Extensible key-value metadata (extension-metadata map - see convention).
   map<string, string> metadata = 99;
 }
