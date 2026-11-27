@@ -26,6 +26,10 @@ on:
         description: On its own, with the site grant at full control. Make sure the test site holds one sample file and one list item for the read-only coverage run (writes only what is missing)
         type: boolean
         default: false
+      run_live_grant_probe:
+        description: Try list item, file and sharing writes next to the fixture on the test site and print whether each was allowed (removes what it wrote). With run_live_admin and live_admin_set_role it shows what a lower site grant permits
+        type: boolean
+        default: false
       live_coverage_admin:
         description: Run the read-only coverage with the admin app's certificate instead of the test app
         type: boolean
@@ -343,6 +347,60 @@ jobs:
           fi
           exit "$status"
 
+  # Manual only: tries the writes that need no new list on the fixture's list
+  # and library and prints each outcome. A refused call is an answer, so the
+  # job is green at any site grant; it fails on any other error or on leftovers.
+  live-microsoft-grant-probe:
+    needs: live-microsoft-admin
+    if: ${{ !cancelled() && github.event_name == 'workflow_dispatch' && inputs.run_live_grant_probe && (needs.live-microsoft-admin.result == 'success' || needs.live-microsoft-admin.result == 'skipped') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          path: grpc-microsoft
+      - id: core
+        name: Pick the grpc-integration ref (same branch if it exists, else main)
+        env:
+          BRANCH: ${{ github.head_ref || github.ref_name }}
+        run: |
+          if git ls-remote --exit-code --heads https://github.com/ai-pipestream/grpc-integration "$BRANCH" >/dev/null; then
+            echo "ref=$BRANCH" >> "$GITHUB_OUTPUT"
+          else
+            echo "ref=$INTEGRATION_REF" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v5
+        with:
+          repository: ai-pipestream/grpc-integration
+          ref: ${{ steps.core.outputs.ref }}
+          path: grpc-integration
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: gradle
+      - name: Live Microsoft Graph grant probe
+        working-directory: grpc-microsoft
+        env:
+          MICROSOFT_TENANT_ID: ${{ secrets.MICROSOFT_TENANT_ID }}
+          MICROSOFT_CLIENT_ID: ${{ secrets.MICROSOFT_CLIENT_ID }}
+          MICROSOFT_CLIENT_SECRET: ${{ secrets.MICROSOFT_CLIENT_SECRET }}
+          MICROSOFT_CLIENT_CERT_PEM: ${{ secrets.MICROSOFT_CLIENT_CERT_PEM }}
+          MICROSOFT_SITE_ID: ${{ inputs.live_write_site_id || env.LIVE_SITE_ID }}
+          MICROSOFT_DRIVE_IDS: ${{ secrets.MICROSOFT_DRIVE_IDS }}
+          MICROSOFT_LIVE_GRANT_PROBE: "1"
+        run: |
+          status=0
+          ./gradlew --no-daemon -PintegrationDir=../grpc-integration :grpc-microsoft-service:liveGrantProbeTest --rerun-tasks > "$RUNNER_TEMP/probe.log" 2>&1 || status=$?
+          grep -F '[MicrosoftLiveGrantProbeIT]' "$RUNNER_TEMP/probe.log" || true
+          if ! grep -qF '[MicrosoftLiveGrantProbeIT] cleanup:' "$RUNNER_TEMP/probe.log"; then
+            echo "::error::the grant probe did not run to its end"
+            [ "$status" -ne 0 ] || status=1
+          fi
+          if [ "$status" -ne 0 ]; then
+            grep -E '^(BUILD|FAILURE|> Task|e: |.*error:|.*Exception|.*AssertionError|.*Expecting)' "$RUNNER_TEMP/probe.log" | tail -n 40 || true
+          fi
+          exit "$status"
+
   # Manual only: the admin service reads the test site's grants and dry-runs an
   # ensure. It changes grants only when live_admin_change or live_admin_set_role is set.
   live-microsoft-admin:
@@ -403,7 +461,7 @@ jobs:
   # Manual only: puts the test app's role on the test site back after the
   # coverage and write jobs of a run that lowered it, whatever their outcome.
   live-microsoft-admin-restore:
-    needs: [live-microsoft-admin, live-microsoft-coverage, live-microsoft-write]
+    needs: [live-microsoft-admin, live-microsoft-coverage, live-microsoft-write, live-microsoft-grant-probe]
     if: ${{ always() && github.event_name == 'workflow_dispatch' && inputs.live_admin_restore_role != '' }}
     runs-on: ubuntu-latest
     steps:

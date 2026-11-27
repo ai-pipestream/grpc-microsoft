@@ -45,6 +45,7 @@ tasks.named<Test>("test") {
     exclude("**/MicrosoftLiveWriteIT.class")
     exclude("**/MicrosoftLiveChangeIT.class")
     exclude("**/MicrosoftLiveFixtureIT.class")
+    exclude("**/MicrosoftLiveGrantProbeIT.class")
     // -PreplayRecordsDir=<dir> makes the write replay save the records it read there.
     providers.gradleProperty("replayRecordsDir").orNull?.let {
         systemProperty("replay.records.dir", file(it).path)
@@ -84,6 +85,20 @@ tasks.register<Test>("liveFixtureTest") {
     classpath = sourceSets.test.get().runtimeClasspath
     filter {
         includeTestsMatching("ai.pipestream.microsoft.MicrosoftLiveFixtureIT")
+    }
+    outputs.upToDateWhen { false }
+    testLogging {
+        showStandardStreams = true
+    }
+}
+
+tasks.register<Test>("liveGrantProbeTest") {
+    description = "Tries list item, file and sharing writes next to the fixture on the test site and prints whether each was allowed, then removes what it wrote; needs the live credentials, MICROSOFT_SITE_ID and MICROSOFT_LIVE_GRANT_PROBE=1, skips otherwise"
+    group = "verification"
+    testClassesDirs = sourceSets.test.get().output.classesDirs
+    classpath = sourceSets.test.get().runtimeClasspath
+    filter {
+        includeTestsMatching("ai.pipestream.microsoft.MicrosoftLiveGrantProbeIT")
     }
     outputs.upToDateWhen { false }
     testLogging {
