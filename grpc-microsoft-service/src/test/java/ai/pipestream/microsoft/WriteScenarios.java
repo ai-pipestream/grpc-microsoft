@@ -310,6 +310,8 @@ final class WriteScenarios {
     private boolean linkColumn;
     private String libraryId;
     private boolean libraryTried;
+    private GraphGroup listedGroup;
+    private final Map<String, List<com.google.protobuf.Message>> records = new TreeMap<>();
 
     /**
      * Creates the scenarios of one run.
@@ -329,6 +331,15 @@ final class WriteScenarios {
         this.driveId = backend.driveId();
         this.folderName = "pipestream-live-write-" + backend.suffix();
         this.listName = "pipestream-live-write-" + backend.suffix();
+    }
+
+    /**
+     * What the directory and security reads of this run answered, by kind:
+     * {@code entra-users}, {@code entra-group-changes}, {@code entra-group-owners}
+     * (the group, then its owners) and {@code sharepoint-sync-records}.
+     */
+    Map<String, List<com.google.protobuf.Message>> records() {
+        return records;
     }
 
     /** Name of the test folder at the drive root. */
@@ -1399,6 +1410,7 @@ final class WriteScenarios {
                 .findFirst().orElse(null);
         userPrincipalName = users.stream().map(GraphUser::getUserPrincipalName)
                 .filter(name -> !name.isEmpty()).findFirst().orElse(null);
+        records.put("entra-users", List.copyOf(users));
         return users.size() + " user(s)";
     }
 
@@ -1411,6 +1423,7 @@ final class WriteScenarios {
                 "a group was listed twice");
         if (!groups.isEmpty()) {
             groupId = groups.get(0).getId();
+            listedGroup = groups.get(0);
         }
         return groups.size() + " group(s)";
     }
@@ -1439,6 +1452,8 @@ final class WriteScenarios {
             }
         }
         check(groupId == null || ids.contains(groupId), "a listed group is missing from the delta");
+        records.put("entra-group-changes", full.subList(0, full.size() - 1).stream()
+                .<com.google.protobuf.Message>map(DeltaGroupsResponse::getChange).toList());
 
         List<DeltaGroupsResponse> next = new ArrayList<>();
         stub().deltaGroups(DeltaGroupsRequest.newBuilder().setDeltaLink(link).setIncludeMembers(true)
@@ -1650,6 +1665,10 @@ final class WriteScenarios {
         stub().listGroupOwners(ai.pipestream.microsoft.v1.ListGroupOwnersRequest.newBuilder()
                 .setGroupId(groupId).build())
                 .forEachRemaining(response -> owners.add(response.getOwner()));
+        List<com.google.protobuf.Message> groupAndOwners = new ArrayList<>();
+        groupAndOwners.add(listedGroup);
+        groupAndOwners.addAll(owners);
+        records.put("entra-group-owners", groupAndOwners);
         return owners.size() + " owner(s), kinds " + memberKinds(owners);
     }
 
@@ -1811,6 +1830,7 @@ final class WriteScenarios {
             throw notGranted(e);
         }
         check(securityCursor != null, "the pass ended without a resume cursor");
+        records.put("sharepoint-sync-records", List.copyOf(entities.values()));
         String siteAcl = MicrosoftEntityIds.siteAcl(SiteSecurable.newBuilder().setSiteId(siteId).build());
         String itemAcl = MicrosoftEntityIds.siteAcl(
                 SiteSecurable.newBuilder().setListItem(listItemRef(itemId)).build());
