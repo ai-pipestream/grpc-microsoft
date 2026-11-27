@@ -24,6 +24,7 @@ import ai.pipestream.microsoft.v1.SiteGroup;
 import ai.pipestream.microsoft.v1.SitePrincipal;
 import ai.pipestream.microsoft.v1.SitePrincipalType;
 import ai.pipestream.microsoft.v1.SiteRoleAssignment;
+import ai.pipestream.microsoft.v1.SiteSharingLinkGroup;
 import ai.pipestream.microsoft.v1.SiteSecurable;
 import io.grpc.ManagedChannel;
 import io.grpc.Server;
@@ -112,6 +113,41 @@ class SiteSecurityRpcTest {
                 .extracting(FakeGraphServer.RecordedRequest::authorization)
                 .containsExactly("Bearer sharepoint-token", "Bearer sharepoint-token");
         assertThat(resources).containsExactly(fake.baseUrl());
+    }
+
+    @Test
+    void theGroupOfASharingLinkSaysWhichItemKindAndShareItStandsFor() {
+        String item = "7c9e6679-7425-40de-944b-e07fc1f90ae7";
+        String share = "0f8fad5b-d9cb-469f-a165-70867728950e";
+        fake.stub(WEB + "/web/sitegroups", """
+                {"value":[
+                 {"Id":20,"LoginName":"SharingLinks.%1$s.OrganizationView.%2$s","Title":"SharingLinks.%1$s.OrganizationView.%2$s","IsHiddenInUI":true},
+                 {"Id":21,"LoginName":"SharingLinks.%1$s.AnonymousEdit.%2$s","Title":"a"},
+                 {"Id":22,"LoginName":"SharingLinks.%1$s.Flexible.%2$s","Title":"b"},
+                 {"Id":23,"LoginName":"SharingLinks.%1$s.Later.%2$s","Title":"c"},
+                 {"Id":24,"LoginName":"SharingLinks.%1$s","Title":"d"},
+                 {"Id":25,"LoginName":"Limited Access System Group","Title":"e"}]}""".formatted(item, share));
+        fake.stub(WEB + "/web/roleassignments", """
+                {"value":[{"PrincipalId":20,
+                  "Member":{"Id":20,"LoginName":"SharingLinks.%s.OrganizationView.%s","PrincipalType":8},
+                  "RoleDefinitionBindings":[{"Id":1073741826,"Name":"Read","RoleTypeKind":2}]}]}"""
+                .formatted(item, share));
+
+        List<SiteGroup> groups = drain(stub.listSiteGroups(
+                ListSiteGroupsRequest.newBuilder().setSiteId("s1").build()))
+                .stream().map(r -> r.getGroup()).toList();
+        SitePrincipal member = drain(stub.listSiteRoleAssignments(ListSiteRoleAssignmentsRequest.newBuilder()
+                .setSecurable(SiteSecurable.newBuilder().setSiteId("s1")).build()))
+                .getFirst().getAssignment().getMember();
+
+        assertThat(groups).extracting(SiteGroup::hasSharingLink)
+                .containsExactly(true, true, true, true, false, false);
+        assertThat(groups.getFirst().getSharingLink()).isEqualTo(SiteSharingLinkGroup.newBuilder()
+                .setItemUniqueId(item).setKind("OrganizationView").setShareId(share).setScope("organization")
+                .build());
+        assertThat(groups).extracting(group -> group.getSharingLink().getScope())
+                .containsExactly("organization", "anonymous", "users", "", "", "");
+        assertThat(member.getSharingLink()).isEqualTo(groups.getFirst().getSharingLink());
     }
 
     @Test

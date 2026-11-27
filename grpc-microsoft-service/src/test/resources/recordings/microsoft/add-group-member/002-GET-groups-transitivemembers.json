@@ -1,7 +1,7 @@
 {
   "request" : {
     "method" : "GET",
-    "url" : "https://graph.microsoft.com/v1.0/groups/00000000-0000-4000-8000-000000000065/transitiveMembers",
+    "url" : "https://graph.microsoft.com/v1.0/groups/00000000-0000-4000-8000-000000000069/transitiveMembers",
     "authorized" : true,
     "headers" : { }
   },

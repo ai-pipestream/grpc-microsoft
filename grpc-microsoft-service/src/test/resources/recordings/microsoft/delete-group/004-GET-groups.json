@@ -1,26 +1,28 @@
 {
   "request" : {
     "method" : "GET",
-    "url" : "https://graph.microsoft.com/v1.0/groups/00000000-0000-4000-8000-000000000065?$select=id,displayName,description,mail,mailNickname,mailEnabled,securityEnabled,groupTypes,visibility,securityIdentifier",
+    "url" : "https://graph.microsoft.com/v1.0/groups/00000000-0000-4000-8000-000000000069?$select=id,displayName,description,mail,mailNickname,mailEnabled,securityEnabled,groupTypes,visibility,securityIdentifier",
     "authorized" : true,
     "headers" : { }
   },
   "response" : {
-    "status" : 404,
+    "status" : 200,
     "headers" : {
-      "content-type" : "application/json"
+      "content-type" : "application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8"
     },
     "body" : {
       "json" : {
-        "error" : {
-          "code" : "Request_ResourceNotFound",
-          "message" : "Resource '00000000-0000-4000-8000-000000000065' does not exist or one of its queried reference-property objects are not present.",
-          "innerError" : {
-            "date" : "2026-11-27T17:38:16",
-            "request-id" : "00000000-0000-4000-8000-000000000072",
-            "client-request-id" : "00000000-0000-4000-8000-000000000072"
-          }
-        }
+        "@odata.context" : "Directory value 31",
+        "id" : "00000000-0000-4000-8000-000000000069",
+        "displayName" : "pipestream-live-write-20261127-190819-c90fc85b-entra-renamed",
+        "description" : "pipestream-live-write-20261127-190819-c90fc85b-entra renamed by a live test run",
+        "mail" : null,
+        "mailNickname" : "pipestream-live-write-20261127-190819-c90fc85b-entra",
+        "mailEnabled" : false,
+        "securityEnabled" : true,
+        "groupTypes" : [ ],
+        "visibility" : null,
+        "securityIdentifier" : "Directory value 30"
       }
     }
   }

@@ -1,7 +1,7 @@
 {
   "request" : {
     "method" : "POST",
-    "url" : "https://graph.microsoft.com/v1.0/groups/00000000-0000-4000-8000-000000000065/members/$ref",
+    "url" : "https://graph.microsoft.com/v1.0/groups/00000000-0000-4000-8000-000000000069/members/$ref",
     "authorized" : true,
     "headers" : {
       "content-type" : "application/json"

@@ -1,15 +1,15 @@
 {
   "request" : {
     "method" : "PATCH",
-    "url" : "https://graph.microsoft.com/v1.0/groups/00000000-0000-4000-8000-000000000065",
+    "url" : "https://graph.microsoft.com/v1.0/groups/00000000-0000-4000-8000-000000000069",
     "authorized" : true,
     "headers" : {
       "content-type" : "application/json"
     },
     "body" : {
       "json" : {
-        "displayName" : "pipestream-live-write-20261127-173717-ecc2f242-entra-renamed",
-        "description" : "pipestream-live-write-20261127-173717-ecc2f242-entra renamed by a live test run"
+        "displayName" : "pipestream-live-write-20261127-190819-c90fc85b-entra-renamed",
+        "description" : "pipestream-live-write-20261127-190819-c90fc85b-entra renamed by a live test run"
       }
     }
   },
@@ -22,11 +22,11 @@
       "json" : {
         "error" : {
           "code" : "Request_ResourceNotFound",
-          "message" : "Resource '00000000-0000-4000-8000-000000000065' does not exist or one of its queried reference-property objects are not present.",
+          "message" : "Resource '00000000-0000-4000-8000-000000000069' does not exist or one of its queried reference-property objects are not present.",
           "innerError" : {
-            "date" : "2026-11-27T17:37:40",
-            "request-id" : "00000000-0000-4000-8000-000000000068",
-            "client-request-id" : "00000000-0000-4000-8000-000000000068"
+            "date" : "2026-11-27T19:08:40",
+            "request-id" : "00000000-0000-4000-8000-000000000072",
+            "client-request-id" : "00000000-0000-4000-8000-000000000072"
           }
         }
       }

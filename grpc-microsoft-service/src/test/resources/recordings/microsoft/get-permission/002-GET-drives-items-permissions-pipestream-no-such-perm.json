@@ -1,0 +1,28 @@
+{
+  "request" : {
+    "method" : "GET",
+    "url" : "https://graph.microsoft.com/v1.0/drives/b!drive-0001/items/item-0008/permissions/pipestream-no-such-permission",
+    "authorized" : true,
+    "headers" : { }
+  },
+  "response" : {
+    "status" : 400,
+    "headers" : {
+      "content-type" : "application/json"
+    },
+    "body" : {
+      "json" : {
+        "error" : {
+          "code" : "invalidRequest",
+          "message" : "One of the provided arguments is not acceptable.",
+          "innerError" : {
+            "code" : "badArgument",
+            "date" : "2026-11-27T19:09:00",
+            "request-id" : "00000000-0000-4000-8000-000000000102",
+            "client-request-id" : "00000000-0000-4000-8000-000000000102"
+          }
+        }
+      }
+    }
+  }
+}

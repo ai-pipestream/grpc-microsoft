@@ -15,6 +15,16 @@ import ai.pipestream.microsoft.v1.CopyDriveItemRequest;
 import ai.pipestream.microsoft.v1.CopyDriveItemResponse;
 import ai.pipestream.microsoft.v1.CreateFolderRequest;
 import ai.pipestream.microsoft.v1.CreateListItemRequest;
+import ai.pipestream.microsoft.v1.CreateSharingLinkRequest;
+import ai.pipestream.microsoft.v1.CreateSharingLinkResponse;
+import ai.pipestream.microsoft.v1.DeletePermissionRequest;
+import ai.pipestream.microsoft.v1.GetPermissionRequest;
+import ai.pipestream.microsoft.v1.GrantLinkAccessRequest;
+import ai.pipestream.microsoft.v1.InviteRecipientsRequest;
+import ai.pipestream.microsoft.v1.RevokeLinkAccessRequest;
+import ai.pipestream.microsoft.v1.SharingRecipient;
+import ai.pipestream.microsoft.v1.SiteSharingLinkGroup;
+import ai.pipestream.microsoft.v1.UpdatePermissionRequest;
 import ai.pipestream.microsoft.v1.DateTimeColumnFormat;
 import ai.pipestream.microsoft.v1.DeleteDriveItemRequest;
 import ai.pipestream.microsoft.v1.DeltaGroupsRequest;
@@ -288,6 +298,15 @@ final class WriteScenarios {
     /** The Entra group this run created and has not deleted yet. */
     private String entraGroupId;
     private Long readRoleId;
+    /** The file this run shares. */
+    private DriveItem shared;
+    private SiteSecurable sharedSecurable;
+    private String organizationLinkId;
+    private String usersLinkId;
+    private String anyoneLinkId;
+    private String invitedPermissionId;
+    /** Roles the invited group held on the shared file before the invitation. */
+    private final Set<String> rolesBeforeTheInvitation = new TreeSet<>();
     private boolean linkColumn;
     private String libraryId;
     private boolean libraryTried;
@@ -406,12 +425,38 @@ final class WriteScenarios {
                 new Scenario("list-site-changes-latest", "ListSiteChanges",
                         "ListSiteChanges [the end of the site, site collection and list logs]",
                         this::endOfTheChangeLogs),
+                new Scenario("create-sharing-link-organization", "CreateSharingLink",
+                        "CreateSharingLink [a view link for the organization, asked for twice]",
+                        this::shareWithTheOrganization),
+                new Scenario("get-permission", "GetPermission", "GetPermission [the organization link]",
+                        this::getPermission),
+                new Scenario("create-sharing-link-users", "CreateSharingLink",
+                        "CreateSharingLink [a view link for named people]", this::shareWithNamedPeople),
+                new Scenario("grant-link-access", "GrantLinkAccess",
+                        "GrantLinkAccess [a directory user on the link for named people]",
+                        this::grantLinkAccess),
+                new Scenario("invite-recipients", "InviteRecipients",
+                        "InviteRecipients [a directory group, no mail]", this::inviteRecipients),
+                new Scenario("update-permission", "UpdatePermission",
+                        "UpdatePermission [read to write]", this::updatePermission),
+                new Scenario("create-sharing-link-anonymous", "CreateSharingLink",
+                        "CreateSharingLink [a view link for anyone]", this::shareWithAnyone),
+                new Scenario("list-permissions-shared-item", "ListPermissions",
+                        "ListPermissions [the shared file]", this::permissionsOfTheSharedFile),
+                new Scenario("list-site-role-assignments-shared-item", "ListSiteRoleAssignments",
+                        "ListSiteRoleAssignments [the shared file, its link groups and their members]",
+                        this::roleAssignmentsOfTheSharedFile),
                 new Scenario("set-site-role-inheritance-break", "SetSiteRoleInheritance",
                         "SetSiteRoleInheritance [list item and folder stop inheriting]",
                         this::breakInheritance),
                 new Scenario("sync-security", "Sync",
                         "Sync [site security: groups, role assignments, owner of every item]",
                         this::syncSecurity),
+                new Scenario("revoke-link-access", "RevokeLinkAccess",
+                        "RevokeLinkAccess [the directory user]", this::revokeLinkAccess),
+                new Scenario("delete-permission", "DeletePermission",
+                        "DeletePermission [the grant and every link of the shared file]",
+                        this::deletePermissions),
                 new Scenario("create-site-group", "CreateSiteGroup", "CreateSiteGroup",
                         this::createSiteGroup),
                 new Scenario("list-site-role-definitions", "ListSiteRoleDefinitions",
@@ -1841,10 +1886,32 @@ final class WriteScenarios {
         ai.pipestream.microsoft.v1.MicrosoftEntity file = entities.get("DRIVE_ITEM " + small.getId());
         check(file != null && file.getDriveItem().getAclOwnerId().equals(folderAcl),
                 "a file in the test folder does not point at the folder's role assignments");
+        String sharing = "";
+        if (sharedSecurable != null) {
+            String sharedAcl = MicrosoftEntityIds.siteAcl(sharedSecurable);
+            ai.pipestream.microsoft.v1.MicrosoftEntity sharedFile = entities.get("DRIVE_ITEM " + shared.getId());
+            check(sharedFile != null && sharedFile.getDriveItem().getAclOwnerId().equals(sharedAcl),
+                    "the shared file does not point at its own role assignments");
+            ai.pipestream.microsoft.v1.MicrosoftEntity acl = entities.get("SITE_ACL " + sharedAcl);
+            check(acl != null, "the role assignments of the shared file were not emitted");
+            Set<String> scopes = new TreeSet<>();
+            for (SiteRoleAssignment assignment : acl.getSiteAcl().getAssignmentsList()) {
+                if (assignment.getMember().hasSharingLink()) {
+                    scopes.add(assignment.getMember().getSharingLink().getScope());
+                }
+            }
+            check(scopes.contains("organization"),
+                    "the shared file's role assignments name no group of an organization link: " + scopes);
+            long linkGroups = entities.values().stream().filter(entity -> entity.hasSiteGroup()
+                    && entity.getSiteGroup().getGroup().hasSharingLink()).count();
+            check(linkGroups >= scopes.size(), "a link group was not emitted with its members");
+            sharing = "; the shared file has its own role assignments, with link groups for " + scopes
+                    + ", and " + linkGroups + " link group(s) arrive with their members";
+        }
         return groups + " group(s), " + admins + " site administrator(s), " + acls
                 + " role assignment set(s), " + owned
                 + " drives, lists and items with an owner, " + joinable + " of " + users
-                + " user grantee(s) with a user principal name";
+                + " user grantee(s) with a user principal name" + sharing;
     }
 
     private String createSiteGroup() {
@@ -2225,6 +2292,358 @@ final class WriteScenarios {
         }
         return new Skip("the app's grant on the site does not allow this read: "
                 + e.getStatus().getDescription());
+    }
+
+    // ------------------------------------------------------------ sharing
+
+    private PermissionTarget sharedTarget() {
+        return PermissionTarget.newBuilder().setDriveItem(ref(need(shared, "the shared file").getId())).build();
+    }
+
+    private Permission permissionOfTheSharedFile(String id) {
+        return stub().getPermission(GetPermissionRequest.newBuilder().setTarget(sharedTarget())
+                .setPermissionId(id).build()).getPermission();
+    }
+
+    private SharingRecipient theUser() {
+        return SharingRecipient.newBuilder().setObjectId(need(userId, "a directory user")).build();
+    }
+
+    /** Whether a permission names the user or group with this directory id as a grantee. */
+    private static boolean names(Permission permission, String id) {
+        List<SharePointIdentitySet> grantees = new ArrayList<>(permission.getGrantedToIdentitiesList());
+        grantees.add(permission.getGrantedTo());
+        return grantees.stream().anyMatch(grantee -> grantee.getUser().getId().equalsIgnoreCase(id)
+                || grantee.getGroup().getId().equalsIgnoreCase(id));
+    }
+
+    private String shareWithTheOrganization() throws Exception {
+        shared = upload("shared.txt",
+                remember(("shared " + folderName + "\n").getBytes(StandardCharsets.UTF_8)), 0,
+                ConflictBehavior.CONFLICT_BEHAVIOR_FAIL);
+        CreateSharingLinkRequest request = CreateSharingLinkRequest.newBuilder().setTarget(sharedTarget())
+                .setType("view").setScope("organization").build();
+        CreateSharingLinkResponse made = stub().createSharingLink(request);
+        Permission link = made.getPermission();
+        check(made.getCreated(), "the first link of the file was not reported as new");
+        check(!link.getId().isEmpty(), "the link has no id");
+        check(link.getLink().getScope().equals("organization") && link.getLink().getType().equals("view"),
+                "asked for a view link for the organization, got " + link.getLink().getType() + " for "
+                        + link.getLink().getScope());
+        check(!link.getLink().getWebUrl().isEmpty(), "the link has no address");
+        check(link.getTarget().equals(sharedTarget()), "the link names another target");
+        CreateSharingLinkResponse again = stub().createSharingLink(request);
+        check(!again.getCreated() && again.getPermission().getId().equals(link.getId()),
+                "asking for the same link again made another one");
+        organizationLinkId = link.getId();
+        return "a view link for the organization with roles " + link.getRolesList()
+                + "; asking again answers the same link and says it is not new";
+    }
+
+    private String getPermission() {
+        need(organizationLinkId, "the organization link");
+        Permission read = permissionOfTheSharedFile(organizationLinkId);
+        check(read.getId().equals(organizationLinkId), "another permission was read");
+        check(read.getLink().getScope().equals("organization"), "the link read back is for "
+                + read.getLink().getScope());
+        check(read.getTarget().equals(sharedTarget()), "the permission names another target");
+        io.grpc.Status.Code missing;
+        try {
+            permissionOfTheSharedFile("pipestream-no-such-permission");
+            throw new AssertionError("a permission that does not exist was read");
+        } catch (StatusRuntimeException e) {
+            missing = e.getStatus().getCode();
+        }
+        check(missing == io.grpc.Status.Code.NOT_FOUND || missing == io.grpc.Status.Code.INVALID_ARGUMENT,
+                "a permission that does not exist answers " + missing);
+        return "the link read back by id; an id that does not exist answers " + missing;
+    }
+
+    private String shareWithNamedPeople() {
+        need(organizationLinkId, "the shared file");
+        Permission link = stub().createSharingLink(CreateSharingLinkRequest.newBuilder()
+                .setTarget(sharedTarget()).setType("view").setScope("users").build()).getPermission();
+        check(link.getLink().getScope().equals("users"), "asked for a link for named people, got one for "
+                + link.getLink().getScope());
+        check(!link.getId().isEmpty() && !link.getId().equals(organizationLinkId),
+                "the link for named people is the organization link");
+        usersLinkId = link.getId();
+        return "a view link for named people, " + link.getGrantedToIdentitiesCount() + " of them so far";
+    }
+
+    private String grantLinkAccess() {
+        need(usersLinkId, "the link for named people");
+        List<Permission> granted = stub().grantLinkAccess(GrantLinkAccessRequest.newBuilder()
+                .setItem(ref(shared.getId())).setPermissionId(usersLinkId).addRecipients(theUser())
+                .addRoles("read").build()).getPermissionsList();
+        check(!granted.isEmpty(), "the grant answered no permission");
+        check(granted.stream().allMatch(permission -> permission.getTarget().equals(sharedTarget())),
+                "a granted permission names another target");
+        Permission link = permissionOfTheSharedFile(usersLinkId);
+        check(names(link, userId), "the link does not name the user it was granted to");
+        return granted.size() + " permission(s) answered; the link read back names the user among "
+                + link.getGrantedToIdentitiesCount() + " grantee(s)";
+    }
+
+    private String inviteRecipients() {
+        need(organizationLinkId, "the shared file");
+        need(groupId, "a directory group");
+        stub().listPermissions(ListPermissionsRequest.newBuilder().setTarget(sharedTarget()).build())
+                .forEachRemaining(response -> {
+                    if (!response.getPermission().hasLink() && names(response.getPermission(), groupId)) {
+                        rolesBeforeTheInvitation.addAll(response.getPermission().getRolesList());
+                    }
+                });
+        check(rolesBeforeTheInvitation.isEmpty(), "the group already holds " + rolesBeforeTheInvitation
+                + " on the file");
+        List<Permission> made = stub().inviteRecipients(InviteRecipientsRequest.newBuilder()
+                .setItem(ref(shared.getId()))
+                .addRecipients(SharingRecipient.newBuilder().setObjectId(groupId)).addRoles("read")
+                .setRequireSignIn(true).build()).getPermissionsList();
+        check(made.size() == 1, "one recipient got " + made.size() + " permission(s)");
+        Permission permission = made.get(0);
+        check(!permission.getId().isEmpty(), "the permission has no id");
+        check(permission.getRolesList().contains("read"), "asked for read, got " + permission.getRolesList());
+        check(permission.getTarget().equals(sharedTarget()), "the permission names another target");
+        invitedPermissionId = permission.getId();
+        return "1 permission with roles " + permission.getRolesList() + " for a "
+                + (permission.hasGrantedTo() ? kind(permission.getGrantedTo()) : "grantee Graph does not name")
+                + ", a link " + (permission.hasLink() ? "for " + permission.getLink().getScope()
+                        : "is not part of it") + ", no mail asked for";
+    }
+
+    private String updatePermission() {
+        need(invitedPermissionId, "the invited group's permission");
+        Permission changed = stub().updatePermission(UpdatePermissionRequest.newBuilder()
+                .setTarget(sharedTarget()).setPermissionId(invitedPermissionId).addRoles("write").build())
+                .getPermission();
+        check(changed.getRolesList().contains("write"), "asked for write, got " + changed.getRolesList());
+        check(!changed.getId().isEmpty(), "the changed permission has no id");
+        String before = invitedPermissionId;
+        invitedPermissionId = changed.getId();
+        Permission read = permissionOfTheSharedFile(invitedPermissionId);
+        check(read.getRolesList().contains("write"), "read back with roles " + read.getRolesList());
+        return "roles " + read.getRolesList() + " read back, under "
+                + (before.equals(invitedPermissionId) ? "the same id" : "a new id");
+    }
+
+    private String shareWithAnyone() {
+        need(organizationLinkId, "the shared file");
+        Permission link;
+        try {
+            link = stub().createSharingLink(CreateSharingLinkRequest.newBuilder().setTarget(sharedTarget())
+                    .setType("view").setScope("anonymous").build()).getPermission();
+        } catch (StatusRuntimeException e) {
+            io.grpc.Status.Code code = e.getStatus().getCode();
+            if (code != io.grpc.Status.Code.PERMISSION_DENIED && code != io.grpc.Status.Code.INVALID_ARGUMENT
+                    && code != io.grpc.Status.Code.FAILED_PRECONDITION) {
+                throw e;
+            }
+            return "the site refuses a link for anyone: " + code;
+        }
+        check(!link.getId().isEmpty(), "the link has no id");
+        if (!link.getId().equals(organizationLinkId) && !link.getId().equals(usersLinkId)) {
+            anyoneLinkId = link.getId();
+        }
+        check(!link.getLink().getScope().isEmpty(), "the link has no scope");
+        return link.getLink().getScope().equals("anonymous")
+                ? "the site allows it: a view link for anyone with roles " + link.getRolesList()
+                : "asked for a link for anyone, the site answered one for " + link.getLink().getScope();
+    }
+
+    private String permissionsOfTheSharedFile() {
+        need(organizationLinkId, "the organization link");
+        Map<String, Permission> byId = new HashMap<>();
+        Map<String, Integer> scopes = new TreeMap<>();
+        stub().listPermissions(ListPermissionsRequest.newBuilder().setTarget(sharedTarget()).build())
+                .forEachRemaining(response -> {
+                    Permission permission = response.getPermission();
+                    byId.put(permission.getId(), permission);
+                    if (permission.hasLink()) {
+                        scopes.merge(permission.getLink().getScope(), 1, Integer::sum);
+                    }
+                });
+        Permission organization = byId.get(organizationLinkId);
+        check(organization != null && organization.getLink().getScope().equals("organization"),
+                "the ACL does not list the organization link");
+        if (usersLinkId != null) {
+            Permission people = byId.get(usersLinkId);
+            check(people != null && people.getLink().getScope().equals("users"),
+                    "the ACL does not list the link for named people");
+            check(userId == null || names(people, userId),
+                    "the link for named people does not name the user it was granted to");
+        }
+        if (anyoneLinkId != null) {
+            check(byId.containsKey(anyoneLinkId), "the ACL does not list the link for anyone");
+        }
+        if (invitedPermissionId != null) {
+            Permission invited = byId.get(invitedPermissionId);
+            check(invited != null && invited.getRolesList().contains("write"),
+                    "the ACL does not list the invited group with write"
+                            + (invited == null ? "" : ", but with " + invited.getRolesList()));
+        }
+        return byId.size() + " permission(s), links by scope " + scopes
+                + (invitedPermissionId == null ? "" : ", the invited group with write");
+    }
+
+    /** A drive item of the test library as a list item. */
+    private SiteSecurable librarySecurable(String driveItemId) {
+        String number = getItem(driveItemId).getSharepointIds().getListItemId();
+        check(!number.isEmpty(), "the item's list item id is unknown");
+        return SiteSecurable.newBuilder().setListItem(ListItemRef.newBuilder()
+                .setSiteId(siteId).setListId(folderSecurable().getListItem().getListId())
+                .setItemId(number)).build();
+    }
+
+    private String roleAssignmentsOfTheSharedFile() {
+        need(organizationLinkId, "the organization link");
+        String unique = getItem(shared.getId()).getSharepointIds().getListItemUniqueId();
+        check(!unique.isEmpty(), "the shared file's unique id is unknown");
+        SiteSecurable file = librarySecurable(shared.getId());
+        sharedSecurable = file;
+        List<SiteRoleAssignment> assignments = new ArrayList<>();
+        List<SiteRoleAssignment> onTheSite = new ArrayList<>();
+        List<SiteGroup> groups = new ArrayList<>();
+        try {
+            check(stub().getSiteRoleInheritance(GetSiteRoleInheritanceRequest.newBuilder()
+                    .setSecurable(file).build()).getHasUniqueRoleAssignments(),
+                    "a shared file still inherits its role assignments");
+            stub().listSiteRoleAssignments(ListSiteRoleAssignmentsRequest.newBuilder().setSecurable(file)
+                    .build()).forEachRemaining(response -> assignments.add(response.getAssignment()));
+            stub().listSiteRoleAssignments(ListSiteRoleAssignmentsRequest.newBuilder()
+                    .setSecurable(SiteSecurable.newBuilder().setSiteId(siteId)).build())
+                    .forEachRemaining(response -> onTheSite.add(response.getAssignment()));
+            stub().listSiteGroups(ListSiteGroupsRequest.newBuilder().setSiteId(siteId).build())
+                    .forEachRemaining(response -> groups.add(response.getGroup()));
+        } catch (StatusRuntimeException e) {
+            throw notGranted(e);
+        }
+        Map<String, Set<String>> levels = new TreeMap<>();
+        for (SiteRoleAssignment assignment : assignments) {
+            checkPrincipal(assignment.getMember());
+            if (assignment.getMember().hasSharingLink()) {
+                SiteSharingLinkGroup link = assignment.getMember().getSharingLink();
+                check(link.getItemUniqueId().equalsIgnoreCase(unique),
+                        "the file's role assignments name the link group of another item");
+                check(!link.getKind().isEmpty() && !link.getShareId().isEmpty(),
+                        "a link group has no kind or no share id");
+                assignment.getRolesList().forEach(role -> levels
+                        .computeIfAbsent(link.getScope() + " (" + link.getKind() + ")", key -> new TreeSet<>())
+                        .add(role.getName()));
+            }
+        }
+        check(levels.keySet().stream().anyMatch(scope -> scope.startsWith("organization ")),
+                "no role assignment names the group of the organization link: " + levels.keySet());
+        check(usersLinkId == null || levels.keySet().stream().anyMatch(scope -> scope.startsWith("users ")),
+                "no role assignment names the group of the link for named people: " + levels.keySet());
+        Set<String> siteLevels = new TreeSet<>();
+        Set<String> groupOnTheSite = new TreeSet<>();
+        int limited = 0;
+        for (SiteRoleAssignment assignment : onTheSite) {
+            if (assignment.getMember().getSharingLink().getItemUniqueId().equalsIgnoreCase(unique)) {
+                assignment.getRolesList().forEach(role -> siteLevels.add(role.getName()));
+            }
+            if (groupId != null && assignment.getMember().getDirectoryObjectId().equalsIgnoreCase(groupId)) {
+                assignment.getRolesList().forEach(role -> groupOnTheSite.add(role.getName()));
+            }
+            // Role type 1 is SharePoint's Guest type: Limited Access.
+            limited += assignment.getRolesCount() > 0 && assignment.getRolesList().stream()
+                    .allMatch(role -> role.getRoleTypeKind() == 1) ? 1 : 0;
+        }
+        Set<String> groupOnTheFile = new TreeSet<>();
+        for (SiteRoleAssignment assignment : assignments) {
+            if (groupId != null && assignment.getMember().getDirectoryObjectId().equalsIgnoreCase(groupId)) {
+                assignment.getRolesList().forEach(role -> groupOnTheFile.add(role.getName()));
+            }
+        }
+        check(invitedPermissionId == null || !groupOnTheFile.isEmpty(),
+                "the file's role assignments do not name the invited group");
+        int linkGroups = 0;
+        int members = 0;
+        boolean userIsMember = false;
+        for (SiteGroup group : groups) {
+            if (!group.getSharingLink().getItemUniqueId().equalsIgnoreCase(unique)) {
+                continue;
+            }
+            linkGroups++;
+            if (!group.getSharingLink().getScope().equals("users")) {
+                continue;
+            }
+            List<SitePrincipal> people = new ArrayList<>();
+            stub().listSiteGroupMembers(ListSiteGroupMembersRequest.newBuilder().setSiteId(siteId)
+                    .setGroupId(group.getId()).build())
+                    .forEachRemaining(response -> people.add(response.getMember()));
+            people.forEach(WriteScenarios::checkPrincipal);
+            members += people.size();
+            userIsMember |= userPrincipalName != null && people.stream().anyMatch(person ->
+                    person.getUserPrincipalName().equalsIgnoreCase(userPrincipalName));
+        }
+        check(linkGroups >= levels.size(), "the site lists " + linkGroups + " link group(s) of the file for "
+                + levels.size() + " link(s) in its role assignments");
+        check(usersLinkId == null || userPrincipalName == null || userIsMember,
+                "the group of the link for named people does not hold the user it was granted to");
+        return "the file has its own role assignments; link groups and their levels " + levels + "; "
+                + linkGroups + " link group(s) of the file among the site's groups, " + members
+                + " member(s) in the one for named people; on the site those groups hold "
+                + (siteLevels.isEmpty() ? "nothing" : siteLevels)
+                + (invitedPermissionId == null ? "" : "; the invited group holds " + groupOnTheFile
+                        + " on the file and " + (groupOnTheSite.isEmpty() ? "nothing" : groupOnTheSite)
+                        + " on the site")
+                + "; " + limited + " assignment(s) on the site hold only Limited Access";
+    }
+
+    private String revokeLinkAccess() throws InterruptedException {
+        need(usersLinkId, "the link for named people");
+        Permission after = stub().revokeLinkAccess(RevokeLinkAccessRequest.newBuilder()
+                .setItem(ref(shared.getId())).setPermissionId(usersLinkId).addGrantees(theUser()).build())
+                .getPermission();
+        check(after.getId().equals(usersLinkId), "the answer is another permission");
+        int reads = 1;
+        while (names(permissionOfTheSharedFile(usersLinkId), userId)) {
+            check(reads < DIRECTORY_READS, "after " + reads + " reads the link still names the user");
+            reads++;
+            pause();
+        }
+        return "the answer names " + after.getGrantedToIdentitiesCount()
+                + " grantee(s); the link read back no longer names the user on read " + reads;
+    }
+
+    private String deletePermissions() {
+        need(organizationLinkId, "the organization link");
+        List<String> ids = new ArrayList<>();
+        for (String id : Arrays.asList(invitedPermissionId, usersLinkId, anyoneLinkId, organizationLinkId)) {
+            if (id != null) {
+                ids.add(id);
+            }
+        }
+        for (String id : ids) {
+            stub().deletePermission(DeletePermissionRequest.newBuilder().setTarget(sharedTarget())
+                    .setPermissionId(id).build());
+        }
+        String invited = invitedPermissionId;
+        invitedPermissionId = null;
+        usersLinkId = null;
+        anyoneLinkId = null;
+        Map<String, Permission> left = new HashMap<>();
+        int[] links = {0};
+        stub().listPermissions(ListPermissionsRequest.newBuilder().setTarget(sharedTarget()).build())
+                .forEachRemaining(response -> {
+                    left.put(response.getPermission().getId(), response.getPermission());
+                    links[0] += response.getPermission().hasLink() ? 1 : 0;
+                });
+        check(links[0] == 0, links[0] + " link(s) are still in the ACL");
+        left.keySet().retainAll(ids);
+        String user = "";
+        if (invited != null && left.containsKey(invited)) {
+            // The group held a permission of its own before the invitation; that one stays.
+            Set<String> roles = new TreeSet<>(left.remove(invited).getRolesList());
+            check(!rolesBeforeTheInvitation.isEmpty() && roles.equals(rolesBeforeTheInvitation),
+                    "the invited group is still in the ACL with " + roles + "; before the invitation "
+                            + rolesBeforeTheInvitation);
+            user = "; the group is back to " + roles + ", as before the invitation";
+        }
+        check(left.isEmpty(), left.size() + " removed permission(s) are still in the ACL");
+        return ids.size() + " permission(s) removed; the ACL lists no link" + user;
     }
 
     private String permissionsOfTheFile() {

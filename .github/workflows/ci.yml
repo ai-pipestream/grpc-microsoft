@@ -658,6 +658,7 @@ jobs:
           check "bearer credential" 'Bearer [A-Za-z0-9._-]{16,}'
           check "client secret field" 'client_secret'
           check "tenant host" 'pipestreamai'
+          check "encoded sharing URL" 'u!aHR0c'
           # OData annotation keys such as fields@odata.context have the shape of an address.
           n=$(grep -rIhoE '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}' . | grep -vE '@(odata|microsoft\.graph)\.[A-Za-z.]+$' | grep -vcE '@example\.(invalid|com|org)$' || true)
           echo "email address: $n matches outside the placeholder domains"
@@ -739,6 +740,7 @@ jobs:
           check "bearer credential" 'Bearer [A-Za-z0-9._-]{16,}'
           check "client secret field" 'client_secret'
           check "tenant host" 'pipestreamai'
+          check "encoded sharing URL" 'u!aHR0c'
           check "encoded grantee" 'aTowaS50fG1zLnNwLmV4dH'
           # OData annotation keys such as fields@odata.context have the shape of an address.
           n=$(grep -rIhoE '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}' . | grep -vE '@(odata|microsoft\.graph)\.[A-Za-z.]+$' | grep -vcE '@example\.(invalid|com|org)$' || true)

@@ -134,6 +134,13 @@ class MicrosoftLiveCoverageIT {
             Map.entry("DeltaListItems", "GET /sites/{site-id}/lists/{list-id}/items/delta"),
             Map.entry("ListColumns", "GET /sites/{site-id}[/lists/{id}][/contentTypes/{id}]/columns"),
             Map.entry("ListPermissions", "GET .../permissions"),
+            Map.entry("GetPermission", "GET .../permissions/{permission-id}"),
+            Map.entry("CreateSharingLink", "POST .../createLink"),
+            Map.entry("InviteRecipients", "POST /drives/{drive-id}/items/{item-id}/invite"),
+            Map.entry("UpdatePermission", "PATCH .../permissions/{permission-id}"),
+            Map.entry("DeletePermission", "DELETE .../permissions/{permission-id}"),
+            Map.entry("GrantLinkAccess", "POST .../permissions/{permission-id}/grant"),
+            Map.entry("RevokeLinkAccess", "POST .../permissions/{permission-id}/revokeGrants"),
             Map.entry("GetTermStore", "GET /sites/{site-id}/termStore"),
             Map.entry("ListTermGroups", "GET /sites/{site-id}/termStore/groups"),
             Map.entry("ListTermSets", "GET /sites/{site-id}/termStore/groups/{id}/sets"),
@@ -761,6 +768,7 @@ class MicrosoftLiveCoverageIT {
         if (target == null) {
             skip("GetItem", "no drive item found");
             skip("ListPermissions", "ListPermissions [drive item]", "no drive item found");
+            skip("GetPermission", "no drive item found");
         } else {
             String itemId = target.getId();
             unary("GetItem", "GetItem [id, list columns + permissions + publication]",
@@ -783,11 +791,22 @@ class MicrosoftLiveCoverageIT {
                             .setInclude(DriveItemInclude.newBuilder().setRetentionLabel(true)).build()),
                     r -> r.getItem().hasRetentionLabel() ? "label \"" + r.getItem().getRetentionLabel().getName()
                             + "\"" : "no retention label");
-            stream("ListPermissions", "ListPermissions [drive item]", LIST_CAP,
-                    s -> s.listPermissions(ListPermissionsRequest.newBuilder().setTarget(PermissionTarget
-                            .newBuilder().setDriveItem(DriveItemRef.newBuilder().setDriveId(driveId)
-                                    .setItemId(itemId))).build()),
+            PermissionTarget onTheItem = PermissionTarget.newBuilder().setDriveItem(DriveItemRef.newBuilder()
+                    .setDriveId(driveId).setItemId(itemId)).build();
+            List<ai.pipestream.microsoft.v1.ListPermissionsResponse> permissions = stream("ListPermissions",
+                    "ListPermissions [drive item]", LIST_CAP,
+                    s -> s.listPermissions(ListPermissionsRequest.newBuilder().setTarget(onTheItem).build()),
                     l -> join(l, r -> join(r.getPermission().getRolesList(), x -> x)));
+            if (permissions == null || permissions.isEmpty()) {
+                skip("GetPermission", "no permission was listed");
+            } else {
+                String permissionId = permissions.get(0).getPermission().getId();
+                unary("GetPermission", "GetPermission", s -> s.getPermission(
+                        ai.pipestream.microsoft.v1.GetPermissionRequest.newBuilder().setTarget(onTheItem)
+                                .setPermissionId(permissionId).build()),
+                        r -> r.getPermission().getId().equals(permissionId) ? "the listed permission"
+                                : "another permission");
+            }
         }
         if (file == null) {
             String reason = "no file of at most " + DOWNLOAD_CAP + " bytes among " + paths.size()
@@ -1396,6 +1415,8 @@ class MicrosoftLiveCoverageIT {
             "UpdateListItemFields", "DeleteListItem", "EnsureColumns", "EnsureList", "Mutate",
             "SetSiteRoleInheritance", "CreateSiteGroup", "DeleteSiteGroup", "AddSiteGroupMember",
             "RemoveSiteGroupMember", "AddSiteRoleAssignment", "RemoveSiteRoleAssignment",
+            "CreateSharingLink", "InviteRecipients", "UpdatePermission", "DeletePermission",
+            "GrantLinkAccess", "RevokeLinkAccess",
             "CreateGroup", "UpdateGroup", "DeleteGroup", "AddGroupMember", "RemoveGroupMember");
 
     private void skip(String rpc, String reason) {

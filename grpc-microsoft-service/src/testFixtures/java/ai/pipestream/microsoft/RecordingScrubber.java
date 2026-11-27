@@ -48,6 +48,12 @@ final class RecordingScrubber {
             "visibility", "groupTypes", "preferredLanguage");
     /** Starts the name of everything a live run creates. */
     static final String LIVE_RUN_PREFIX = "pipestream-live-";
+    /** Starts the name of the group SharePoint keeps for a sharing link. */
+    private static final String SHARING_LINK_GROUP = "SharingLinks.";
+    /** Starts the name of the groups SharePoint keeps for limited access. */
+    private static final String LIMITED_ACCESS_GROUP = "Limited Access System Group";
+    /** Starts a share id: {@code u!} and the base64 of {@code http}. */
+    private static final String ENCODED_SHARE_URL = "u!aHR0c";
     /** Properties of a SharePoint principal that hold its name. */
     private static final Set<String> PRINCIPAL_NAMES = Set.of("Title", "Description", "OwnerTitle");
     /** Properties of a SharePoint change log entry that name no person, place or title. */
@@ -115,9 +121,19 @@ final class RecordingScrubber {
                     out.set(entry.getKey(), changeValue(value));
                 } else if (principal && value.isTextual() && (PRINCIPAL_NAMES.contains(entry.getKey())
                         || (entry.getKey().equals("LoginName") && value.asText().indexOf('|') < 0))) {
-                    // A principal a live run created carries the run's own name.
-                    out.put(entry.getKey(), value.asText().startsWith(LIVE_RUN_PREFIX) ? value.asText()
-                            : name("principal", value.asText(), "Principal %d"));
+                    if (systemGroup(value.asText())) {
+                        // A group SharePoint names itself: only a kind and ids.
+                        out.put(entry.getKey(), text(value.asText()));
+                    } else {
+                        // A principal a live run created carries the run's own name.
+                        out.put(entry.getKey(), value.asText().startsWith(LIVE_RUN_PREFIX) ? value.asText()
+                                : name("principal", value.asText(), "Principal %d"));
+                    }
+                } else if (entry.getKey().equals("shareId") && value.isTextual() && permission(node)) {
+                    // A share id is the sharing URL, base64-encoded.
+                    out.put(entry.getKey(), value.asText().equals(node.path("id").asText())
+                            ? placeholder("permission", value.asText(), "permission-%04d")
+                            : name("share", value.asText(), "share-%04d"));
                 } else if (value.isTextual() && (node.has(entry.getKey() + "LookupId")
                         || (entry.getKey().equals("LookupValue") && node.has("LookupId")))) {
                     // The shown value of a lookup or person column can be a person's name.
@@ -146,6 +162,22 @@ final class RecordingScrubber {
             return out;
         }
         return node.isTextual() ? JsonNodeFactory.instance.textNode(text(node.asText())) : node;
+    }
+
+    /** Whether a name is one SharePoint gives the group of a sharing link or of limited access. */
+    private static boolean systemGroup(String name) {
+        return sharingLinkGroup(name) || name.startsWith(LIMITED_ACCESS_GROUP);
+    }
+
+    /** Whether a name has the form {@code SharingLinks.{item}.{kind}.{share}}. */
+    private static boolean sharingLinkGroup(String name) {
+        if (!name.startsWith(SHARING_LINK_GROUP)) {
+            return false;
+        }
+        int kind = name.indexOf('.', SHARING_LINK_GROUP.length());
+        int share = kind < 0 ? -1 : name.indexOf('.', kind + 1);
+        return kind > SHARING_LINK_GROUP.length() && share > kind + 1 && share < name.length() - 1
+                && name.indexOf(' ') < 0;
     }
 
     /** Whether a JSON object is a permission; a listing of site permissions leaves the roles out. */
@@ -260,6 +292,13 @@ final class RecordingScrubber {
                     i = end;
                     continue;
                 }
+            }
+            if (boundary && guidless.startsWith(ENCODED_SHARE_URL, i)) {
+                // A share id in the URL of a request.
+                int end = run(guidless, i + 2, RecordingScrubber::idChar);
+                out.append(placeholder("share", guidless.substring(i, end), "share-%04d"));
+                i = end;
+                continue;
             }
             if (boundary && guidless.startsWith("b%21", i)) {
                 // The same drive id inside a URL, with its '!' percent-encoded.
@@ -488,6 +527,9 @@ final class RecordingScrubber {
         }
         if (text.contains(ENCODED_GRANTEE)) {
             found.add("encoded grantee of a site permission");
+        }
+        if (text.contains(ENCODED_SHARE_URL)) {
+            found.add("encoded sharing URL");
         }
         for (int i = 0; i < text.length(); i++) {
             if (guidAt(text, i)) {

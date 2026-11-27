@@ -1,7 +1,7 @@
 {
   "request" : {
     "method" : "GET",
-    "url" : "https://graph.microsoft.com/v1.0/groups/00000000-0000-4000-8000-000000000065?$select=id,displayName,description,mail,mailNickname,mailEnabled,securityEnabled,groupTypes,visibility,securityIdentifier",
+    "url" : "https://graph.microsoft.com/v1.0/groups/00000000-0000-4000-8000-000000000069?$select=id,displayName,description,mail,mailNickname,mailEnabled,securityEnabled,groupTypes,visibility,securityIdentifier",
     "authorized" : true,
     "headers" : { }
   },
@@ -14,11 +14,11 @@
       "json" : {
         "error" : {
           "code" : "Request_ResourceNotFound",
-          "message" : "Resource '00000000-0000-4000-8000-000000000065' does not exist or one of its queried reference-property objects are not present.",
+          "message" : "Resource '00000000-0000-4000-8000-000000000069' does not exist or one of its queried reference-property objects are not present.",
           "innerError" : {
-            "date" : "2026-11-27T17:37:38",
-            "request-id" : "00000000-0000-4000-8000-000000000067",
-            "client-request-id" : "00000000-0000-4000-8000-000000000067"
+            "date" : "2026-11-27T19:08:37",
+            "request-id" : "00000000-0000-4000-8000-000000000071",
+            "client-request-id" : "00000000-0000-4000-8000-000000000071"
           }
         }
       }

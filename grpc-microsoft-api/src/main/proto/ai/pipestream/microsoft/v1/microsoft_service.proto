@@ -13,6 +13,7 @@ import "ai/pipestream/microsoft/v1/site_change.proto";
 import "ai/pipestream/microsoft/v1/site_security.proto";
 import "ai/pipestream/microsoft/v1/term_store.proto";
 import "ai/pipestream/microsoft/v1/write.proto";
+import "google/protobuf/timestamp.proto";
 
 option java_multiple_files = true;
 option java_package = "ai.pipestream.microsoft.v1";
@@ -151,6 +152,39 @@ service MicrosoftService {
   // /sites/{site-id}/lists/{list-id}/permissions, or
   // /sites/{site-id}/permissions. The ACL of one resource as a stream.
   rpc ListPermissions(ListPermissionsRequest) returns (stream ListPermissionsResponse);
+
+  // GET /drives/{drive-id}/items/{item-id}/permissions/{permission-id} (or
+  // the list item, list or site route). One permission.
+  rpc GetPermission(GetPermissionRequest) returns (GetPermissionResponse);
+
+  // POST /drives/{drive-id}/items/{item-id}/createLink or
+  // /sites/{site-id}/lists/{list-id}/items/{item-id}/createLink. Creates a
+  // sharing link, or answers the one of that type and scope the application
+  // already made. The item gets its own permissions. PERMISSION_DENIED when
+  // the site does not allow links of that scope.
+  rpc CreateSharingLink(CreateSharingLinkRequest) returns (CreateSharingLinkResponse);
+
+  // POST /drives/{drive-id}/items/{item-id}/invite. Grants people or groups
+  // access to a drive item. Sends mail only when `send_invitation` is set.
+  rpc InviteRecipients(InviteRecipientsRequest) returns (InviteRecipientsResponse);
+
+  // PATCH /drives/{drive-id}/items/{item-id}/permissions/{permission-id}.
+  // Changes the roles, the expiry or the password of a permission the item
+  // has of its own.
+  rpc UpdatePermission(UpdatePermissionRequest) returns (UpdatePermissionResponse);
+
+  // DELETE /drives/{drive-id}/items/{item-id}/permissions/{permission-id}
+  // (or the list item route). Removes a permission the item has of its own;
+  // an inherited one is refused.
+  rpc DeletePermission(DeletePermissionRequest) returns (DeletePermissionResponse);
+
+  // POST /shares/{share-id}/permission/grant, with the share id of the link's
+  // permission. Lets people or groups use a sharing link.
+  rpc GrantLinkAccess(GrantLinkAccessRequest) returns (GrantLinkAccessResponse);
+
+  // POST /drives/{drive-id}/items/{item-id}/permissions/{permission-id}/revokeGrants.
+  // Takes people or groups off a sharing link.
+  rpc RevokeLinkAccess(RevokeLinkAccessRequest) returns (RevokeLinkAccessResponse);
 
   // --- Directory ------------------------------------------------------------
 
@@ -1039,6 +1073,176 @@ message ListPermissionsRequest {
 // One streamed permission.
 message ListPermissionsResponse {
   // The streamed permission, with `target` set.
+  Permission permission = 1;
+}
+
+// Request for one permission.
+message GetPermissionRequest {
+  // The drive item, list item, list or site the permission is on.
+  PermissionTarget target = 1;
+  // Permission id.
+  string permission_id = 2;
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 3;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// The permission.
+message GetPermissionResponse {
+  // The permission, with `target` set.
+  Permission permission = 1;
+}
+
+// Request to create a sharing link.
+message CreateSharingLinkRequest {
+  // The drive item or list item to share.
+  PermissionTarget target = 1;
+  // Type of link: `view`, `edit`, `embed`, `blocksDownload`, `review` or
+  // another type Graph takes (verbatim). Required.
+  string type = 2;
+  // Who the link is for: `anonymous`, `organization` or `users`. Empty = the
+  // default of the tenant.
+  string scope = 3;
+  // When the link stops working. Unset = no expiry of its own.
+  google.protobuf.Timestamp expires_at = 4;
+  // Password of the link. Empty = none. OneDrive personal only.
+  string password = 5;
+  // False removes the permissions the item inherits when it is shared for the
+  // first time. Unset = Graph's default (keep them).
+  optional bool retain_inherited_permissions = 6;
+  // The people or groups who may use a link of scope `users`.
+  repeated SharingRecipient recipients = 7;
+  // True mails the link to `recipients`.
+  bool send_notification = 8;
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 9;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// The sharing link.
+message CreateSharingLinkResponse {
+  // The permission that holds the link, with `target` set.
+  Permission permission = 1;
+  // True when Graph created the link; false when it answered one that existed.
+  bool created = 2;
+}
+
+// Request to grant people or groups access to a drive item.
+message InviteRecipientsRequest {
+  // The drive item.
+  DriveItemRef item = 1;
+  // Who gets access. At least one.
+  repeated SharingRecipient recipients = 2;
+  // Roles to grant: `read`, `write` or `owner`. At least one.
+  repeated string roles = 3;
+  // True when a recipient must sign in to see the item.
+  bool require_sign_in = 4;
+  // True mails a sharing link to the recipients; false grants the access
+  // without mail.
+  bool send_invitation = 5;
+  // Text of the mail. Empty = none.
+  string message = 6;
+  // When the access ends. Unset = never.
+  google.protobuf.Timestamp expires_at = 7;
+  // Password of the invitation. Empty = none. OneDrive personal only.
+  string password = 8;
+  // False removes the permissions the item inherits when it is shared for the
+  // first time. Unset = Graph's default (keep them).
+  optional bool retain_inherited_permissions = 9;
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 10;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// The permissions the invitation made.
+message InviteRecipientsResponse {
+  // The permissions, each with `target` set.
+  repeated Permission permissions = 1;
+}
+
+// Request to change a permission.
+message UpdatePermissionRequest {
+  // The drive item or list item the permission is on.
+  PermissionTarget target = 1;
+  // Permission id.
+  string permission_id = 2;
+  // New roles. Empty = leave the roles.
+  repeated string roles = 3;
+  // New expiry. Unset = leave it.
+  google.protobuf.Timestamp expires_at = 4;
+  // True removes the expiry; `expires_at` must be unset.
+  bool clear_expires_at = 5;
+  // New password. Unset = leave it. OneDrive personal only.
+  optional string password = 6;
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 7;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// The changed permission.
+message UpdatePermissionResponse {
+  // The permission as Graph answers it, with `target` set.
+  Permission permission = 1;
+}
+
+// Request to remove a permission.
+message DeletePermissionRequest {
+  // The drive item or list item the permission is on.
+  PermissionTarget target = 1;
+  // Permission id.
+  string permission_id = 2;
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 3;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// Empty: the permission is gone.
+message DeletePermissionResponse {}
+
+// Request to let people or groups use a sharing link.
+message GrantLinkAccessRequest {
+  // The drive item the link is on.
+  DriveItemRef item = 1;
+  // Id of the permission that holds the link.
+  string permission_id = 2;
+  // Who may use the link. At least one.
+  repeated SharingRecipient recipients = 3;
+  // Roles to grant: `read` or `write`. At least one.
+  repeated string roles = 4;
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 5;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// The permissions the grant made or changed.
+message GrantLinkAccessResponse {
+  // The permissions, each with `target` set.
+  repeated Permission permissions = 1;
+}
+
+// Request to take people or groups off a sharing link.
+message RevokeLinkAccessRequest {
+  // The drive item the link is on.
+  DriveItemRef item = 1;
+  // Id of the permission that holds the link.
+  string permission_id = 2;
+  // Who may no longer use the link. At least one.
+  repeated SharingRecipient grantees = 3;
+  // Catalog connection to use. Empty = the process-default (env) connection.
+  string connection_id = 4;
+  // Extensible key-value metadata (extension-metadata map - see convention).
+  map<string, string> metadata = 99;
+}
+
+// The link after the change.
+message RevokeLinkAccessResponse {
+  // The permission that holds the link, with `target` set.
   Permission permission = 1;
 }
 

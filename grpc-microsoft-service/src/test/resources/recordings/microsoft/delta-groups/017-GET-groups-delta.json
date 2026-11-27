@@ -1,0 +1,21 @@
+{
+  "request" : {
+    "method" : "GET",
+    "url" : "https://graph.microsoft.com/v1.0/groups/delta?$skiptoken=cursor-0016",
+    "authorized" : true,
+    "headers" : { }
+  },
+  "response" : {
+    "status" : 200,
+    "headers" : {
+      "content-type" : "application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8"
+    },
+    "body" : {
+      "json" : {
+        "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#groups",
+        "@odata.nextLink" : "https://graph.microsoft.com/v1.0/groups/delta?$skiptoken=cursor-0017",
+        "value" : [ ]
+      }
+    }
+  }
+}

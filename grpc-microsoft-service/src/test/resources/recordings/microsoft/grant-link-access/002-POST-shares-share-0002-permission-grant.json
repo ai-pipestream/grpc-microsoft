@@ -1,0 +1,42 @@
+{
+  "request" : {
+    "method" : "POST",
+    "url" : "https://graph.microsoft.com/v1.0/shares/share-0002/permission/grant",
+    "authorized" : true,
+    "headers" : {
+      "content-type" : "application/json"
+    },
+    "body" : {
+      "json" : {
+        "recipients" : [ {
+          "objectId" : "00000000-0000-4000-8000-000000000016"
+        } ],
+        "roles" : [ "read" ]
+      }
+    }
+  },
+  "response" : {
+    "status" : 200,
+    "headers" : {
+      "location" : "https://graph.microsoft.com",
+      "content-type" : "application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8"
+    },
+    "body" : {
+      "json" : {
+        "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#Collection(microsoft.graph.permission)",
+        "value" : [ {
+          "hasPassword" : false,
+          "id" : "permission-0006",
+          "roles" : [ "read" ],
+          "grantedToIdentities" : [ ],
+          "link" : {
+            "preventsDownload" : false,
+            "scope" : "users",
+            "type" : "view",
+            "webUrl" : "https://redacted.example/url/48"
+          }
+        } ]
+      }
+    }
+  }
+}
