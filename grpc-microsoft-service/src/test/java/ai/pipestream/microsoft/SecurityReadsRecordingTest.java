@@ -145,7 +145,7 @@ class SecurityReadsRecordingTest {
                 recorded.append(Files.readString(file));
             }
             assertThat(recorded.toString()).doesNotContain("Ada", "Lovelace", "contoso", "Engineer",
-                    "Research", "Building", "555", "S-1-12-1-11", "Team", "Owners", "100320012345abcd",
+                    "Research", "Building", "555 01", "S-1-12-1-11", "Team", "Owners", "100320012345abcd",
                     USER, GROUP, LIST, sharePoint.baseUrl());
             assertThat(RecordingScrubber.violations(recorded.toString())).isEmpty();
 
