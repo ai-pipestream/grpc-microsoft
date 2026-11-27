@@ -8,7 +8,7 @@
     },
     "body" : {
       "json" : {
-        "Title" : "pipestream-live-change-20261124-201539-f66a325e-group",
+        "Title" : "pipestream-live-change-20261127-174229-070d6c9c-group",
         "Description" : "Created by a live test run; safe to delete."
       }
     }
@@ -21,10 +21,10 @@
     },
     "body" : {
       "json" : {
-        "Id" : 24,
+        "Id" : 32,
         "IsHiddenInUI" : false,
-        "LoginName" : "pipestream-live-change-20261124-201539-f66a325e-group",
-        "Title" : "pipestream-live-change-20261124-201539-f66a325e-group",
+        "LoginName" : "pipestream-live-change-20261127-174229-070d6c9c-group",
+        "Title" : "pipestream-live-change-20261127-174229-070d6c9c-group",
         "PrincipalType" : 8,
         "AllowMembersEditMembership" : false,
         "AllowRequestToJoinLeave" : false,

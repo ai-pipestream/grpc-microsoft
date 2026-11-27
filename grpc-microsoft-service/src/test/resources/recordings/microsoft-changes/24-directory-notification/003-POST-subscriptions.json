@@ -1,0 +1,39 @@
+{
+  "request" : {
+    "method" : "POST",
+    "url" : "https://graph.microsoft.com/v1.0/subscriptions",
+    "authorized" : true,
+    "headers" : {
+      "content-type" : "application/json"
+    },
+    "body" : {
+      "json" : {
+        "changeType" : "updated,deleted",
+        "notificationUrl" : "https://redacted.example/url/1",
+        "resource" : "/groups/00000000-0000-4000-8000-000000000052",
+        "expirationDateTime" : "2026-11-28T17:42:29Z",
+        "clientState" : "pipestream-live-change-20261127-174229-070d6c9c",
+        "lifecycleNotificationUrl" : "https://redacted.example/url/2"
+      }
+    }
+  },
+  "response" : {
+    "status" : 404,
+    "headers" : {
+      "content-type" : "application/json"
+    },
+    "body" : {
+      "json" : {
+        "error" : {
+          "code" : "ExtensionError",
+          "message" : "Operation: Create; Exception: [Status Code: NotFound; Reason: Not Found; Message : Resource not found.]",
+          "innerError" : {
+            "date" : "2026-11-27T18:16:55",
+            "request-id" : "00000000-0000-4000-8000-000000000053",
+            "client-request-id" : "00000000-0000-4000-8000-000000000053"
+          }
+        }
+      }
+    }
+  }
+}

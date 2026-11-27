@@ -1,25 +1,25 @@
 [ {
   "value" : [ {
     "subscriptionId" : "00000000-0000-4000-8000-000000000003",
-    "clientState" : "pipestream-live-change-20261124-201539-f66a325e",
+    "clientState" : "pipestream-live-change-20261127-174229-070d6c9c",
     "resource" : "/drives/b%21drive-0001/root",
     "tenantId" : "00000000-0000-4000-8000-000000000009",
     "resourceData" : {
       "@odata.type" : "#Microsoft.Graph.DriveItem"
     },
-    "subscriptionExpirationDateTime" : "2026-11-26T20:15:39.001+00:00",
+    "subscriptionExpirationDateTime" : "2026-11-29T17:42:29.001+00:00",
     "changeType" : "updated"
   } ]
 }, {
   "value" : [ {
     "subscriptionId" : "00000000-0000-4000-8000-000000000006",
-    "clientState" : "pipestream-live-change-20261124-201539-f66a325e",
+    "clientState" : "pipestream-live-change-20261127-174229-070d6c9c",
     "resource" : "/drives/b%21drive-0001/root",
     "tenantId" : "00000000-0000-4000-8000-000000000009",
     "resourceData" : {
       "@odata.type" : "#Microsoft.Graph.DriveItem"
     },
-    "subscriptionExpirationDateTime" : "2026-11-24T21:05:39+00:00",
+    "subscriptionExpirationDateTime" : "2026-11-27T18:32:29+00:00",
     "changeType" : "updated"
   } ]
 } ]
