@@ -1,7 +1,7 @@
 {
   "request" : {
     "method" : "GET",
-    "url" : "https://graph.microsoft.com/v1.0/groups/delta?$skiptoken=cursor-0037",
+    "url" : "https://graph.microsoft.com/v1.0/groups/00000000-0000-4000-8000-000000000070/transitiveMembers",
     "authorized" : true,
     "headers" : { }
   },
@@ -12,8 +12,7 @@
     },
     "body" : {
       "json" : {
-        "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#groups",
-        "@odata.nextLink" : "https://graph.microsoft.com/v1.0/groups/delta?$skiptoken=cursor-0038",
+        "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#directoryObjects",
         "value" : [ ]
       }
     }

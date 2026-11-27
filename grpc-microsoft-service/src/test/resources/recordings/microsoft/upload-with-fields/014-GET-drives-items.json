@@ -13,8 +13,8 @@
     "body" : {
       "json" : {
         "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#Collection(driveItem)/$entity",
-        "@microsoft.graph.downloadUrl" : "https://redacted.example/url/244",
-        "@microsoft.graph.downloadUrlNoAuth" : "https://redacted.example/url/245",
+        "@microsoft.graph.downloadUrl" : "https://redacted.example/url/241",
+        "@microsoft.graph.downloadUrlNoAuth" : "https://redacted.example/url/242",
         "createdBy" : {
           "application" : {
             "id" : "00000000-0000-4000-8000-000000000007",
@@ -24,7 +24,7 @@
             "displayName" : "Identity 2"
           }
         },
-        "createdDateTime" : "2026-11-27T19:09:31Z",
+        "createdDateTime" : "2026-11-27T19:36:24Z",
         "eTag" : "\"{00000000-0000-4000-8000-000000000329},3\"",
         "id" : "item-0012",
         "lastModifiedBy" : {
@@ -36,28 +36,28 @@
             "displayName" : "Identity 2"
           }
         },
-        "lastModifiedDateTime" : "2026-11-27T19:09:31Z",
+        "lastModifiedDateTime" : "2026-11-27T19:36:24Z",
         "name" : "with-fields.txt",
         "parentReference" : {
           "driveType" : "documentLibrary",
           "driveId" : "b!drive-0013",
           "id" : "item-0002",
-          "name" : "pipestreamlivewrite20261127190819c90fc85blib",
+          "name" : "pipestreamlivewrite202611271935002046648elib",
           "path" : "/drives/b!drive-0013/root:",
           "siteId" : "00000000-0000-4000-8000-000000000001"
         },
-        "webUrl" : "https://redacted.example/url/243",
+        "webUrl" : "https://redacted.example/url/240",
         "cTag" : "\"c:{00000000-0000-4000-8000-000000000329},1\"",
         "file" : {
           "fileExtension" : ".txt",
           "hashes" : {
-            "quickXorHash" : "fePpUxZycEeDr8n30bkmMKapXyY="
+            "quickXorHash" : "fWPoZzZyeUfDu9u30ZFysaekZyY="
           },
           "mimeType" : "text/plain"
         },
         "fileSystemInfo" : {
-          "createdDateTime" : "2026-11-27T19:09:31Z",
-          "lastModifiedDateTime" : "2026-11-27T19:09:31Z"
+          "createdDateTime" : "2026-11-27T19:36:24Z",
+          "lastModifiedDateTime" : "2026-11-27T19:36:24Z"
         },
         "isAuthoritative" : false,
         "shared" : {

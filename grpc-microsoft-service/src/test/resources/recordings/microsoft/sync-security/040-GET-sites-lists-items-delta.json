@@ -1,7 +1,7 @@
 {
   "request" : {
     "method" : "GET",
-    "url" : "https://graph.microsoft.com/v1.0/sites/tenant-1.example,00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000002/lists/00000000-0000-4000-8000-000000000119/items/delta?$select=id,name,webUrl,description,eTag,createdDateTime,lastModifiedDateTime,createdBy,lastModifiedBy,contentType,sharepointIds,parentReference,deleted&$expand=fields",
+    "url" : "https://graph.microsoft.com/v1.0/sites/tenant-1.example,00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000002/lists/00000000-0000-4000-8000-000000000123/items/delta?$select=id,name,webUrl,description,eTag,createdDateTime,lastModifiedDateTime,createdBy,lastModifiedBy,contentType,sharepointIds,parentReference,deleted&$expand=fields",
     "authorized" : true,
     "headers" : { }
   },
@@ -13,10 +13,10 @@
     "body" : {
       "json" : {
         "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#Collection(microsoft.graph.listItem)",
-        "@odata.deltaLink" : "https://graph.microsoft.com/v1.0/sites/tenant-1.example,00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000002/lists/00000000-0000-4000-8000-000000000119/items/delta?$select=id%2cname%2cwebUrl%2cdescription%2ceTag%2ccreatedDateTime%2clastModifiedDateTime%2ccreatedBy%2clastModifiedBy%2ccontentType%2csharepointIds%2cparentReference%2cdeleted&$expand=fields&token=NDslMjM0OyUyMzE7Mzs3ODIyN2RlOC03NzhmLTRiYTgtODVjOS0wOWUyOWUyMjI2MDk7NjM5MzE0MDMzNDUzMzMwMDAwOzE2NzYzMTIwMTM7JTIzOyUyMzslMjMyOyUyMw",
+        "@odata.deltaLink" : "https://graph.microsoft.com/v1.0/sites/tenant-1.example,00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000002/lists/00000000-0000-4000-8000-000000000123/items/delta?$select=id%2cname%2cwebUrl%2cdescription%2ceTag%2ccreatedDateTime%2clastModifiedDateTime%2ccreatedBy%2clastModifiedBy%2ccontentType%2csharepointIds%2cparentReference%2cdeleted&$expand=fields&token=NDslMjM0OyUyMzE7Mzs3ODIyN2RlOC03NzhmLTRiYTgtODVjOS0wOWUyOWUyMjI2MDk7NjM5MzE0MDQ5NTMyODMwMDAwOzE2NzYzMTQ4NjY7JTIzOyUyMzslMjMyOyUyMw",
         "value" : [ {
-          "@odata.etag" : "00000000-0000-4000-8000-000000000125,1",
-          "eTag" : "00000000-0000-4000-8000-000000000125,1",
+          "@odata.etag" : "00000000-0000-4000-8000-000000000129,1",
+          "eTag" : "00000000-0000-4000-8000-000000000129,1",
           "lastModifiedDateTime" : "2026-11-27T18:29:51Z",
           "createdDateTime" : "2026-11-27T18:29:51Z",
           "id" : "1",
@@ -36,9 +36,9 @@
             "siteId" : "00000000-0000-4000-8000-000000000001"
           },
           "sharepointIds" : {
-            "listId" : "00000000-0000-4000-8000-000000000119",
+            "listId" : "00000000-0000-4000-8000-000000000123",
             "listItemId" : "1",
-            "listItemUniqueId" : "00000000-0000-4000-8000-000000000125",
+            "listItemUniqueId" : "00000000-0000-4000-8000-000000000129",
             "siteId" : "00000000-0000-4000-8000-000000000001",
             "siteUrl" : "https://redacted.example/url/3",
             "tenantId" : "00000000-0000-4000-8000-000000000010",
@@ -49,7 +49,7 @@
             "name" : "Item"
           },
           "fields" : {
-            "@odata.etag" : "00000000-0000-4000-8000-000000000125,1",
+            "@odata.etag" : "00000000-0000-4000-8000-000000000129,1",
             "id" : "1",
             "ContentType" : "Item",
             "Title" : "coverage sample",

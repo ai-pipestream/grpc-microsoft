@@ -7,7 +7,7 @@
       "content-type" : "application/octet-stream"
     },
     "body" : {
-      "sha256" : "47d1e693c9f5be56d99e9b48c8e114077927b72b641fe15ce855cbace96e612a",
+      "sha256" : "9ffacb1e5c63be49040084d6164e7cbe36431acf52577d92f78c8aafcb493c75",
       "length" : 59
     }
   },
@@ -19,13 +19,13 @@
     "body" : {
       "json" : {
         "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#drives('b%21drive-0013')/root/$entity",
-        "@microsoft.graph.downloadUrl" : "https://redacted.example/url/242",
-        "createdDateTime" : "2026-11-27T19:09:31Z",
+        "@microsoft.graph.downloadUrl" : "https://redacted.example/url/239",
+        "createdDateTime" : "2026-11-27T19:36:24Z",
         "eTag" : "\"{00000000-0000-4000-8000-000000000329},1\"",
         "id" : "item-0012",
-        "lastModifiedDateTime" : "2026-11-27T19:09:31Z",
+        "lastModifiedDateTime" : "2026-11-27T19:36:24Z",
         "name" : "with-fields.txt",
-        "webUrl" : "https://redacted.example/url/243",
+        "webUrl" : "https://redacted.example/url/240",
         "cTag" : "\"c:{00000000-0000-4000-8000-000000000329},1\"",
         "isAuthoritative" : false,
         "size" : 59,
@@ -51,19 +51,19 @@
           "driveType" : "documentLibrary",
           "driveId" : "b!drive-0013",
           "id" : "item-0002",
-          "name" : "pipestreamlivewrite20261127190819c90fc85blib",
+          "name" : "pipestreamlivewrite202611271935002046648elib",
           "path" : "/drives/b!drive-0013/root:",
           "siteId" : "00000000-0000-4000-8000-000000000001"
         },
         "file" : {
           "mimeType" : "text/plain",
           "hashes" : {
-            "quickXorHash" : "fePpUxZycEeDr8n30bkmMKapXyY="
+            "quickXorHash" : "fWPoZzZyeUfDu9u30ZFysaekZyY="
           }
         },
         "fileSystemInfo" : {
-          "createdDateTime" : "2026-11-27T19:09:31Z",
-          "lastModifiedDateTime" : "2026-11-27T19:09:31Z"
+          "createdDateTime" : "2026-11-27T19:36:24Z",
+          "lastModifiedDateTime" : "2026-11-27T19:36:24Z"
         },
         "shared" : {
           "scope" : "users"

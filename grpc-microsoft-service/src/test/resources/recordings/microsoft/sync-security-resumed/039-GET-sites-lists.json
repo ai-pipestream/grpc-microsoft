@@ -14,11 +14,11 @@
       "json" : {
         "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#sites('tenant-1.example%2C00000000-0000-4000-8000-000000000001%2C00000000-0000-4000-8000-000000000002')/lists(id,name,displayName,description,webUrl,eTag,createdDateTime,lastModifiedDateTime,createdBy,lastModifiedBy,list,sharepointIds,system,parentReference)",
         "value" : [ {
-          "@odata.etag" : "\"00000000-0000-4000-8000-000000000117,0\"",
+          "@odata.etag" : "\"00000000-0000-4000-8000-000000000121,0\"",
           "createdDateTime" : "2026-10-10T02:58:57Z",
           "description" : "",
-          "eTag" : "\"00000000-0000-4000-8000-000000000117,0\"",
-          "id" : "00000000-0000-4000-8000-000000000117",
+          "eTag" : "\"00000000-0000-4000-8000-000000000121,0\"",
+          "id" : "00000000-0000-4000-8000-000000000121",
           "lastModifiedDateTime" : "2026-10-10T02:58:57Z",
           "name" : "Events",
           "webUrl" : "https://redacted.example/url/62",
@@ -37,18 +37,18 @@
             "template" : "events"
           },
           "sharepointIds" : {
-            "listId" : "00000000-0000-4000-8000-000000000117",
+            "listId" : "00000000-0000-4000-8000-000000000121",
             "siteId" : "00000000-0000-4000-8000-000000000001",
             "siteUrl" : "https://redacted.example/url/3",
             "tenantId" : "00000000-0000-4000-8000-000000000010",
             "webId" : "00000000-0000-4000-8000-000000000002"
           }
         }, {
-          "@odata.etag" : "\"00000000-0000-4000-8000-000000000118,112\"",
+          "@odata.etag" : "\"00000000-0000-4000-8000-000000000122,112\"",
           "createdDateTime" : "2026-11-08T22:18:28Z",
           "description" : "The description for the hidden list for the taxonomy feature.",
-          "eTag" : "\"00000000-0000-4000-8000-000000000118,112\"",
-          "id" : "00000000-0000-4000-8000-000000000118",
+          "eTag" : "\"00000000-0000-4000-8000-000000000122,112\"",
+          "id" : "00000000-0000-4000-8000-000000000122",
           "lastModifiedDateTime" : "2026-11-23T02:17:37Z",
           "name" : "TaxonomyHiddenList",
           "webUrl" : "https://redacted.example/url/63",
@@ -67,7 +67,7 @@
             "template" : "genericList"
           },
           "sharepointIds" : {
-            "listId" : "00000000-0000-4000-8000-000000000118",
+            "listId" : "00000000-0000-4000-8000-000000000122",
             "siteId" : "00000000-0000-4000-8000-000000000001",
             "siteUrl" : "https://redacted.example/url/3",
             "tenantId" : "00000000-0000-4000-8000-000000000010",
@@ -75,11 +75,11 @@
           },
           "system" : { }
         }, {
-          "@odata.etag" : "\"00000000-0000-4000-8000-000000000119,1\"",
+          "@odata.etag" : "\"00000000-0000-4000-8000-000000000123,1\"",
           "createdDateTime" : "2026-11-27T18:29:51Z",
           "description" : "One item for the read-only coverage run; safe to delete.",
-          "eTag" : "\"00000000-0000-4000-8000-000000000119,1\"",
-          "id" : "00000000-0000-4000-8000-000000000119",
+          "eTag" : "\"00000000-0000-4000-8000-000000000123,1\"",
+          "id" : "00000000-0000-4000-8000-000000000123",
           "lastModifiedDateTime" : "2026-11-27T18:33:33Z",
           "name" : "pipestreamcoverage",
           "webUrl" : "https://redacted.example/url/64",
@@ -103,18 +103,18 @@
             "template" : "genericList"
           },
           "sharepointIds" : {
-            "listId" : "00000000-0000-4000-8000-000000000119",
+            "listId" : "00000000-0000-4000-8000-000000000123",
             "siteId" : "00000000-0000-4000-8000-000000000001",
             "siteUrl" : "https://redacted.example/url/3",
             "tenantId" : "00000000-0000-4000-8000-000000000010",
             "webId" : "00000000-0000-4000-8000-000000000002"
           }
         }, {
-          "@odata.etag" : "\"00000000-0000-4000-8000-000000000120,15\"",
+          "@odata.etag" : "\"00000000-0000-4000-8000-000000000124,15\"",
           "createdDateTime" : "2026-11-08T22:18:07Z",
           "description" : "Manage your new employee's onboarding process from day 1. Share resources and contacts, and get your new hire up-to-speed quickly.",
-          "eTag" : "\"00000000-0000-4000-8000-000000000120,15\"",
-          "id" : "00000000-0000-4000-8000-000000000120",
+          "eTag" : "\"00000000-0000-4000-8000-000000000124,15\"",
+          "id" : "00000000-0000-4000-8000-000000000124",
           "lastModifiedDateTime" : "2026-11-22T13:58:24Z",
           "name" : "Employee onboarding",
           "webUrl" : "https://redacted.example/url/65",
@@ -135,18 +135,18 @@
             "template" : "genericList"
           },
           "sharepointIds" : {
-            "listId" : "00000000-0000-4000-8000-000000000120",
+            "listId" : "00000000-0000-4000-8000-000000000124",
             "siteId" : "00000000-0000-4000-8000-000000000001",
             "siteUrl" : "https://redacted.example/url/3",
             "tenantId" : "00000000-0000-4000-8000-000000000010",
             "webId" : "00000000-0000-4000-8000-000000000002"
           }
         }, {
-          "@odata.etag" : "\"00000000-0000-4000-8000-000000000121,0\"",
+          "@odata.etag" : "\"00000000-0000-4000-8000-000000000125,0\"",
           "createdDateTime" : "2026-11-08T22:18:05Z",
           "description" : "This list stores run results for the Web Template Extensions feature.",
-          "eTag" : "\"00000000-0000-4000-8000-000000000121,0\"",
-          "id" : "00000000-0000-4000-8000-000000000121",
+          "eTag" : "\"00000000-0000-4000-8000-000000000125,0\"",
+          "id" : "00000000-0000-4000-8000-000000000125",
           "lastModifiedDateTime" : "2026-11-08T22:18:38Z",
           "name" : "wte",
           "webUrl" : "https://redacted.example/url/66",
@@ -167,18 +167,18 @@
             "template" : "webTemplateExtensionsList"
           },
           "sharepointIds" : {
-            "listId" : "00000000-0000-4000-8000-000000000121",
+            "listId" : "00000000-0000-4000-8000-000000000125",
             "siteId" : "00000000-0000-4000-8000-000000000001",
             "siteUrl" : "https://redacted.example/url/3",
             "tenantId" : "00000000-0000-4000-8000-000000000010",
             "webId" : "00000000-0000-4000-8000-000000000002"
           }
         }, {
-          "@odata.etag" : "\"00000000-0000-4000-8000-000000000105,30\"",
+          "@odata.etag" : "\"00000000-0000-4000-8000-000000000109,30\"",
           "createdDateTime" : "2026-10-10T02:58:54Z",
           "description" : "",
-          "eTag" : "\"00000000-0000-4000-8000-000000000105,30\"",
-          "id" : "00000000-0000-4000-8000-000000000105",
+          "eTag" : "\"00000000-0000-4000-8000-000000000109,30\"",
+          "id" : "00000000-0000-4000-8000-000000000109",
           "lastModifiedDateTime" : "2026-11-08T22:18:36Z",
           "name" : "SitePages",
           "webUrl" : "https://redacted.example/url/50",
@@ -202,7 +202,7 @@
             "template" : "webPageLibrary"
           },
           "sharepointIds" : {
-            "listId" : "00000000-0000-4000-8000-000000000105",
+            "listId" : "00000000-0000-4000-8000-000000000109",
             "siteId" : "00000000-0000-4000-8000-000000000001",
             "siteUrl" : "https://redacted.example/url/3",
             "tenantId" : "00000000-0000-4000-8000-000000000010",
@@ -210,11 +210,11 @@
           },
           "system" : { }
         }, {
-          "@odata.etag" : "\"00000000-0000-4000-8000-000000000122,0\"",
+          "@odata.etag" : "\"00000000-0000-4000-8000-000000000126,0\"",
           "createdDateTime" : "2026-10-10T02:58:46Z",
           "description" : "Use this list to store composed looks. These looks can be applied to this site by navigating to Site Settings and choosing Change the look.",
-          "eTag" : "\"00000000-0000-4000-8000-000000000122,0\"",
-          "id" : "00000000-0000-4000-8000-000000000122",
+          "eTag" : "\"00000000-0000-4000-8000-000000000126,0\"",
+          "id" : "00000000-0000-4000-8000-000000000126",
           "lastModifiedDateTime" : "2026-10-10T02:58:47Z",
           "name" : "design",
           "webUrl" : "https://redacted.example/url/67",
@@ -233,7 +233,7 @@
             "template" : "designCatalog"
           },
           "sharepointIds" : {
-            "listId" : "00000000-0000-4000-8000-000000000122",
+            "listId" : "00000000-0000-4000-8000-000000000126",
             "siteId" : "00000000-0000-4000-8000-000000000001",
             "siteUrl" : "https://redacted.example/url/3",
             "tenantId" : "00000000-0000-4000-8000-000000000010",
@@ -241,11 +241,11 @@
           },
           "system" : { }
         }, {
-          "@odata.etag" : "\"00000000-0000-4000-8000-000000000106,0\"",
+          "@odata.etag" : "\"00000000-0000-4000-8000-000000000110,0\"",
           "createdDateTime" : "2026-10-10T02:58:46Z",
           "description" : "Use the style library to store style sheets, such as CSS or XSL files. The style sheets in this gallery can be used by this site or any of its subsites.",
-          "eTag" : "\"00000000-0000-4000-8000-000000000106,0\"",
-          "id" : "00000000-0000-4000-8000-000000000106",
+          "eTag" : "\"00000000-0000-4000-8000-000000000110,0\"",
+          "id" : "00000000-0000-4000-8000-000000000110",
           "lastModifiedDateTime" : "2026-10-10T02:58:46Z",
           "name" : "Style Library",
           "webUrl" : "https://redacted.example/url/51",
@@ -264,7 +264,7 @@
             "template" : "documentLibrary"
           },
           "sharepointIds" : {
-            "listId" : "00000000-0000-4000-8000-000000000106",
+            "listId" : "00000000-0000-4000-8000-000000000110",
             "siteId" : "00000000-0000-4000-8000-000000000001",
             "siteUrl" : "https://redacted.example/url/3",
             "tenantId" : "00000000-0000-4000-8000-000000000010",
@@ -272,11 +272,11 @@
           },
           "system" : { }
         }, {
-          "@odata.etag" : "\"00000000-0000-4000-8000-000000000107,0\"",
+          "@odata.etag" : "\"00000000-0000-4000-8000-000000000111,0\"",
           "createdDateTime" : "2026-10-10T02:58:46Z",
           "description" : "Make a template available for use in list creation by adding it to this gallery. The templates in this gallery are available to this site and all sites under it. Default list templates are not shown.",
-          "eTag" : "\"00000000-0000-4000-8000-000000000107,0\"",
-          "id" : "00000000-0000-4000-8000-000000000107",
+          "eTag" : "\"00000000-0000-4000-8000-000000000111,0\"",
+          "id" : "00000000-0000-4000-8000-000000000111",
           "lastModifiedDateTime" : "2026-10-10T02:58:46Z",
           "name" : "lt",
           "webUrl" : "https://redacted.example/url/52",
@@ -295,7 +295,7 @@
             "template" : "listTemplateCatalog"
           },
           "sharepointIds" : {
-            "listId" : "00000000-0000-4000-8000-000000000107",
+            "listId" : "00000000-0000-4000-8000-000000000111",
             "siteId" : "00000000-0000-4000-8000-000000000001",
             "siteUrl" : "https://redacted.example/url/3",
             "tenantId" : "00000000-0000-4000-8000-000000000010",
@@ -303,12 +303,12 @@
           },
           "system" : { }
         }, {
-          "@odata.etag" : "\"00000000-0000-4000-8000-000000000123,49\"",
+          "@odata.etag" : "\"00000000-0000-4000-8000-000000000127,49\"",
           "createdDateTime" : "2026-10-10T02:58:45Z",
           "description" : "All people.",
-          "eTag" : "\"00000000-0000-4000-8000-000000000123,49\"",
-          "id" : "00000000-0000-4000-8000-000000000123",
-          "lastModifiedDateTime" : "2026-11-27T19:09:11Z",
+          "eTag" : "\"00000000-0000-4000-8000-000000000127,49\"",
+          "id" : "00000000-0000-4000-8000-000000000127",
+          "lastModifiedDateTime" : "2026-11-27T19:35:58Z",
           "name" : "users",
           "webUrl" : "https://redacted.example/url/68",
           "displayName" : "User Information List",
@@ -326,7 +326,7 @@
             "template" : "userInformation"
           },
           "sharepointIds" : {
-            "listId" : "00000000-0000-4000-8000-000000000123",
+            "listId" : "00000000-0000-4000-8000-000000000127",
             "siteId" : "00000000-0000-4000-8000-000000000001",
             "siteUrl" : "https://redacted.example/url/3",
             "tenantId" : "00000000-0000-4000-8000-000000000010",
@@ -339,7 +339,7 @@
           "description" : "",
           "eTag" : "\"00000000-0000-4000-8000-000000000008,1\"",
           "id" : "00000000-0000-4000-8000-000000000008",
-          "lastModifiedDateTime" : "2026-11-27T19:09:00Z",
+          "lastModifiedDateTime" : "2026-11-27T19:35:44Z",
           "name" : "Shared Documents",
           "webUrl" : "https://redacted.example/url/49",
           "displayName" : "Documents",
@@ -364,11 +364,11 @@
             "webId" : "00000000-0000-4000-8000-000000000002"
           }
         }, {
-          "@odata.etag" : "\"00000000-0000-4000-8000-000000000108,0\"",
+          "@odata.etag" : "\"00000000-0000-4000-8000-000000000112,0\"",
           "createdDateTime" : "2026-10-10T02:58:45Z",
           "description" : "Use the Solution Gallery to track user solutions.",
-          "eTag" : "\"00000000-0000-4000-8000-000000000108,0\"",
-          "id" : "00000000-0000-4000-8000-000000000108",
+          "eTag" : "\"00000000-0000-4000-8000-000000000112,0\"",
+          "id" : "00000000-0000-4000-8000-000000000112",
           "lastModifiedDateTime" : "2026-10-10T02:58:45Z",
           "name" : "solutions",
           "webUrl" : "https://redacted.example/url/53",
@@ -387,7 +387,7 @@
             "template" : "solutionCatalog"
           },
           "sharepointIds" : {
-            "listId" : "00000000-0000-4000-8000-000000000108",
+            "listId" : "00000000-0000-4000-8000-000000000112",
             "siteId" : "00000000-0000-4000-8000-000000000001",
             "siteUrl" : "https://redacted.example/url/3",
             "tenantId" : "00000000-0000-4000-8000-000000000010",
@@ -395,11 +395,11 @@
           },
           "system" : { }
         }, {
-          "@odata.etag" : "\"00000000-0000-4000-8000-000000000109,12\"",
+          "@odata.etag" : "\"00000000-0000-4000-8000-000000000113,12\"",
           "createdDateTime" : "2026-10-10T02:58:45Z",
           "description" : "Use the master page gallery to store master pages. The master pages in this gallery are available to this site and any sites underneath it.",
-          "eTag" : "\"00000000-0000-4000-8000-000000000109,12\"",
-          "id" : "00000000-0000-4000-8000-000000000109",
+          "eTag" : "\"00000000-0000-4000-8000-000000000113,12\"",
+          "id" : "00000000-0000-4000-8000-000000000113",
           "lastModifiedDateTime" : "2026-11-08T22:18:29Z",
           "name" : "masterpage",
           "webUrl" : "https://redacted.example/url/54",
@@ -423,7 +423,7 @@
             "template" : "masterPageCatalog"
           },
           "sharepointIds" : {
-            "listId" : "00000000-0000-4000-8000-000000000109",
+            "listId" : "00000000-0000-4000-8000-000000000113",
             "siteId" : "00000000-0000-4000-8000-000000000001",
             "siteUrl" : "https://redacted.example/url/3",
             "tenantId" : "00000000-0000-4000-8000-000000000010",
@@ -431,11 +431,11 @@
           },
           "system" : { }
         }, {
-          "@odata.etag" : "\"00000000-0000-4000-8000-000000000110,1\"",
+          "@odata.etag" : "\"00000000-0000-4000-8000-000000000114,1\"",
           "createdDateTime" : "2026-11-08T22:18:09Z",
           "description" : "List of user browser-enabled form templates on this site collection.",
-          "eTag" : "\"00000000-0000-4000-8000-000000000110,1\"",
-          "id" : "00000000-0000-4000-8000-000000000110",
+          "eTag" : "\"00000000-0000-4000-8000-000000000114,1\"",
+          "id" : "00000000-0000-4000-8000-000000000114",
           "lastModifiedDateTime" : "2026-11-08T22:18:11Z",
           "name" : "IWConvertedForms",
           "webUrl" : "https://redacted.example/url/55",
@@ -454,38 +454,7 @@
             "template" : "10102"
           },
           "sharepointIds" : {
-            "listId" : "00000000-0000-4000-8000-000000000110",
-            "siteId" : "00000000-0000-4000-8000-000000000001",
-            "siteUrl" : "https://redacted.example/url/3",
-            "tenantId" : "00000000-0000-4000-8000-000000000010",
-            "webId" : "00000000-0000-4000-8000-000000000002"
-          },
-          "system" : { }
-        }, {
-          "@odata.etag" : "\"00000000-0000-4000-8000-000000000111,0\"",
-          "createdDateTime" : "2026-10-10T02:58:47Z",
-          "description" : "",
-          "eTag" : "\"00000000-0000-4000-8000-000000000111,0\"",
-          "id" : "00000000-0000-4000-8000-000000000111",
-          "lastModifiedDateTime" : "2026-10-10T02:58:47Z",
-          "name" : "appfiles",
-          "webUrl" : "https://redacted.example/url/56",
-          "displayName" : "appfiles",
-          "createdBy" : {
-            "user" : {
-              "displayName" : "Identity 8"
-            }
-          },
-          "parentReference" : {
-            "siteId" : "tenant-1.example,00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000002"
-          },
-          "list" : {
-            "contentTypesEnabled" : false,
-            "hidden" : true,
-            "template" : "appFilesCatalog"
-          },
-          "sharepointIds" : {
-            "listId" : "00000000-0000-4000-8000-000000000111",
+            "listId" : "00000000-0000-4000-8000-000000000114",
             "siteId" : "00000000-0000-4000-8000-000000000001",
             "siteUrl" : "https://redacted.example/url/3",
             "tenantId" : "00000000-0000-4000-8000-000000000010",
@@ -494,14 +463,14 @@
           "system" : { }
         }, {
           "@odata.etag" : "\"00000000-0000-4000-8000-000000000022,21\"",
-          "createdDateTime" : "2026-11-27T19:08:31Z",
+          "createdDateTime" : "2026-11-27T19:35:15Z",
           "description" : "Created by the live write test; safe to delete.",
           "eTag" : "\"00000000-0000-4000-8000-000000000022,21\"",
           "id" : "00000000-0000-4000-8000-000000000022",
-          "lastModifiedDateTime" : "2026-11-27T19:08:33Z",
-          "name" : "pipestreamlivewrite20261127190819c90fc85b",
+          "lastModifiedDateTime" : "2026-11-27T19:35:18Z",
+          "name" : "pipestreamlivewrite202611271935002046648e",
           "webUrl" : "https://redacted.example/url/34",
-          "displayName" : "pipestream-live-write-20261127-190819-c90fc85b",
+          "displayName" : "pipestream-live-write-20261127-193500-2046648e",
           "createdBy" : {
             "user" : {
               "displayName" : "Identity 2"
@@ -528,11 +497,42 @@
             "webId" : "00000000-0000-4000-8000-000000000002"
           }
         }, {
-          "@odata.etag" : "\"00000000-0000-4000-8000-000000000112,0\"",
+          "@odata.etag" : "\"00000000-0000-4000-8000-000000000115,0\"",
+          "createdDateTime" : "2026-10-10T02:58:47Z",
+          "description" : "",
+          "eTag" : "\"00000000-0000-4000-8000-000000000115,0\"",
+          "id" : "00000000-0000-4000-8000-000000000115",
+          "lastModifiedDateTime" : "2026-10-10T02:58:47Z",
+          "name" : "appfiles",
+          "webUrl" : "https://redacted.example/url/56",
+          "displayName" : "appfiles",
+          "createdBy" : {
+            "user" : {
+              "displayName" : "Identity 8"
+            }
+          },
+          "parentReference" : {
+            "siteId" : "tenant-1.example,00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000002"
+          },
+          "list" : {
+            "contentTypesEnabled" : false,
+            "hidden" : true,
+            "template" : "appFilesCatalog"
+          },
+          "sharepointIds" : {
+            "listId" : "00000000-0000-4000-8000-000000000115",
+            "siteId" : "00000000-0000-4000-8000-000000000001",
+            "siteUrl" : "https://redacted.example/url/3",
+            "tenantId" : "00000000-0000-4000-8000-000000000010",
+            "webId" : "00000000-0000-4000-8000-000000000002"
+          },
+          "system" : { }
+        }, {
+          "@odata.etag" : "\"00000000-0000-4000-8000-000000000116,0\"",
           "createdDateTime" : "2026-10-10T02:58:46Z",
           "description" : "Use this Web Part Gallery to store and retrieve Web Parts. The Web Parts in this gallery are available to this site and all sites under it. To preview a Web Part, click its title.",
-          "eTag" : "\"00000000-0000-4000-8000-000000000112,0\"",
-          "id" : "00000000-0000-4000-8000-000000000112",
+          "eTag" : "\"00000000-0000-4000-8000-000000000116,0\"",
+          "id" : "00000000-0000-4000-8000-000000000116",
           "lastModifiedDateTime" : "2026-11-08T22:18:32Z",
           "name" : "wp",
           "webUrl" : "https://redacted.example/url/57",
@@ -551,7 +551,7 @@
             "template" : "webPartCatalog"
           },
           "sharepointIds" : {
-            "listId" : "00000000-0000-4000-8000-000000000112",
+            "listId" : "00000000-0000-4000-8000-000000000116",
             "siteId" : "00000000-0000-4000-8000-000000000001",
             "siteUrl" : "https://redacted.example/url/3",
             "tenantId" : "00000000-0000-4000-8000-000000000010",
@@ -559,11 +559,11 @@
           },
           "system" : { }
         }, {
-          "@odata.etag" : "\"00000000-0000-4000-8000-000000000113,0\"",
+          "@odata.etag" : "\"00000000-0000-4000-8000-000000000117,0\"",
           "createdDateTime" : "2026-10-10T02:58:46Z",
           "description" : "Use the theme gallery to store themes. The themes in this gallery can be used by this site or any of its subsites.",
-          "eTag" : "\"00000000-0000-4000-8000-000000000113,0\"",
-          "id" : "00000000-0000-4000-8000-000000000113",
+          "eTag" : "\"00000000-0000-4000-8000-000000000117,0\"",
+          "id" : "00000000-0000-4000-8000-000000000117",
           "lastModifiedDateTime" : "2026-11-08T22:18:07Z",
           "name" : "theme",
           "webUrl" : "https://redacted.example/url/58",
@@ -582,7 +582,7 @@
             "template" : "themeCatalog"
           },
           "sharepointIds" : {
-            "listId" : "00000000-0000-4000-8000-000000000113",
+            "listId" : "00000000-0000-4000-8000-000000000117",
             "siteId" : "00000000-0000-4000-8000-000000000001",
             "siteUrl" : "https://redacted.example/url/3",
             "tenantId" : "00000000-0000-4000-8000-000000000010",
@@ -590,11 +590,11 @@
           },
           "system" : { }
         }, {
-          "@odata.etag" : "\"00000000-0000-4000-8000-000000000124,0\"",
+          "@odata.etag" : "\"00000000-0000-4000-8000-000000000128,0\"",
           "createdDateTime" : "2026-10-10T02:58:47Z",
           "description" : "",
-          "eTag" : "\"00000000-0000-4000-8000-000000000124,0\"",
-          "id" : "00000000-0000-4000-8000-000000000124",
+          "eTag" : "\"00000000-0000-4000-8000-000000000128,0\"",
+          "id" : "00000000-0000-4000-8000-000000000128",
           "lastModifiedDateTime" : "2026-10-10T02:58:47Z",
           "name" : "appdata",
           "webUrl" : "https://redacted.example/url/69",
@@ -613,7 +613,7 @@
             "template" : "appDataCatalog"
           },
           "sharepointIds" : {
-            "listId" : "00000000-0000-4000-8000-000000000124",
+            "listId" : "00000000-0000-4000-8000-000000000128",
             "siteId" : "00000000-0000-4000-8000-000000000001",
             "siteUrl" : "https://redacted.example/url/3",
             "tenantId" : "00000000-0000-4000-8000-000000000010",
@@ -621,11 +621,11 @@
           },
           "system" : { }
         }, {
-          "@odata.etag" : "\"00000000-0000-4000-8000-000000000114,14\"",
+          "@odata.etag" : "\"00000000-0000-4000-8000-000000000118,14\"",
           "createdDateTime" : "2026-11-08T22:18:08Z",
           "description" : "This library contains administrator-approved form templates that were activated to this site collection.",
-          "eTag" : "\"00000000-0000-4000-8000-000000000114,14\"",
-          "id" : "00000000-0000-4000-8000-000000000114",
+          "eTag" : "\"00000000-0000-4000-8000-000000000118,14\"",
+          "id" : "00000000-0000-4000-8000-000000000118",
           "lastModifiedDateTime" : "2026-11-08T22:18:11Z",
           "name" : "FormServerTemplates",
           "webUrl" : "https://redacted.example/url/59",
@@ -644,7 +644,7 @@
             "template" : "documentLibrary"
           },
           "sharepointIds" : {
-            "listId" : "00000000-0000-4000-8000-000000000114",
+            "listId" : "00000000-0000-4000-8000-000000000118",
             "siteId" : "00000000-0000-4000-8000-000000000001",
             "siteUrl" : "https://redacted.example/url/3",
             "tenantId" : "00000000-0000-4000-8000-000000000010",
@@ -652,11 +652,11 @@
           },
           "system" : { }
         }, {
-          "@odata.etag" : "\"00000000-0000-4000-8000-000000000115,16\"",
+          "@odata.etag" : "\"00000000-0000-4000-8000-000000000119,16\"",
           "createdDateTime" : "2026-11-08T22:18:09Z",
           "description" : "Use this library to store files which are included on pages within this site, such as images on Wiki pages.",
-          "eTag" : "\"00000000-0000-4000-8000-000000000115,16\"",
-          "id" : "00000000-0000-4000-8000-000000000115",
+          "eTag" : "\"00000000-0000-4000-8000-000000000119,16\"",
+          "id" : "00000000-0000-4000-8000-000000000119",
           "lastModifiedDateTime" : "2026-11-08T22:18:45Z",
           "name" : "SiteAssets",
           "webUrl" : "https://redacted.example/url/60",
@@ -682,7 +682,7 @@
             "template" : "documentLibrary"
           },
           "sharepointIds" : {
-            "listId" : "00000000-0000-4000-8000-000000000115",
+            "listId" : "00000000-0000-4000-8000-000000000119",
             "siteId" : "00000000-0000-4000-8000-000000000001",
             "siteUrl" : "https://redacted.example/url/3",
             "tenantId" : "00000000-0000-4000-8000-000000000010",

@@ -1,7 +1,7 @@
 {
   "request" : {
     "method" : "GET",
-    "url" : "https://redacted.example/url/3/_api/web/lists(guid'00000000-0000-4000-8000-000000000008')/items(325)/roleassignments?$expand=Member,RoleDefinitionBindings",
+    "url" : "https://redacted.example/url/3/_api/web/lists(guid'00000000-0000-4000-8000-000000000008')/items(334)/roleassignments?$expand=Member,RoleDefinitionBindings",
     "authorized" : true,
     "headers" : { }
   },
@@ -126,62 +126,6 @@
           "PrincipalId" : 11
         }, {
           "Member" : {
-            "Id" : 39,
-            "IsHiddenInUI" : false,
-            "LoginName" : "SharingLinks.00000000-0000-4000-8000-000000000100.OrganizationView.permission-0005",
-            "Title" : "SharingLinks.00000000-0000-4000-8000-000000000100.OrganizationView.permission-0005",
-            "PrincipalType" : 8,
-            "AllowMembersEditMembership" : false,
-            "AllowRequestToJoinLeave" : false,
-            "AutoAcceptRequestToJoinLeave" : false,
-            "Description" : "Principal 2",
-            "OnlyAllowMembersViewMembership" : true,
-            "OwnerTitle" : "Principal 1",
-            "RequestToJoinLeaveEmailSetting" : null
-          },
-          "RoleDefinitionBindings" : [ {
-            "BasePermissions" : {
-              "High" : "176",
-              "Low" : "138612833"
-            },
-            "Description" : "Can view pages and list items and download documents.",
-            "Hidden" : false,
-            "Id" : 1073741826,
-            "Name" : "Read",
-            "Order" : 128,
-            "RoleTypeKind" : 2
-          } ],
-          "PrincipalId" : 39
-        }, {
-          "Member" : {
-            "Id" : 40,
-            "IsHiddenInUI" : false,
-            "LoginName" : "SharingLinks.00000000-0000-4000-8000-000000000100.Flexible.permission-0006",
-            "Title" : "SharingLinks.00000000-0000-4000-8000-000000000100.Flexible.permission-0006",
-            "PrincipalType" : 8,
-            "AllowMembersEditMembership" : false,
-            "AllowRequestToJoinLeave" : false,
-            "AutoAcceptRequestToJoinLeave" : false,
-            "Description" : "Principal 2",
-            "OnlyAllowMembersViewMembership" : true,
-            "OwnerTitle" : "Principal 1",
-            "RequestToJoinLeaveEmailSetting" : null
-          },
-          "RoleDefinitionBindings" : [ {
-            "BasePermissions" : {
-              "High" : "176",
-              "Low" : "138612833"
-            },
-            "Description" : "Can view pages and list items and download documents.",
-            "Hidden" : false,
-            "Id" : 1073741826,
-            "Name" : "Read",
-            "Order" : 128,
-            "RoleTypeKind" : 2
-          } ],
-          "PrincipalId" : 40
-        }, {
-          "Member" : {
             "Id" : 41,
             "IsHiddenInUI" : false,
             "LoginName" : "c:0o.c|federateddirectoryclaimprovider|00000000-0000-4000-8000-000000000054",
@@ -208,6 +152,62 @@
             "RoleTypeKind" : 3
           } ],
           "PrincipalId" : 41
+        }, {
+          "Member" : {
+            "Id" : 43,
+            "IsHiddenInUI" : false,
+            "LoginName" : "SharingLinks.00000000-0000-4000-8000-000000000104.OrganizationView.permission-0005",
+            "Title" : "SharingLinks.00000000-0000-4000-8000-000000000104.OrganizationView.permission-0005",
+            "PrincipalType" : 8,
+            "AllowMembersEditMembership" : false,
+            "AllowRequestToJoinLeave" : false,
+            "AutoAcceptRequestToJoinLeave" : false,
+            "Description" : "Principal 2",
+            "OnlyAllowMembersViewMembership" : true,
+            "OwnerTitle" : "Principal 1",
+            "RequestToJoinLeaveEmailSetting" : null
+          },
+          "RoleDefinitionBindings" : [ {
+            "BasePermissions" : {
+              "High" : "176",
+              "Low" : "138612833"
+            },
+            "Description" : "Can view pages and list items and download documents.",
+            "Hidden" : false,
+            "Id" : 1073741826,
+            "Name" : "Read",
+            "Order" : 128,
+            "RoleTypeKind" : 2
+          } ],
+          "PrincipalId" : 43
+        }, {
+          "Member" : {
+            "Id" : 44,
+            "IsHiddenInUI" : false,
+            "LoginName" : "SharingLinks.00000000-0000-4000-8000-000000000104.Flexible.permission-0006",
+            "Title" : "SharingLinks.00000000-0000-4000-8000-000000000104.Flexible.permission-0006",
+            "PrincipalType" : 8,
+            "AllowMembersEditMembership" : false,
+            "AllowRequestToJoinLeave" : false,
+            "AutoAcceptRequestToJoinLeave" : false,
+            "Description" : "Principal 2",
+            "OnlyAllowMembersViewMembership" : true,
+            "OwnerTitle" : "Principal 1",
+            "RequestToJoinLeaveEmailSetting" : null
+          },
+          "RoleDefinitionBindings" : [ {
+            "BasePermissions" : {
+              "High" : "176",
+              "Low" : "138612833"
+            },
+            "Description" : "Can view pages and list items and download documents.",
+            "Hidden" : false,
+            "Id" : 1073741826,
+            "Name" : "Read",
+            "Order" : 128,
+            "RoleTypeKind" : 2
+          } ],
+          "PrincipalId" : 44
         } ]
       }
     }

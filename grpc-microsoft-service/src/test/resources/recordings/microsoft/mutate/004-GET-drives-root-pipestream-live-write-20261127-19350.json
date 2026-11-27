@@ -1,7 +1,7 @@
 {
   "request" : {
     "method" : "GET",
-    "url" : "https://graph.microsoft.com/v1.0/drives/b!drive-0001/root:/pipestream-live-write-20261127-190819-c90fc85b:?$select=id,name,eTag,cTag,createdBy,createdDateTime,lastModifiedBy,lastModifiedDateTime,parentReference,webUrl,webDavUrl,description,size,file,folder,fileSystemInfo,deleted,root,package,remoteItem,shared,specialFolder,image,photo,video,audio,location,malware,sharepointIds,pendingOperations,@microsoft.graph.downloadUrl",
+    "url" : "https://graph.microsoft.com/v1.0/drives/b!drive-0001/root:/pipestream-live-write-20261127-193500-2046648e/batch-b:?$select=id,name,eTag,cTag,createdBy,createdDateTime,lastModifiedBy,lastModifiedDateTime,parentReference,webUrl,webDavUrl,description,size,file,folder,fileSystemInfo,deleted,root,package,remoteItem,shared,specialFolder,image,photo,video,audio,location,malware,sharepointIds,pendingOperations,@microsoft.graph.downloadUrl",
     "authorized" : true,
     "headers" : { }
   },
@@ -13,7 +13,7 @@
     "body" : {
       "json" : {
         "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#Collection(driveItem)/$entity",
-        "@odata.etag" : "\"{00000000-0000-4000-8000-000000000006},2\"",
+        "@odata.etag" : "\"{00000000-0000-4000-8000-000000000306},2\"",
         "createdBy" : {
           "application" : {
             "id" : "00000000-0000-4000-8000-000000000007",
@@ -23,9 +23,9 @@
             "displayName" : "Identity 2"
           }
         },
-        "createdDateTime" : "2026-11-27T19:08:20Z",
-        "eTag" : "\"{00000000-0000-4000-8000-000000000006},2\"",
-        "id" : "item-0001",
+        "createdDateTime" : "2026-11-27T19:36:19Z",
+        "eTag" : "\"{00000000-0000-4000-8000-000000000306},2\"",
+        "id" : "item-0011",
         "lastModifiedBy" : {
           "application" : {
             "id" : "00000000-0000-4000-8000-000000000007",
@@ -35,27 +35,27 @@
             "displayName" : "Identity 2"
           }
         },
-        "lastModifiedDateTime" : "2026-11-27T19:08:20Z",
-        "name" : "pipestream-live-write-20261127-190819-c90fc85b",
+        "lastModifiedDateTime" : "2026-11-27T19:36:20Z",
+        "name" : "batch-b",
         "parentReference" : {
           "driveType" : "documentLibrary",
           "driveId" : "b!drive-0001",
-          "id" : "item-0002",
-          "name" : "Shared Documents",
-          "path" : "/drives/b!drive-0001/root:",
+          "id" : "item-0001",
+          "name" : "pipestream-live-write-20261127-193500-2046648e",
+          "path" : "/drives/b!drive-0001/root:/pipestream-live-write-20261127-193500-2046648e",
           "sharepointIds" : {
             "listId" : "00000000-0000-4000-8000-000000000008",
-            "listItemUniqueId" : "00000000-0000-4000-8000-000000000009",
+            "listItemUniqueId" : "00000000-0000-4000-8000-000000000006",
             "siteId" : "00000000-0000-4000-8000-000000000001",
             "siteUrl" : "https://redacted.example/url/3",
             "webId" : "00000000-0000-4000-8000-000000000002"
           },
           "siteId" : "00000000-0000-4000-8000-000000000001"
         },
-        "webUrl" : "https://redacted.example/url/2",
+        "webUrl" : "https://redacted.example/url/231",
         "fileSystemInfo" : {
-          "createdDateTime" : "2026-11-27T19:08:20Z",
-          "lastModifiedDateTime" : "2026-11-27T19:08:20Z"
+          "createdDateTime" : "2026-11-27T19:36:19Z",
+          "lastModifiedDateTime" : "2026-11-27T19:36:20Z"
         },
         "folder" : {
           "childCount" : 0
@@ -65,15 +65,15 @@
         },
         "sharepointIds" : {
           "listId" : "00000000-0000-4000-8000-000000000008",
-          "listItemId" : "319",
-          "listItemUniqueId" : "00000000-0000-4000-8000-000000000006",
+          "listItemId" : "336",
+          "listItemUniqueId" : "00000000-0000-4000-8000-000000000306",
           "siteId" : "00000000-0000-4000-8000-000000000001",
           "siteUrl" : "https://redacted.example/url/3",
           "tenantId" : "00000000-0000-4000-8000-000000000010",
           "webId" : "00000000-0000-4000-8000-000000000002"
         },
         "size" : 0,
-        "webDavUrl" : "https://redacted.example/url/2"
+        "webDavUrl" : "https://redacted.example/url/231"
       }
     }
   }

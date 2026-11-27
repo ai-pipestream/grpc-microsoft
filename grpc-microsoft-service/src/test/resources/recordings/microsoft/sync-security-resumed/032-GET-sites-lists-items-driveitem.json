@@ -1,7 +1,7 @@
 {
   "request" : {
     "method" : "GET",
-    "url" : "https://graph.microsoft.com/v1.0/sites/tenant-1.example,00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000002/lists/00000000-0000-4000-8000-000000000008/items/319/driveItem?$select=id,name,eTag,cTag,createdBy,createdDateTime,lastModifiedBy,lastModifiedDateTime,parentReference,webUrl,webDavUrl,description,size,file,folder,fileSystemInfo,deleted,root,package,remoteItem,shared,specialFolder,image,photo,video,audio,location,malware,sharepointIds,pendingOperations,@microsoft.graph.downloadUrl",
+    "url" : "https://graph.microsoft.com/v1.0/sites/tenant-1.example,00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000002/lists/00000000-0000-4000-8000-000000000008/items/328/driveItem?$select=id,name,eTag,cTag,createdBy,createdDateTime,lastModifiedBy,lastModifiedDateTime,parentReference,webUrl,webDavUrl,description,size,file,folder,fileSystemInfo,deleted,root,package,remoteItem,shared,specialFolder,image,photo,video,audio,location,malware,sharepointIds,pendingOperations,@microsoft.graph.downloadUrl",
     "authorized" : true,
     "headers" : { }
   },
@@ -23,7 +23,7 @@
             "displayName" : "Identity 2"
           }
         },
-        "createdDateTime" : "2026-11-27T19:08:20Z",
+        "createdDateTime" : "2026-11-27T19:35:01Z",
         "eTag" : "\"{00000000-0000-4000-8000-000000000006},2\"",
         "id" : "item-0001",
         "lastModifiedBy" : {
@@ -35,8 +35,8 @@
             "displayName" : "Identity 2"
           }
         },
-        "lastModifiedDateTime" : "2026-11-27T19:08:20Z",
-        "name" : "pipestream-live-write-20261127-190819-c90fc85b",
+        "lastModifiedDateTime" : "2026-11-27T19:35:01Z",
+        "name" : "pipestream-live-write-20261127-193500-2046648e",
         "parentReference" : {
           "driveType" : "documentLibrary",
           "driveId" : "b!drive-0001",
@@ -54,8 +54,8 @@
         },
         "webUrl" : "https://redacted.example/url/2",
         "fileSystemInfo" : {
-          "createdDateTime" : "2026-11-27T19:08:20Z",
-          "lastModifiedDateTime" : "2026-11-27T19:08:20Z"
+          "createdDateTime" : "2026-11-27T19:35:01Z",
+          "lastModifiedDateTime" : "2026-11-27T19:35:01Z"
         },
         "folder" : {
           "childCount" : 6
@@ -65,7 +65,7 @@
         },
         "sharepointIds" : {
           "listId" : "00000000-0000-4000-8000-000000000008",
-          "listItemId" : "319",
+          "listItemId" : "328",
           "listItemUniqueId" : "00000000-0000-4000-8000-000000000006",
           "siteId" : "00000000-0000-4000-8000-000000000001",
           "siteUrl" : "https://redacted.example/url/3",

@@ -1,7 +1,7 @@
 {
   "request" : {
     "method" : "GET",
-    "url" : "https://redacted.example/url/3/_api/web/sitegroups/getbyid(22)/users",
+    "url" : "https://redacted.example/url/3/_api/web/sitegroups/getbyid(43)/users",
     "authorized" : true,
     "headers" : { }
   },

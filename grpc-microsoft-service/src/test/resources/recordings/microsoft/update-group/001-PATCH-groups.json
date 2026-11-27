@@ -1,35 +1,20 @@
 {
   "request" : {
     "method" : "PATCH",
-    "url" : "https://graph.microsoft.com/v1.0/groups/00000000-0000-4000-8000-000000000069",
+    "url" : "https://graph.microsoft.com/v1.0/groups/00000000-0000-4000-8000-000000000070",
     "authorized" : true,
     "headers" : {
       "content-type" : "application/json"
     },
     "body" : {
       "json" : {
-        "displayName" : "pipestream-live-write-20261127-190819-c90fc85b-entra-renamed",
-        "description" : "pipestream-live-write-20261127-190819-c90fc85b-entra renamed by a live test run"
+        "displayName" : "pipestream-live-write-20261127-193500-2046648e-entra-renamed",
+        "description" : "pipestream-live-write-20261127-193500-2046648e-entra renamed by a live test run"
       }
     }
   },
   "response" : {
-    "status" : 404,
-    "headers" : {
-      "content-type" : "application/json"
-    },
-    "body" : {
-      "json" : {
-        "error" : {
-          "code" : "Request_ResourceNotFound",
-          "message" : "Resource '00000000-0000-4000-8000-000000000069' does not exist or one of its queried reference-property objects are not present.",
-          "innerError" : {
-            "date" : "2026-11-27T19:08:40",
-            "request-id" : "00000000-0000-4000-8000-000000000072",
-            "client-request-id" : "00000000-0000-4000-8000-000000000072"
-          }
-        }
-      }
-    }
+    "status" : 204,
+    "headers" : { }
   }
 }

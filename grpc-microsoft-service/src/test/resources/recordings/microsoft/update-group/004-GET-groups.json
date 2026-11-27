@@ -1,7 +1,7 @@
 {
   "request" : {
     "method" : "GET",
-    "url" : "https://graph.microsoft.com/v1.0/groups/00000000-0000-4000-8000-000000000069?$select=id,displayName,description,mail,mailNickname,mailEnabled,securityEnabled,groupTypes,visibility,securityIdentifier",
+    "url" : "https://graph.microsoft.com/v1.0/groups/00000000-0000-4000-8000-000000000070?$select=id,displayName,description,mail,mailNickname,mailEnabled,securityEnabled,groupTypes,visibility,securityIdentifier",
     "authorized" : true,
     "headers" : { }
   },
@@ -13,11 +13,11 @@
     "body" : {
       "json" : {
         "@odata.context" : "Directory value 31",
-        "id" : "00000000-0000-4000-8000-000000000069",
-        "displayName" : "pipestream-live-write-20261127-190819-c90fc85b-entra",
-        "description" : "pipestream-live-write-20261127-190819-c90fc85b-entra created by a live test run; safe to delete",
+        "id" : "00000000-0000-4000-8000-000000000070",
+        "displayName" : "pipestream-live-write-20261127-193500-2046648e-entra-renamed",
+        "description" : "pipestream-live-write-20261127-193500-2046648e-entra renamed by a live test run",
         "mail" : null,
-        "mailNickname" : "pipestream-live-write-20261127-190819-c90fc85b-entra",
+        "mailNickname" : "pipestream-live-write-20261127-193500-2046648e-entra",
         "mailEnabled" : false,
         "securityEnabled" : true,
         "groupTypes" : [ ],

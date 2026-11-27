@@ -15,11 +15,11 @@
       "json" : {
         "@odata.context" : "https://graph.microsoft.com/v1.0/$metadata#sites('tenant-1.example%2C00000000-0000-4000-8000-000000000001%2C00000000-0000-4000-8000-000000000002')/lists('00000000-0000-4000-8000-000000000022')/items(id,name,webUrl,description,eTag,createdDateTime,lastModifiedDateTime,createdBy,lastModifiedBy,contentType,sharepointIds,parentReference,deleted,fields())/$entity",
         "@odata.etag" : "\"00000000-0000-4000-8000-000000000308,2\"",
-        "createdDateTime" : "2026-11-27T19:09:28Z",
+        "createdDateTime" : "2026-11-27T19:36:21Z",
         "eTag" : "\"00000000-0000-4000-8000-000000000308,2\"",
         "id" : "4",
-        "lastModifiedDateTime" : "2026-11-27T19:09:28Z",
-        "webUrl" : "https://redacted.example/url/236",
+        "lastModifiedDateTime" : "2026-11-27T19:36:20Z",
+        "webUrl" : "https://redacted.example/url/233",
         "createdBy" : {
           "user" : {
             "displayName" : "Identity 2"
@@ -39,7 +39,7 @@
           "siteId" : "tenant-1.example,00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000002"
         },
         "contentType" : {
-          "id" : "0x010078E227328C86584E84E92AC1857D7F88",
+          "id" : "0x0100742DF8C37404CE41AFD49A7A3BEEEBCC",
           "name" : "Item"
         },
         "sharepointIds" : {
@@ -63,8 +63,8 @@
           "PsTerms" : [ ],
           "id" : "4",
           "ContentType" : "Item",
-          "Modified" : "2026-11-27T19:09:28Z",
-          "Created" : "2026-11-27T19:09:28Z",
+          "Modified" : "2026-11-27T19:36:20Z",
+          "Created" : "2026-11-27T19:36:21Z",
           "AuthorLookupId" : "1073741822",
           "EditorLookupId" : "1073741822",
           "_UIVersionString" : "2.0",

@@ -1,12 +1,27 @@
 {
   "request" : {
     "method" : "DELETE",
-    "url" : "https://graph.microsoft.com/v1.0/groups/00000000-0000-4000-8000-000000000069/members/00000000-0000-4000-8000-000000000016/$ref",
+    "url" : "https://graph.microsoft.com/v1.0/groups/00000000-0000-4000-8000-000000000070/members/00000000-0000-4000-8000-000000000016/$ref",
     "authorized" : true,
     "headers" : { }
   },
   "response" : {
-    "status" : 204,
-    "headers" : { }
+    "status" : 404,
+    "headers" : {
+      "content-type" : "application/json"
+    },
+    "body" : {
+      "json" : {
+        "error" : {
+          "code" : "Request_ResourceNotFound",
+          "message" : "Resource '00000000-0000-4000-8000-000000000070' does not exist or one of its queried reference-property objects are not present.",
+          "innerError" : {
+            "date" : "2026-11-27T19:35:30",
+            "request-id" : "00000000-0000-4000-8000-000000000073",
+            "client-request-id" : "00000000-0000-4000-8000-000000000073"
+          }
+        }
+      }
+    }
   }
 }
