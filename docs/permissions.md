@@ -57,6 +57,7 @@ the rpc calls SharePoint REST and also needs SharePoint Online
 | `ListPermissions` on a site | `fullcontrol` | Proven: refused with `read`, `write` and `manage` (same runs), pass with `fullcontrol` (run 45065737777) |
 | `WatchChanges` with `site_changes` (REST) | `read` | Assumed below `fullcontrol`: it reads the change log that `ListSiteChanges` reads. Proven with `fullcontrol` |
 | `SetSiteRoleInheritance`, `CreateSiteGroup`, `DeleteSiteGroup`, `AddSiteGroupMember`, `RemoveSiteGroupMember`, `AddSiteRoleAssignment`, `RemoveSiteRoleAssignment` (REST) | `fullcontrol` | Proven: `SetSiteRoleInheritance` and `CreateSiteGroup` are refused with `manage` (run 46051076476), so the steps that build on them did not run there. The whole row passes with `fullcontrol` |
+| `GetPermission`, `CreateSharingLink`, `InviteRecipients`, `UpdatePermission`, `DeletePermission`, `GrantLinkAccess`, `RevokeLinkAccess` (pull request 40) | `fullcontrol` until a lower grant is tried | Proven with `fullcontrol` (write run 46054394305). `read`, `write` and `manage` not tried. A link of scope anonymous is refused by the test site (`sharingDisabled`), so that case is not proven |
 | `CreateSubscription`, `GetSubscription`, `ListSubscriptions`, `UpdateSubscription`, `ReauthorizeSubscription`, `DeleteSubscription` on a drive | `read` | Assumed below `fullcontrol`. Proven with `fullcontrol`, security notifications included. Microsoft documents `Files.ReadWrite.All`; the site grant was enough. A subscription on a list was not tried |
 | `WatchChanges` | What its `Sync` passes need (rows above) | Proven with `fullcontrol` |
 | `WatchNotifications`, `ListSubscriptionRenewals` | Nothing in Microsoft 365: they read the server's own state | By construction |
@@ -96,6 +97,8 @@ The admin app has no Entra permission and cannot list users or groups
 - List item writes and `Mutate` with `write`: the write run creates its
   list first, which needs `manage`, so they were only tried from `manage` up.
 - `WatchChanges` and subscriptions below `fullcontrol`.
+- The sharing rpcs (`CreateSharingLink` and the rest of its row) below
+  `fullcontrol`, and a link of scope anonymous.
 - `Group.ReadWrite.All` is tenant-wide: it lets the app change every group.
   Leave it out unless the Entra group writes are used.
 - `GetGroup` with `GroupMember.Read.All` alone.
