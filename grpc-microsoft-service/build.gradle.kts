@@ -44,6 +44,10 @@ tasks.named<Test>("test") {
     exclude("**/MicrosoftLiveCoverageIT.class")
     exclude("**/MicrosoftLiveWriteIT.class")
     exclude("**/MicrosoftLiveChangeIT.class")
+    // -PreplayRecordsDir=<dir> makes the write replay save the records it read there.
+    providers.gradleProperty("replayRecordsDir").orNull?.let {
+        systemProperty("replay.records.dir", file(it).path)
+    }
 }
 
 tasks.register<Test>("liveSmokeTest") {

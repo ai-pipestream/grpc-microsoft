@@ -3,6 +3,7 @@ package ai.pipestream.microsoft;
 import ai.pipestream.microsoft.v1.AuthMode;
 import ai.pipestream.microsoft.v1.MicrosoftServiceGrpc;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.google.protobuf.Message;
 import io.grpc.ManagedChannel;
 import io.grpc.Server;
 import io.grpc.inprocess.InProcessChannelBuilder;
@@ -11,6 +12,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.TestFactory;
 
+import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -30,6 +33,9 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * recorded one fails its scenario. A scenario with no recording is skipped.
  */
 class MicrosoftWriteReplayTest {
+
+    /** System property naming a directory; when set, the records the scenarios read are written there. */
+    static final String RECORDS_DIR = "replay.records.dir";
 
     private ExecutorService executor;
     private Server server;
@@ -81,7 +87,25 @@ class MicrosoftWriteReplayTest {
                         .isEqualTo(WriteScenarios.Status.PASS);
             }));
         }
+        String export = System.getProperty(RECORDS_DIR, "");
+        if (!export.isBlank()) {
+            tests.add(DynamicTest.dynamicTest("write the records", () -> write(scenarios.records(),
+                    Path.of(export))));
+        }
         return tests;
+    }
+
+    /** Writes each kind of record to {@code {kind}.binpb}, length-delimited. */
+    private static void write(Map<String, List<Message>> records, Path directory) throws IOException {
+        assertThat(records).as("records the replayed scenarios read").isNotEmpty();
+        Files.createDirectories(directory);
+        for (Map.Entry<String, List<Message>> kind : records.entrySet()) {
+            try (OutputStream out = Files.newOutputStream(directory.resolve(kind.getKey() + ".binpb"))) {
+                for (Message message : kind.getValue()) {
+                    message.writeDelimitedTo(out);
+                }
+            }
+        }
     }
 
     private WriteScenarios start(JsonNode run, ReplayTransport transport,
