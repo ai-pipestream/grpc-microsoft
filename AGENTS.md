@@ -87,7 +87,12 @@ Reviewers do not dispatch them.
   name the group, not the member; Graph asks for a reauthorization of a
   50 minute drive subscription about 16 minutes before it expires; for
   some seconds after `CreateGroup`, Entra answers 404 to reads and writes of
-  the new group, also after one read has already found it.
+  the new group, also after one read has already found it; Graph answers 501
+  to `grant` on an item's permission route and takes it on `/shares`; a
+  sharing link's hidden group carries the link's Graph permission id; a
+  directory group invited to a file gets Limited Access on the site; deleting
+  a shared file without removing its link first leaves the link's group on
+  the site.
 - Updates and deletes send `expected_etag` as If-Match; 412 maps to
   `ABORTED`. 429 and 503 map to `RESOURCE_EXHAUSTED` / `UNAVAILABLE` with
   `RetryInfo`.
